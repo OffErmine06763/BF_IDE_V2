@@ -5,6 +5,14 @@
 #include <dxgi1_4.h>
 #include <tchar.h>
 
+#include <dwmapi.h>
+
+#include "Src/App.h"
+
+#define FLTINT(v) v * 255
+#define RGBFLT(x, y, z) RGB(FLTINT(x), FLTINT(y), FLTINT(z))
+#define RGBVFLT(vec) RGBFLT(vec.x, vec.y, vec.z)
+
 #ifdef _DEBUG
 #define DX12_ENABLE_DEBUG_LAYER
 #endif
@@ -71,23 +79,23 @@ struct ExampleDescriptorHeapAllocator
 };
 
 // Data
-static FrameContext                 g_frameContext[APP_NUM_FRAMES_IN_FLIGHT] = {};
-static UINT                         g_frameIndex = 0;
+static FrameContext						g_frameContext[APP_NUM_FRAMES_IN_FLIGHT] = {};
+static UINT								g_frameIndex = 0;
 
-static ID3D12Device* g_pd3dDevice = nullptr;
-static ID3D12DescriptorHeap* g_pd3dRtvDescHeap = nullptr;
-static ID3D12DescriptorHeap* g_pd3dSrvDescHeap = nullptr;
-static ExampleDescriptorHeapAllocator g_pd3dSrvDescHeapAlloc;
-static ID3D12CommandQueue* g_pd3dCommandQueue = nullptr;
-static ID3D12GraphicsCommandList* g_pd3dCommandList = nullptr;
-static ID3D12Fence* g_fence = nullptr;
-static HANDLE                       g_fenceEvent = nullptr;
-static UINT64                       g_fenceLastSignaledValue = 0;
-static IDXGISwapChain3* g_pSwapChain = nullptr;
-static bool                         g_SwapChainOccluded = false;
-static HANDLE                       g_hSwapChainWaitableObject = nullptr;
-static ID3D12Resource* g_mainRenderTargetResource[APP_NUM_BACK_BUFFERS] = {};
-static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[APP_NUM_BACK_BUFFERS] = {};
+static ID3D12Device*					g_pd3dDevice = nullptr;
+static ID3D12DescriptorHeap*			g_pd3dRtvDescHeap = nullptr;
+static ID3D12DescriptorHeap*			g_pd3dSrvDescHeap = nullptr;
+static ExampleDescriptorHeapAllocator	g_pd3dSrvDescHeapAlloc;
+static ID3D12CommandQueue*				g_pd3dCommandQueue = nullptr;
+static ID3D12GraphicsCommandList*		g_pd3dCommandList = nullptr;
+static ID3D12Fence*						g_fence = nullptr;
+static HANDLE							g_fenceEvent = nullptr;
+static UINT64							g_fenceLastSignaledValue = 0;
+static IDXGISwapChain3*					g_pSwapChain = nullptr;
+static bool								g_SwapChainOccluded = false;
+static HANDLE							g_hSwapChainWaitableObject = nullptr;
+static ID3D12Resource*					g_mainRenderTargetResource[APP_NUM_BACK_BUFFERS] = {};
+static D3D12_CPU_DESCRIPTOR_HANDLE		g_mainRenderTargetDescriptor[APP_NUM_BACK_BUFFERS] = {};
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
@@ -103,9 +111,13 @@ int main(int, char**)
 {
 	// Create application window
 	//ImGui_ImplWin32_EnableDpiAwareness();
-	WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
+	WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"App", nullptr };
 	::RegisterClassExW(&wc);
-	HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui DirectX12 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+	auto windowsFlags = WS_OVERLAPPEDWINDOW;
+	// auto windowsFlags = /*WS_SIZEBOX |*/ WS_POPUP | WS_VISIBLE;
+	HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"What if instead of BrainFuck was BroFucksMe", windowsFlags, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+
+	const DWORD DWMWA_CAPTION_COLOR = 35; // Use this for title bar color
 
 	// Initialize Direct3D
 	if (!CreateDeviceD3D(hwnd))
@@ -133,6 +145,9 @@ int main(int, char**)
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
 	//ImGui::StyleColorsLight();
+	ImVec4* colors = ImGui::GetStyle().Colors;
+	COLORREF color = RGBVFLT(colors[ImGuiCol_WindowBg]);
+	DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
 
 	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -179,6 +194,8 @@ int main(int, char**)
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+	App::Init();
+
 	// Main loop
 	bool done = false;
 	while (!done)
@@ -209,42 +226,12 @@ int main(int, char**)
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
-		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+
+		App::Render(&done);
+
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		{
-			static float f = 0.0f;
-			static int counter = 0;
-
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-			ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-			ImGui::End();
-		}
-
-		// 3. Show another simple window.
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-			ImGui::Text("Hello from another window!");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-			ImGui::End();
-		}
 
 		// Rendering
 		ImGui::Render();
