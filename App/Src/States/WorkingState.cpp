@@ -3,7 +3,20 @@
 
 #include <imgui.h>
 
+#include <iostream>
 
+namespace fs = std::filesystem;
+
+
+WorkingState::WorkingState(const WorkingDirectory& dir)
+	: m_WorkDir(dir)
+{
+	std::cout << "Working Created: " << dir.Path << ' ' << dir.DirType << '\n';
+}
+WorkingState::~WorkingState()
+{
+	std::cout << "Working Destroyed: " << m_WorkDir.Path << ' ' << m_WorkDir.DirType << '\n';
+}
 
 void WorkingState::Render()
 {

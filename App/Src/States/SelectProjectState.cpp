@@ -1,10 +1,12 @@
 #include "SelectProjectState.h"
+#include "App.h"
+#include "OpenProjectState.h"
 
 #include <imgui.h>
+
 #include <format>
 #include <filesystem>
-#include <unordered_set>
-
+#include <iostream>
 
 
 // Extra functions to add deletion support to ImGuiSelectionBasicStorage
@@ -77,6 +79,10 @@ static const char* ExampleNames[] =
 	"Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
 };
 
+
+SelectProjectState:: SelectProjectState() { std::cout << "Select Created\n"; };
+SelectProjectState::~SelectProjectState() { std::cout << "Select Destroyed\n"; };
+
 void SelectProjectState::Render()
 {
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -85,6 +91,9 @@ void SelectProjectState::Render()
 
 	if (ImGui::Begin("Documents", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
 	{
+		if (ImGui::Button("Open/New Project"))
+			App::RequestNewState<OpenProjectState>();
+
 		RenderFav();
 		RenderRec();
 	}
@@ -97,7 +106,7 @@ void SelectProjectState::RenderFav()
 
 	// Options
 	static bool show_color_button = true;
-	static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_ClearOnClickVoid | ImGuiMultiSelectFlags_SelectOnClickRelease;
+	static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_ClearOnClickVoid;
 
 	// Initialize default list with 1000 items.
 	// Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
@@ -159,6 +168,7 @@ void SelectProjectState::RenderFav()
 				bool item_is_open = false;
 				ImGui::SetNextItemSelectionUserData(n);
 				ImGui::Selectable(label.c_str(), item_is_selected, ImGuiSelectableFlags_None);
+				ImGui::Spacing();
 
 				// Focus (for after deletion)
 				if (item_curr_idx_to_focus == n)
@@ -227,7 +237,7 @@ void SelectProjectState::RenderRec()
 
 	// Options
 	static bool show_color_button = true;
-	static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_ClearOnClickVoid | ImGuiMultiSelectFlags_SelectOnClickRelease;
+	static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_ClearOnClickVoid;
 
 	// Initialize default list with 1000 items.
 	// Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
@@ -289,6 +299,7 @@ void SelectProjectState::RenderRec()
 				bool item_is_open = false;
 				ImGui::SetNextItemSelectionUserData(n);
 				ImGui::Selectable(label.c_str(), item_is_selected, ImGuiSelectableFlags_None);
+				ImGui::Spacing();
 
 				// Focus (for after deletion)
 				if (item_curr_idx_to_focus == n)

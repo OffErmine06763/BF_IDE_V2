@@ -150,9 +150,11 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Src\App.cpp" />
     <ClCompile Include="Src\Editor.cpp" />
+    <ClCompile Include="Src\States\OpenProjectState.cpp" />
     <ClCompile Include="Src\States\SelectProjectState.cpp" />
     <ClCompile Include="Src\States\State.cpp" />
     <ClCompile Include="Src\States\WorkingState.cpp" />
+    <ClCompile Include="Src\Utility.cpp" />
     <ClCompile Include="vendor\imgui\backends\imgui_impl_dx12.cpp" />
     <ClCompile Include="vendor\imgui\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
@@ -164,9 +166,11 @@
   <ItemGroup>
     <ClInclude Include="Src\App.h" />
     <ClInclude Include="Src\Editor.h" />
+    <ClInclude Include="Src\States\OpenProjectState.h" />
     <ClInclude Include="Src\States\SelectProjectState.h" />
     <ClInclude Include="Src\States\State.h" />
     <ClInclude Include="Src\States\WorkingState.h" />
+    <ClInclude Include="Src\Utility.h" />
     <ClInclude Include="vendor\imgui\backends\imgui_impl_dx12.h" />
     <ClInclude Include="vendor\imgui\backends\imgui_impl_win32.h" />
     <ClInclude Include="vendor\imgui\imconfig.h" />

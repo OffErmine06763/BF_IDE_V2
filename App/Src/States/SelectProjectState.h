@@ -1,17 +1,18 @@
 #pragma once
 #include "State.h"
 
+#include <iostream>
+
 
 class SelectProjectState : public State
 {
 public:
-	SelectProjectState() = default;
-	~SelectProjectState() override = default;
+	SelectProjectState();
+	~SelectProjectState() override;
 
-	void Render();
+	void Render() override;
 
 private:
 	void RenderFav();
 	void RenderRec();
-
 };
