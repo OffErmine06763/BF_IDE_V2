@@ -203,6 +203,7 @@ void OpenProjectState::RenderForms()
 		ImGui::SetNextWindowSize(size);
 
 		ImGui::Begin("Fill me Senpai", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
+		ImGui::SetKeyboardFocusHere();
 
 		static char data[256] = "";
 		if (ImGui::InputText("Name", data, 256, ImGuiInputTextFlags_EnterReturnsTrue))
@@ -236,6 +237,7 @@ void OpenProjectState::RenderForms()
 		ImGui::SetNextWindowSize(size);
 
 		ImGui::Begin("Fill me Senpai", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
+		ImGui::SetKeyboardFocusHere();
 
 		static char data[256] = "";
 		if (ImGui::InputText("Name", data, 256, ImGuiInputTextFlags_EnterReturnsTrue))
@@ -269,6 +271,7 @@ void OpenProjectState::RenderForms()
 		ImGui::SetNextWindowSize(size);
 
 		ImGui::Begin("Fill me Senpai", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
+		ImGui::SetKeyboardFocusHere();
 
 		static char data[256] = "";
 		if (ImGui::InputText("Name", data, 256, ImGuiInputTextFlags_EnterReturnsTrue))

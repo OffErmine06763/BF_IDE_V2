@@ -60,6 +60,12 @@
     <ClCompile Include="Src\Utility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Src\MyImGuiWidgets.h">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MyImGuiWidgets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vendor\imgui\imconfig.h">

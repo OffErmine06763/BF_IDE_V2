@@ -148,8 +148,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MyImGuiWidgets.cpp" />
     <ClCompile Include="Src\App.cpp" />
     <ClCompile Include="Src\Editor.cpp" />
+    <ClCompile Include="Src\MyImGuiWidgets.h" />
     <ClCompile Include="Src\States\OpenProjectState.cpp" />
     <ClCompile Include="Src\States\SelectProjectState.cpp" />
     <ClCompile Include="Src\States\State.cpp" />

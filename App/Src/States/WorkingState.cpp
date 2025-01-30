@@ -11,11 +11,11 @@ namespace fs = std::filesystem;
 WorkingState::WorkingState(const WorkingDirectory& dir)
 	: m_WorkDir(dir)
 {
-	std::cout << "Working Created: " << dir.Path << ' ' << dir.DirType << '\n';
+	std::cout << "Working Created: " << dir.Path << ' ' << static_cast<std::underlying_type_t<PathType>>(dir.DirType) << '\n';
 }
 WorkingState::~WorkingState()
 {
-	std::cout << "Working Destroyed: " << m_WorkDir.Path << ' ' << m_WorkDir.DirType << '\n';
+	std::cout << "Working Destroyed: " << m_WorkDir.Path << ' ' << static_cast<std::underlying_type_t<PathType>>(m_WorkDir.DirType) << '\n';
 }
 
 void WorkingState::Render()

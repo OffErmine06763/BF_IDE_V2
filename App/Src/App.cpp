@@ -11,18 +11,21 @@ namespace fs = std::filesystem;
 
 
 std::unique_ptr<App> App::Instance = nullptr;
+static fs::path DEFAULT_HISTORY_PATH = fs::current_path() / "history.bfidedata";
+
 
 App::App() :
-	m_State(std::make_unique<OpenProjectState>())
+	m_History(DEFAULT_HISTORY_PATH)
 { }
 App::~App()
-{
-
-}
+{ }
 void App::Init()
 {
 	if (Instance == nullptr)
+	{
 		Instance = std::unique_ptr<App>(new App());
+		Instance->m_State = std::make_unique<SelectProjectState>(); // create state only after initialization
+	}
 }
 
 
@@ -46,6 +49,6 @@ void App::_Render()
 
 void App::OpenPath(const fs::path& path)
 {
-	// TODO: add to recent files
+	Instance->m_History.SetAsMostRecent(path);
 	RequestNewState<WorkingState>(WorkingDirectory(path));
 }

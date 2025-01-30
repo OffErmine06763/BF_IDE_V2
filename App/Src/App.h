@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <filesystem>
+#include "Utility.h"
 
 
 class State;
@@ -15,6 +16,7 @@ public:
 	template <class S, typename... Args, std::enable_if_t<std::is_base_of_v<State, S>, bool> = true>
 	static void RequestNewState(Args&&... args);
 	static void OpenPath(const std::filesystem::path& path);
+	static History& GetHistory() { return Instance->m_History; }
 
 private:
 	App();
@@ -26,6 +28,8 @@ private:
 	std::unique_ptr<State> m_State = nullptr, m_NextState = nullptr;
 
 	bool m_IsOpen = true, m_NewStateRequested = false;
+
+	History m_History;
 
 public:
 	friend struct std::default_delete<App>;
