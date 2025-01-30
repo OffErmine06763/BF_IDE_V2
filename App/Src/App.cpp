@@ -1,13 +1,11 @@
 #include "App.h"
 
-#include "Utility.h"
 #include "States/WorkingState.h"
 #include "States/SelectProjectState.h"
 #include "States/OpenProjectState.h"
 
 #include <format>
 
-namespace fs = std::filesystem;
 
 
 std::unique_ptr<App> App::Instance = nullptr;
@@ -47,7 +45,7 @@ void App::_Render()
 	}
 }
 
-void App::OpenPath(const fs::path& path)
+void App::RequestOpenPath(const fs::path& path)
 {
 	Instance->m_History.SetAsMostRecent(path);
 	RequestNewState<WorkingState>(WorkingDirectory(path));

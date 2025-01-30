@@ -6,8 +6,8 @@
 
 #include <format>
 #include <iostream>
+#include <ranges>
 
-namespace fs = std::filesystem;
 
 #define to static_cast
 
@@ -101,9 +101,11 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
 	}
 	void ApplyMovePostLoop(ImGuiMultiSelectIO* ms_io, std::vector<SelectProjectState::Entry>& src, std::vector<SelectProjectState::Entry>& dst, int item_curr_idx_to_select, bool data)
 	{
+		using E = SelectProjectState::Entry;
+
 		// Rewrite item list (delete items) + convert old selection index (before deletion) to new selection index (after selection).
 		// If NavId was not part of selection, we will stay on same item.
-		std::vector<SelectProjectState::Entry> new_items;
+		std::vector<E> new_items;
 		new_items.reserve(src.size() - Size);
 		int item_next_idx_to_select = -1;
 		for (int idx = 0; idx < src.size(); idx++)
@@ -112,7 +114,11 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
 				new_items.push_back(src[idx]);
 			else
 			{
-				dst.push_back(src[idx]);
+				const E& el = src[idx];
+				dst.insert(
+					stdr::find_if(dst, [&el](const E& e) { return e.ID > el.ID; }),
+					src[idx]
+				);
 				App::GetHistory().SetFavourite(src[idx].Path, data);
 			}
 			if (item_curr_idx_to_select == idx)
@@ -152,12 +158,11 @@ void SelectProjectState::Render()
 	ImGui::End();
 }
 
+
 void SelectProjectState::RenderFav()
 {
 	ImGui::Text("Favourites");
 
-	// Options
-	static bool show_color_button = true;
 	static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_ClearOnClickVoid | ImGuiMultiSelectFlags_SelectOnClickRelease;
 
 	// Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
@@ -198,9 +203,8 @@ void SelectProjectState::RenderFav()
 		{
 			const int item_begin = clipper.DisplayStart;
 			const int item_end = clipper.DisplayEnd;
-			for (int i = item_begin; i < item_end; i++)
+			for (int n = item_begin; n < item_end; n++)
 			{
-				int n = Fav.size() - 1 - i;
 				std::string label = Fav[n].Path.string();
 
 				// IMPORTANT: for deletion refocus to work we need object ID to be stable,
@@ -219,9 +223,7 @@ void SelectProjectState::RenderFav()
 				ImGui::SetNextItemSelectionUserData(n);
 				ImGui::Selectable(label.c_str(), item_is_selected, ImGuiSelectableFlags_None);
 				if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-				{
-					std::cout << "AAA\n";
-				}
+					App::RequestOpenPath(Fav[n].Path);
 				ImGui::Spacing();
 
 				// Focus (for after deletion)
@@ -282,7 +284,7 @@ void SelectProjectState::RenderFav()
 		if (want_delete)
 			selection.ApplyDeletionPostLoop(ms_io, Fav, item_curr_idx_to_focus);
 		else if (want_move)
-			selection.ApplyMovePostLoop(ms_io, Fav, Recent, item_curr_idx_to_focus, false);
+			selection.ApplyMovePostLoop(ms_io, Fav, Rec, item_curr_idx_to_focus, false);
 	}
 	ImGui::EndChild();
 }
@@ -291,8 +293,6 @@ void SelectProjectState::RenderRec()
 {
 	ImGui::Text("Recent");
 
-	// Options
-	static bool show_color_button = true;
 	static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_ClearOnClickVoid | ImGuiMultiSelectFlags_SelectOnClickRelease;
 
 	// Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
@@ -300,15 +300,15 @@ void SelectProjectState::RenderRec()
 	static bool request_deletion_from_menu = false; // Queue deletion triggered from context menu
 	static bool request_move_from_menu = false;
 
-	ImGui::Text("Selection size: %d/%d", selection.Size, Recent.size());
+	ImGui::Text("Selection size: %d/%d", selection.Size, Rec.size());
 
 	const float items_height = ImGui::GetTextLineHeightWithSpacing();
-	ImGui::SetNextWindowContentSize(ImVec2(0.0f, Recent.size() * items_height));
+	ImGui::SetNextWindowContentSize(ImVec2(0.0f, Rec.size() * items_height));
 	if (ImGui::BeginChild("##RecBasket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
 	{
 		ImVec2 color_button_sz(ImGui::GetFontSize(), ImGui::GetFontSize());
 
-		ImGuiMultiSelectIO* ms_io = ImGui::MyBeginMultiSelect(flags, selection.Size, to<int>(Recent.size()));
+		ImGuiMultiSelectIO* ms_io = ImGui::MyBeginMultiSelect(flags, selection.Size, to<int>(Rec.size()));
 		selection.ApplyRequests(ms_io);
 
 		const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (selection.Size > 0)) || request_deletion_from_menu;
@@ -317,13 +317,13 @@ void SelectProjectState::RenderRec()
 		request_move_from_menu = false;
 
 		const int item_curr_idx_to_focus = want_delete
-			? selection.ApplyDeletionPreLoop(ms_io, to<int>(Fav.size()))
+			? selection.ApplyDeletionPreLoop(ms_io, to<int>(Rec.size()))
 			: want_move
-			? selection.ApplyMovePreLoop(ms_io, to<int>(Fav.size()))
+			? selection.ApplyMovePreLoop(ms_io, to<int>(Rec.size()))
 			: -1;
 
 		ImGuiListClipper clipper;
-		clipper.Begin(to<int>(Recent.size()));
+		clipper.Begin(to<int>(Rec.size()));
 		if (item_curr_idx_to_focus != -1)
 			clipper.IncludeItemByIndex(item_curr_idx_to_focus); // Ensure focused item is not clipped.
 		if (ms_io->RangeSrcItem != -1)
@@ -333,18 +333,17 @@ void SelectProjectState::RenderRec()
 		{
 			const int item_begin = clipper.DisplayStart;
 			const int item_end = clipper.DisplayEnd;
-			for (int i = item_begin; i < item_end; i++)
+			for (int n = item_begin; n < item_end; n++)
 			{
-				int n = Recent.size() - 1 - i;
-				std::string label = Recent[n].Path.string();
+				std::string label = Rec[n].Path.string();
 
 				// IMPORTANT: for deletion refocus to work we need object ID to be stable,
 				// aka not depend on their index in the list. Here we use our persistent item_id.
 				// (If we used PushID(index) instead, focus wouldn't be restored correctly after deletion).
-				ImGui::PushID(Recent[n].ID);
+				ImGui::PushID(Rec[n].ID);
 
 				// TODO: Icon
-				ImU32 dummy_col = (ImU32)((unsigned int)Recent[n].Type * 0xC250B74B) | IM_COL32_A_MASK;
+				ImU32 dummy_col = (ImU32)((unsigned int)Rec[n].Type * 0xC250B74B) | IM_COL32_A_MASK;
 				ImGui::ColorButton("##", ImColor(dummy_col), ImGuiColorEditFlags_NoTooltip, color_button_sz);
 				ImGui::SameLine();
 
@@ -354,9 +353,7 @@ void SelectProjectState::RenderRec()
 				ImGui::SetNextItemSelectionUserData(n);
 				ImGui::Selectable(label.c_str(), item_is_selected, ImGuiSelectableFlags_None);
 				if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-				{
-					std::cout << "AAA\n";
-				}
+					App::RequestOpenPath(Rec[n].Path);
 				ImGui::Spacing();
 
 				// Focus (for after deletion)
@@ -386,7 +383,7 @@ void SelectProjectState::RenderRec()
 					const int* payload_items = (int*)payload->Data;
 					const int payload_count = (int)payload->DataSize / (int)sizeof(int);
 					if (payload_count == 1)
-						ImGui::Text("Object %05d: %s", payload_items[0], Recent[payload_items[0]].Path.string()); // TODO: the payload is the ID of the entry, not the index
+						ImGui::Text("Object %05d: %s", payload_items[0], Rec[payload_items[0]].Path.string()); // TODO: the payload is the ID of the entry, not the index
 					else
 						ImGui::Text("Dragging %d objects", payload_count);
 
@@ -415,9 +412,9 @@ void SelectProjectState::RenderRec()
 		ms_io = ImGui::MyEndMultiSelect();
 		selection.ApplyRequests(ms_io);
 		if (want_delete)
-			selection.ApplyDeletionPostLoop(ms_io, Recent, item_curr_idx_to_focus);
+			selection.ApplyDeletionPostLoop(ms_io, Rec, item_curr_idx_to_focus);
 		else if (want_move)
-			selection.ApplyMovePostLoop(ms_io, Recent, Fav, item_curr_idx_to_focus, true);
+			selection.ApplyMovePostLoop(ms_io, Rec, Fav, item_curr_idx_to_focus, true);
 	}
 	ImGui::EndChild();
 }
@@ -427,5 +424,62 @@ void SelectProjectState::CacheHistory()
 {
 	const History& h = App::GetHistory();
 	for (const History::Entry& e : h)
-		e.Fav ? Fav.push_back({ CurrId++, GetType(e.Path), e.Path }) : Recent.push_back({ CurrId++, GetType(e.Path), e.Path });
+		e.Fav ? Fav.push_back({ CurrId++, e.Path }) : Rec.push_back({ CurrId++, e.Path });
+		// e.Fav ? _Unnamed.AddFav(CurrId++, e.Path) : _Unnamed.AddRec(CurrId++, e.Path);
 }
+
+
+//void SelectProjectState::Unnamed::AddRec(const uint32_t id, const fs::path& path)
+//{
+//	RecSize++;
+//	Size++; 
+//	std::shared_ptr<Node> next = std::make_shared<Node>(Entry{ id, GetType(path), false, path });
+//	if (!Tail)
+//	{
+//		Root = next;
+//		Tail = next;
+//		return;
+//	}
+//
+//	Tail->NextRec = next;
+//	Tail->Next = next;
+//	next->Prev = Tail;
+//	if (Tail->Data.Fav)
+//	{
+//		next->PrevRec = Tail->PrevRec;
+//		next->PrevFav = Tail;
+//	}
+//	else
+//	{
+//		next->PrevRec = Tail;
+//		next->PrevFav = Tail->PrevFav;
+//	}
+//	Tail = next;
+//}
+//void SelectProjectState::Unnamed::AddFav(const uint32_t id, const fs::path& path)
+//{
+//	FavSize++;
+//	Size++;
+//	std::shared_ptr<Node> next = std::make_shared<Node>(Entry{ id, GetType(path), true, path });
+//	if (!Tail)
+//	{
+//		Root = next;
+//		Tail = next;
+//		return;
+//	}
+//
+//	Tail->NextFav = next;
+//	Tail->Next = next;
+//	next->Prev = Tail;
+//	if (Tail->Data.Fav)
+//	{
+//		next->PrevRec = Tail->PrevRec;
+//		next->PrevFav = Tail;
+//	}
+//	else
+//	{
+//		next->PrevRec = Tail;
+//		next->PrevFav = Tail->PrevFav;
+//	}
+//	Tail = next;
+//}

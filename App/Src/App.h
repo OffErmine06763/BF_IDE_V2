@@ -1,7 +1,8 @@
 #pragma once
+#include "Utility.h"
+
 #include <memory>
 #include <filesystem>
-#include "Utility.h"
 
 
 class State;
@@ -15,7 +16,7 @@ public:
 	static inline void RequestClose() { Instance->m_IsOpen = false; }
 	template <class S, typename... Args, std::enable_if_t<std::is_base_of_v<State, S>, bool> = true>
 	static void RequestNewState(Args&&... args);
-	static void OpenPath(const std::filesystem::path& path);
+	static void RequestOpenPath(const fs::path& path);
 	static History& GetHistory() { return Instance->m_History; }
 
 private:

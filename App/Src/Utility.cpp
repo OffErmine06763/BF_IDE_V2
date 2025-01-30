@@ -2,11 +2,9 @@
 
 #include <fstream>
 
-namespace fs = std::filesystem;
 
-
-
-constexpr PathType GetType(const fs::path& path)
+// ################################################################## PATH ##################################################################
+constexpr PathType GetPathType(const fs::path& path)
 {
 	if (path.extension().string() == ".bf")
 		return PathType::FILE;
@@ -18,16 +16,16 @@ constexpr PathType GetType(const fs::path& path)
 }
 
 
-
-
 WorkingDirectory::WorkingDirectory(const fs::path& path)
-	: Path(path), DirType(GetType(path))
+	: Path(path), DirType(GetPathType(path))
 {
 }
+// ################################################################## PATH ##################################################################
 
 
 
 
+// ################################################################## HISTORY ##################################################################
 History::History(const fs::path& path)
 	: SaveFile(path)
 {
@@ -87,7 +85,7 @@ void History::Add(const fs::path& path, const bool fav)
 
 void History::SetAsMostRecent(const fs::path& path)
 {
-	auto res = std::ranges::find_if(Files, [&path](const Entry& f) { return f.Path.compare(path) == 0; });
+	auto res = stdr::find_if(Files, [&path](const Entry& f) { return f.Path.compare(path) == 0; });
 	if (res == Files.end())
 		Add(path);
 	else 
@@ -119,7 +117,7 @@ void History::SetFavourite(const size_t index, const bool fav)
 }
 void History::SetFavourite(const fs::path& path, const bool fav)
 {
-	auto res = std::ranges::find_if(Files, [&path](const Entry& f) { return f.Path.compare(path) == 0; });
+	auto res = stdr::find_if(Files, [&path](const Entry& f) { return f.Path.compare(path) == 0; });
 	if (res != Files.end() && (*res).Fav != fav)
 	{
 		Dirty = true;
@@ -129,7 +127,7 @@ void History::SetFavourite(const fs::path& path, const bool fav)
 
 void History::Remove(const fs::path& path)
 {
-	auto where = std::ranges::find_if(Files, [&path](const Entry& f) { return f.Path.compare(path) == 0; });
+	auto where = stdr::find_if(Files, [&path](const Entry& f) { return f.Path.compare(path) == 0; });
 	if (where != Files.end())
 	{
 		Dirty = true;
@@ -144,3 +142,4 @@ void History::Remove(const size_t index)
 		Files.erase(Files.begin() + index);
 	}
 }
+// ################################################################## HISTORY ##################################################################

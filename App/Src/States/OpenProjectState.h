@@ -1,5 +1,6 @@
 #pragma once
 #include "State.h"
+#include "Utility.h"
 
 #include <filesystem>
 #include <functional>
@@ -14,14 +15,14 @@ public:
 	void Render() override;
 
 private:
-	void RenderDir(const std::filesystem::path& dir);
+	void RenderDir(const fs::path& dir);
 	void RenderOptions();
 	void RenderForms();
 
-	// void RenderCreateFolderForm(const std::filesystem::path& p);
-	void DeletePath(const std::filesystem::path& path);
+	// void RenderCreateFolderForm(const fs::path& p);
+	void DeletePath(const fs::path& path);
 
-	std::filesystem::path m_Selected;
+	fs::path m_Selected;
 
 	bool m_CreatingFolder = false, m_CreatingFile = false, m_CreatingProj = false,
 		 m_FailedDelete = false, m_WantDelete = false;

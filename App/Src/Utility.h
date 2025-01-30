@@ -2,56 +2,88 @@
 #include <inttypes.h>
 #include <filesystem>
 #include <vector>
+#include <ranges>
 
+// ################################################################## TYPES ##################################################################
+namespace stdv = std::views;
+namespace stdr = std::ranges;
+namespace fs = std::filesystem;
+using namespace std::string_literals;
+using namespace std::chrono_literals;
+
+using u8  = uint8_t ;
+using u16 = uint32_t;
+using u32 = uint32_t;
+using u64 = uint64_t;
+using i8  =  int8_t ;
+using i16 =  int32_t;
+using i32 =  int32_t; 
+using i64 =  int64_t;
+using f32 =  float  ;
+using f64 =  double ;
+// ################################################################## TYPES ##################################################################
+
+
+// ################################################################## PATH ##################################################################
 enum class PathType : uint16_t
 {
 	NONE = 0, FILE, FOLDER, PROJECT
 };
-constexpr PathType GetType(const std::filesystem::path& path);
+constexpr PathType GetPathType(const fs::path& path);
 
 struct WorkingDirectory
 {
-	WorkingDirectory(const std::filesystem::path& path);
+	WorkingDirectory(const fs::path& path);
 
-	const std::filesystem::path Path;
+	const fs::path Path;
 	const PathType DirType;
 };
+// ################################################################## PATH ##################################################################
 
+
+// ################################################################## HISTORY ##################################################################
 // TODO: add callbacks for changes?
 struct History
 {
 public:
 	struct Entry
 	{
-		std::filesystem::path Path;
+		fs::path Path;
 		bool Fav;
 	};
 
-	History(const std::filesystem::path& path);
+	History(const fs::path& path);
 	~History();
 
 
 	void InitFromFile();
-	void InitFromFile(const std::filesystem::path& path);
+	void InitFromFile(const fs::path& path);
+	
 	void SaveToFile();
-	void SaveToFile(const std::filesystem::path& path);
-	void Add(const std::filesystem::path& path, const bool fav = false);
-	void SetAsMostRecent(const std::filesystem::path& path);
+	void SaveToFile(const fs::path& path);
+	
+	void Add(const fs::path& path, const bool fav = false);
+	
+	void SetAsMostRecent(const fs::path& path);
 	void SetAsMostRecent(const size_t index);
+	
 	void SetFavourite(const size_t index, const bool fav = true);
-	void SetFavourite(const std::filesystem::path& path, const bool fav = true);
-	void Remove(const std::filesystem::path& path);
+	void SetFavourite(const fs::path& path, const bool fav = true);
+	
+	void Remove(const fs::path& path);
 	void Remove(const size_t index);
 
 	inline bool IsDirty() const { return Dirty; }
+	inline size_t Size() const { return Files.size(); }
 
 	inline const History::Entry& operator[](const size_t i) const { return Files[i]; }
-	inline std::vector<Entry>::const_iterator begin() const { return Files.cbegin(); }
-	inline std::vector<Entry>::const_iterator end() const { return Files.cend(); }
+	inline std::vector<Entry>::const_reverse_iterator begin() const { return Files.crbegin(); }
+	inline std::vector<Entry>::const_reverse_iterator end() const { return Files.crend(); }
 
 private:
 	std::vector<Entry> Files;
 
-	std::filesystem::path SaveFile;
+	fs::path SaveFile;
 	bool Dirty = false;
 };
+// ################################################################## HISTORY ##################################################################
