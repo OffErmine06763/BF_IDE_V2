@@ -22,7 +22,8 @@ void App::Init()
 	if (Instance == nullptr)
 	{
 		Instance = std::unique_ptr<App>(new App());
-		Instance->m_State = std::make_unique<SelectProjectState>(); // create state only after initialization
+		// Instance->m_State = std::make_unique<SelectProjectState>(); // create state only after initialization
+		Instance->m_State = std::make_unique<FileState>(Instance->m_History.begin()->Path);
 	}
 }
 
@@ -48,5 +49,20 @@ void App::_Render()
 void App::RequestOpenPath(const fs::path& path)
 {
 	Instance->m_History.SetAsMostRecent(path);
-	RequestNewState<WorkingState>(WorkingDirectory(path));
+	const PathType type = GetPathType(path);
+	switch (type)
+	{
+	case PathType::FILE: 
+		RequestNewState<FileState>(path);
+		return;
+	case PathType::FOLDER:
+		RequestNewState<FolderState>(path);
+		return;
+	case PathType::PROJECT:
+		RequestNewState<ProjectState>(path);
+		return;
+	default:
+		dbg << "RequestOpenPath: Invalid path... do nothing\n";
+		break;
+	}
 }

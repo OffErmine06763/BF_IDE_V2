@@ -3,46 +3,75 @@
 #include "Editor.h"
 #include "Utility.h"
 
-#include <filesystem>
 
 
 class WorkingState : public State 
 {
 public:
-	WorkingState(const WorkingDirectory& workingdir);
 	~WorkingState() override;
 
-	void Render() override;
+	void Render() override = 0;
 
-private:
-	void RenderMainMenu();
-	void RenderEditor();
+protected:
+	WorkingState(const fs::path& workdir);
 
+	virtual void RenderMainMenu();
+	virtual void RenderEditor();
 
-	bool m_WantRedock = false;
 	Editor m_Editor;
 
-	const WorkingDirectory m_WorkDir;
+	const fs::path m_WorkDir;
 };
+
+
 
 class FileState : public WorkingState
 {
 public:
+	static constexpr PathType Type = PathType::FILE;
 
-private:
+	FileState(const fs::path& workdir);
+	~FileState() override;
+
+	void Render() override;
+
+protected:
+	void RenderMainMenu() override;
 
 };
+
+
+
 class FolderState : public WorkingState
 {
 public:
+	static constexpr PathType Type = PathType::FOLDER;
 
-private:
+	FolderState(const fs::path& workdir);
+	~FolderState() override;
+
+	void Render() override;
+
+protected:
+	void RenderMainMenu() override;
+	void RenderFSTree();
 
 };
+
+
+
 class ProjectState : public WorkingState
 {
 public:
+	static constexpr PathType Type = PathType::PROJECT;
 
-private:
+	ProjectState(const fs::path& workdir);
+	~ProjectState() override;
+
+	void Render() override;
+
+protected:
+	void RenderMainMenu() override;
+	void RenderFSTree();
 
 };

@@ -22,8 +22,8 @@ static inline bool IsProj(const fs::path& path) { return path.extension().string
 static inline bool IsProjFile(const fs::path& p) { return !fs::is_directory(p) && p.extension().string() == ".bfproj"; }
 
 
-OpenProjectState::OpenProjectState() { std::cout << "Open Created\n"; }
-OpenProjectState::~OpenProjectState() { std::cout << "Open Destroyed\n"; }
+OpenProjectState::OpenProjectState() { dbg << "Open Created\n"; }
+OpenProjectState::~OpenProjectState() { dbg << "Open Destroyed\n"; }
 
 void OpenProjectState::Render()
 {

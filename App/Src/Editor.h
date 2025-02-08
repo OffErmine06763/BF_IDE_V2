@@ -4,48 +4,72 @@
 #include <format>
 #include <imgui.h>
 
-struct MyDocument
-{
-	char        Name[32];   // Document title
-	int         UID;        // Unique ID (necessary as we can change title)
-	bool        Open;       // Set when open (we keep an array of all available documents to simplify demo code!)
-	bool        OpenPrev;   // Copy of Open from last update.
-	bool        Dirty;      // Set when the document has been modified
-	ImVec4      Color;      // An arbitrary variable associated to the document
+#include "Utility.h"
 
-	MyDocument(int uid, const char* name, bool open = true, const ImVec4& color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
+
+struct Document
+{
+	std::string Name;
+	fs::path Path;
+	i32 Id;
+	bool Dirty = false;
+
+	Document(const fs::path& path)
+		: Id(NextId++), Path(path), Name(path.filename().string())
+	{ }
+	void operator=(const Document& other)
 	{
-		UID = uid;
-		snprintf(Name, sizeof(Name), "%s", name);
-		Open = OpenPrev = open;
-		Dirty = false;
-		Color = color;
+		Name = other.Name;
+		Path = other.Path;
+		Dirty = other.Dirty;
+		Id = other.Id;
 	}
-	void DoOpen() { Open = true; }
-	void DoForceClose() { Open = false; Dirty = false; }
-	void DoSave() { Dirty = false; }
+
+	static i32 NextId;
 };
 
+
+/*
+* Utility class to handle tabs of opened files:
+* - Render
+* - Handle Inputs
+*/
 class Editor
 {
 public:
-	Editor();
+	Editor(const fs::path& workdir);
 	~Editor() = default;
 
 	void Render();
 
+	i32 OpenFile(const fs::path& dir);
+	i32 OpenOrFocus(const fs::path& path);
+
+	bool Focus(const i32 id);
+
+	bool CloseFile(const fs::path& dir);
+	bool CloseFile(const i32 id);
+	void CloseAll();
+	
 	inline void RequestRedock() { m_WantRedock = true; }
 
-	void GetTabName(MyDocument* doc, char* out_buf, size_t out_buf_size);
-	void DisplayDocContents(MyDocument* doc);
-	void DisplayDocContextMenu(MyDocument* doc);
-	void NotifyOfDocumentsClosedElsewhere();
+	void DisplayDocContents(const i32 n);
+	void DisplayDocContextMenu(const i32 n);
 
 private:
-	bool m_WantRedock = false;
+	void SaveDoc(Document& doc);
 
-	std::vector<MyDocument> Documents;
-	std::vector<MyDocument*> CloseQueue;
-	MyDocument* RenamingDoc = NULL;
-	bool RenamingStarted = false;
+	void _Focus(const i32 ind);
+
+	const fs::path m_WorkDir;
+
+	bool m_WantRedock = false;
+	// bool m_CloseAllOnConfirmClose = false;
+	bool m_RenamingStarted = false;
+
+	std::vector<Document> m_Documents;
+	std::vector<u32> m_CloseQueue;
+	Document* m_RenamingDoc = nullptr;
+
+	std::vector<fs::path> m_Recent;
 };

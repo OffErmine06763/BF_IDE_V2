@@ -1,5 +1,6 @@
 #pragma once
 #include <inttypes.h>
+#include <iostream>
 #include <filesystem>
 #include <vector>
 #include <ranges>
@@ -27,17 +28,19 @@ using f64 =  double ;
 // ################################################################## PATH ##################################################################
 enum class PathType : uint16_t
 {
-	NONE = 0, FILE, FOLDER, PROJECT
+	UNKNOWN = 0, FILE, FOLDER, PROJECT
 };
 constexpr PathType GetPathType(const fs::path& path);
+std::ostream& operator<<(std::ostream& out, const PathType& t);
 
 struct WorkingDirectory
 {
 	WorkingDirectory(const fs::path& path);
 
 	const fs::path Path;
-	const PathType DirType;
+	const PathType PathType;
 };
+std::ostream& operator<<(std::ostream& out, const WorkingDirectory& d);
 // ################################################################## PATH ##################################################################
 
 
@@ -64,6 +67,8 @@ public:
 	
 	void Add(const fs::path& path, const bool fav = false);
 	
+	void UpdatePath(const fs::path& oldpath, const fs::path& newpath);
+
 	void SetAsMostRecent(const fs::path& path);
 	void SetAsMostRecent(const size_t index);
 	
@@ -74,16 +79,38 @@ public:
 	void Remove(const size_t index);
 
 	inline bool IsDirty() const { return Dirty; }
-	inline size_t Size() const { return Files.size(); }
+	inline size_t Size() const { return Entries.size(); }
 
-	inline const History::Entry& operator[](const size_t i) const { return Files[i]; }
-	inline std::vector<Entry>::const_reverse_iterator begin() const { return Files.crbegin(); }
-	inline std::vector<Entry>::const_reverse_iterator end() const { return Files.crend(); }
+	inline const History::Entry& operator[](const size_t i) const { return Entries[i]; }
+	inline std::vector<Entry>::const_reverse_iterator begin() const { return Entries.crbegin(); }
+	inline std::vector<Entry>::const_reverse_iterator end() const { return Entries.crend(); }
 
 private:
-	std::vector<Entry> Files;
+	std::vector<Entry> Entries;
 
 	fs::path SaveFile;
 	bool Dirty = false;
 };
 // ################################################################## HISTORY ##################################################################
+
+// DEBUG
+#ifdef _DEBUG
+struct Dbg { };
+static constexpr Dbg dbg;
+template <typename T>
+const Dbg& operator<<(const Dbg& dbg, const T& data)
+{
+	std::cout << data;
+	return dbg;
+}
+#else
+struct Dbg { };
+static constexpr Dbg dbg;
+template <typename T>
+const Dbg& operator<<(const Dbg& dbg, const T& data)
+{
+	// std::cout << data;
+	return dbg;
+}
+#endif
+// DEBUG

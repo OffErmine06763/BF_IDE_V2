@@ -136,10 +136,10 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
 
 SelectProjectState:: SelectProjectState() 
 { 
-	std::cout << "Select Created\n"; 
+	dbg << "Select Created\n"; 
 	CacheHistory();
 };
-SelectProjectState::~SelectProjectState() { std::cout << "Select Destroyed\n"; };
+SelectProjectState::~SelectProjectState() { dbg << "Select Destroyed\n"; };
 
 void SelectProjectState::Render()
 {

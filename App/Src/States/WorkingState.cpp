@@ -8,20 +8,15 @@
 namespace fs = std::filesystem;
 
 
-WorkingState::WorkingState(const WorkingDirectory& dir)
-	: m_WorkDir(dir)
+// ################################################################## WORKING ##################################################################
+WorkingState::WorkingState(const fs::path& dir)
+	: m_WorkDir(dir), m_Editor(dir)
 {
-	std::cout << "Working Created: " << dir.Path << ' ' << static_cast<std::underlying_type_t<PathType>>(dir.DirType) << '\n';
+	//dbg << "Working Created: " << dir << '\n';
 }
 WorkingState::~WorkingState()
 {
-	std::cout << "Working Destroyed: " << m_WorkDir.Path << ' ' << static_cast<std::underlying_type_t<PathType>>(m_WorkDir.DirType) << '\n';
-}
-
-void WorkingState::Render()
-{
-	RenderMainMenu();
-	RenderEditor();
+	//dbg << "Working Destroyed: " << m_WorkDir << '\n';
 }
 
 
@@ -42,16 +37,16 @@ void WorkingState::RenderMainMenu()
 			ImGui::PopTextWrapPos();
 			ImGui::EndTooltip();
 		}
-		if (ImGui::BeginMenu("Edit"))
-		{
-			if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-			if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-			ImGui::Separator();
-			if (ImGui::MenuItem("Cut", "CTRL+X")) {}
-			if (ImGui::MenuItem("Copy", "CTRL+C")) {}
-			if (ImGui::MenuItem("Paste", "CTRL+V")) {}
-			ImGui::EndMenu();
-		}
+		//if (ImGui::BeginMenu("Edit"))
+		//{
+		//	if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+		//	if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+		//	ImGui::Separator();
+		//	if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+		//	if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+		//	if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+		//	ImGui::EndMenu();
+		//}
 		ImGui::EndMainMenuBar();
 	}
 }
@@ -60,3 +55,86 @@ void WorkingState::RenderEditor()
 {
 	m_Editor.Render();
 }
+// ################################################################## WORKING ##################################################################
+
+
+
+
+// ################################################################## FILE ##################################################################
+FileState::FileState(const fs::path& workdir)
+	: WorkingState(workdir)
+{
+	dbg << "Working File Created: " << m_WorkDir << '\n';
+	m_Editor.OpenFile(workdir);
+}
+FileState::~FileState()
+{
+	dbg << "Working File Created: " << m_WorkDir << '\n';
+}
+
+void FileState::Render()
+{
+	RenderMainMenu();
+	RenderEditor();
+}
+void FileState::RenderMainMenu()
+{
+	WorkingState::RenderMainMenu();
+}
+// ################################################################## FILE ##################################################################
+
+
+
+// ################################################################## FOLDER ##################################################################
+FolderState::FolderState(const fs::path& workdir)
+	: WorkingState(workdir)
+{
+	dbg << "Working Folder Created: " << m_WorkDir << '\n';
+}
+FolderState::~FolderState()
+{
+	dbg << "Working Folder Created: " << m_WorkDir << '\n';
+}
+
+void FolderState::Render()
+{
+	RenderMainMenu();
+	RenderEditor();
+	RenderFSTree();
+}
+void FolderState::RenderMainMenu()
+{
+	WorkingState::RenderMainMenu();
+}
+void FolderState::RenderFSTree()
+{
+}
+// ################################################################## FOLDER ##################################################################
+
+
+
+// ################################################################## PROJECT ##################################################################
+ProjectState::ProjectState(const fs::path& workdir)
+	: WorkingState(workdir)
+{
+	dbg << "Working Project Created: " << m_WorkDir << '\n';
+}
+ProjectState::~ProjectState()
+{
+	dbg << "Working Project Created: " << m_WorkDir << '\n';
+}
+
+void ProjectState::Render()
+{
+	RenderMainMenu();
+	RenderEditor();
+	RenderFSTree();
+}
+void ProjectState::RenderMainMenu()
+{
+	WorkingState::RenderMainMenu();
+}
+void ProjectState::RenderFSTree()
+{
+}
+// ################################################################## PROJECT ##################################################################

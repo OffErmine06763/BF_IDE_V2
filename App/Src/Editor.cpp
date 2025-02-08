@@ -1,14 +1,104 @@
 #include "Editor.h"
+#include "App.h"
 
-Editor::Editor()
+#include <numeric>
+
+#define to static_cast
+
+
+i32 Document::NextId = 0;
+
+
+Editor::Editor(const fs::path& workdir)
+	: m_WorkDir(workdir)
+{}
+
+
+
+i32 Editor::OpenFile(const fs::path& dir)
 {
-	Documents.push_back(MyDocument(0, "Lettuce", true, ImVec4(0.4f, 0.8f, 0.4f, 1.0f)));
-	Documents.push_back(MyDocument(1, "Eggplant", true, ImVec4(0.8f, 0.5f, 1.0f, 1.0f)));
-	Documents.push_back(MyDocument(2, "Carrot", true, ImVec4(1.0f, 0.8f, 0.5f, 1.0f)));
-	Documents.push_back(MyDocument(3, "Tomato", false, ImVec4(1.0f, 0.3f, 0.4f, 1.0f)));
-	Documents.push_back(MyDocument(4, "A Rather Long Title", false, ImVec4(0.4f, 0.8f, 0.8f, 1.0f)));
-	Documents.push_back(MyDocument(5, "Some Document", false, ImVec4(0.8f, 0.8f, 1.0f, 1.0f)));
+	Document newdoc = { dir };
+	m_Documents.push_back(newdoc);
+
+	auto it = stdr::find(m_Recent, dir);
+	if (it == m_Recent.end())
+	{
+		m_Recent.insert(m_Recent.begin(), dir);
+		m_Recent.resize(std::min(m_Recent.size(), 10ull));
+	}
+	else if (it != m_Recent.begin())
+	{
+		m_Recent.erase(it);
+		m_Recent.insert(m_Recent.begin(), dir);
+	}
+	return newdoc.Id;
 }
+i32 Editor::OpenOrFocus(const fs::path& path)
+{
+	auto it = stdr::find(m_Documents, path, &Document::Path);
+	if (it == m_Documents.end())
+		return OpenFile(path);
+
+	Focus(it->Id);
+	return it->Id;
+}
+
+bool Editor::Focus(const i32 id)
+{
+	auto it = stdr::find(m_Documents, id, &Document::Id);
+	if (it == m_Documents.end())
+		return false;
+	_Focus(to<i32>(std::distance(m_Documents.begin(), it)));
+	return true;
+}
+void Editor::_Focus(const i32 ind)
+{
+	// TODO:
+}
+
+bool Editor::CloseFile(const fs::path& dir)
+{
+	auto it = stdr::find_if(m_Documents, [&dir](const Document& doc) { return doc.Path.compare(dir) == 0; });
+	if (it == m_Documents.end())
+		return false;
+	if (it->Dirty)
+		m_CloseQueue.push_back(to<i32>(std::distance(m_Documents.begin(), it)));
+	else
+		m_Documents.erase(it);
+	return true;
+}
+bool Editor::CloseFile(const i32 id)
+{
+	auto it = stdr::find_if(m_Documents, [id](const Document& doc) { return doc.Id == id; });
+	//auto it = stdr::lower_bound(m_Documents, id, stdr::less{}, &Document::Id);
+	if (it == m_Documents.end())
+		return false;
+	if (it->Dirty)
+		m_CloseQueue.push_back(to<i32>(std::distance(m_Documents.begin(), it)));
+	else
+		m_Documents.erase(it);
+	return true;
+}
+void Editor::CloseAll()
+{
+	m_CloseQueue.resize(m_Documents.size());
+	std::iota(m_CloseQueue.begin(), m_CloseQueue.end(), 0);
+	//for (size_t n = 0; n < m_Documents.size(); n++)
+	//	if (m_Documents[n].Dirty)
+	//		m_CloseQueue.push_back(n);
+	if (m_CloseQueue.empty())
+		m_Documents.clear();
+	/*else
+		m_CloseAllOnConfirmClose = true;*/
+}
+
+
+void Editor::SaveDoc(Document& doc)
+{
+	// TODO:
+	doc.Dirty = false;
+}
+
 
 void Editor::Render()
 {
@@ -22,20 +112,18 @@ void Editor::Render()
 		}
 		if (ImGui::BeginMenu("File"))
 		{
-			int open_count = 0;
-			for (MyDocument& doc : Documents)
-				open_count += doc.Open ? 1 : 0;
-
-			if (ImGui::BeginMenu("Open", open_count < Documents.size()))
+			if (ImGui::BeginMenu("Open", !m_Recent.empty()))
 			{
-				for (MyDocument& doc : Documents)
-					if (!doc.Open && ImGui::MenuItem(doc.Name))
-						doc.DoOpen();
+				for (fs::path& rec : m_Recent)
+					if (ImGui::MenuItem(rec.filename().string().c_str()))
+						OpenOrFocus(rec);
 				ImGui::EndMenu();
 			}
-			if (ImGui::MenuItem("Close All Documents", NULL, false, open_count > 0))
-				for (MyDocument& doc : Documents)
-					CloseQueue.push_back(&doc);
+			if (ImGui::MenuItem("Close All", nullptr, false, !m_Documents.empty()))
+			{
+				m_CloseQueue.resize(m_Documents.size());
+				std::iota(m_CloseQueue.begin(), m_CloseQueue.end(), 0);
+			}
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -58,34 +146,27 @@ void Editor::Render()
 
 	bool window_contents_visible = ImGui::Begin("Documents", nullptr, flags);
 
-	// Tabs
-	NotifyOfDocumentsClosedElsewhere();
-
 	// Create a DockSpace node where any window can be docked
 	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
 	ImGui::DockSpace(dockspace_id, { 0, 0 }, ImGuiDockNodeFlags_None);
 
 	// Create Windows
-	for (int doc_n = 0; doc_n < Documents.size(); doc_n++)
+	for (int doc_n = 0; doc_n < m_Documents.size(); doc_n++)
 	{
-		MyDocument* doc = &Documents[doc_n];
-		if (!doc->Open)
-			continue;
+		Document& doc = m_Documents[doc_n];
 
 		ImGui::SetNextWindowDockID(dockspace_id, m_WantRedock ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
-		ImGuiWindowFlags window_flags = (doc->Dirty ? ImGuiWindowFlags_UnsavedDocument : 0);
-		bool visible = ImGui::Begin(doc->Name, &doc->Open, window_flags);
+		ImGuiWindowFlags window_flags = (doc.Dirty ? ImGuiWindowFlags_UnsavedDocument : 0);
+		bool notwantclose = true;
+		bool visible = ImGui::Begin(doc.Name.c_str(), &notwantclose, window_flags);
 
 		// Cancel attempt to close when unsaved add to save queue so we can display a popup.
-		if (!doc->Open && doc->Dirty)
-		{
-			doc->Open = true;
-			CloseQueue.push_back(doc);
-		}
+		if (!notwantclose && doc.Dirty)
+			m_CloseQueue.push_back(doc_n);
 
-		DisplayDocContextMenu(doc);
+		DisplayDocContextMenu(doc_n);
 		if (visible)
-			DisplayDocContents(doc);
+			DisplayDocContents(doc_n);
 
 		ImGui::End();
 	}
@@ -100,82 +181,94 @@ void Editor::Render()
 	}
 
 	// Display renaming UI
-	if (RenamingDoc != NULL)
+	if (m_RenamingDoc != nullptr)
 	{
-		if (RenamingStarted)
+		static char name[256] = "";
+		if (m_RenamingStarted)
+		{
+			memcpy(name, m_RenamingDoc->Name.c_str(), 256);
 			ImGui::OpenPopup("Rename");
+		}
 		if (ImGui::BeginPopup("Rename"))
 		{
 			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 30);
-			if (ImGui::InputText("###Name", RenamingDoc->Name, IM_ARRAYSIZE(RenamingDoc->Name), ImGuiInputTextFlags_EnterReturnsTrue))
+			if (ImGui::InputText("###Name", name, 256, ImGuiInputTextFlags_EnterReturnsTrue))
 			{
 				ImGui::CloseCurrentPopup();
-				RenamingDoc = NULL;
+				
+				m_RenamingDoc->Name = name;
+				auto newpath = m_RenamingDoc->Path.parent_path() / m_RenamingDoc->Name;
+
+				std::filesystem::rename(m_RenamingDoc->Path, newpath);
+				App::GetHistory().UpdatePath(m_RenamingDoc->Path, newpath);
+				m_RenamingDoc->Path = newpath;
+
+				m_RenamingDoc = nullptr;
+				//memset(name, 0, 256);
 			}
-			if (RenamingStarted)
+			if (m_RenamingStarted)
 				ImGui::SetKeyboardFocusHere(-1);
 			ImGui::EndPopup();
 		}
 		else
-		{
-			RenamingDoc = NULL;
-		}
-		RenamingStarted = false;
+			m_RenamingDoc = nullptr;
+		m_RenamingStarted = false;
 	}
 
 	// Display closing confirmation UI
-	if (!CloseQueue.empty())
+	if (!m_CloseQueue.empty())
 	{
-		int close_queue_unsaved_documents = 0;
-		for (int n = 0; n < CloseQueue.size(); n++)
-			if (CloseQueue[n]->Dirty)
-				close_queue_unsaved_documents++;
+		size_t close_queue_unsaved_documents = stdr::count_if(m_CloseQueue, &Document::Dirty, [this](const i32 n) -> const Document& { return m_Documents[n]; });
 
 		if (close_queue_unsaved_documents == 0)
 		{
-			// Close documents when all are unsaved
-			for (int n = 0; n < CloseQueue.size(); n++)
-				CloseQueue[n]->DoForceClose();
-			CloseQueue.clear();
+			// [1, 2, 3, 4, 5, 6, 7, 8, 9]
+			// [1, 2, x, x, x, 6, x, 8, 9]
+			// [1, 2, 6, 9, 8, 6, 9, 8, 9]
+			for (size_t offset = 0; offset < m_CloseQueue.size(); offset++)
+				m_Documents[*(m_CloseQueue.crbegin() + offset)] = *(m_Documents.crbegin() + offset);
+			m_Documents.erase(m_Documents.cbegin() + m_Documents.size() - m_CloseQueue.size(), m_Documents.cend());
+			m_CloseQueue.clear();
 		}
 		else
 		{
 			if (!ImGui::IsPopupOpen("Save?"))
 				ImGui::OpenPopup("Save?");
-			if (ImGui::BeginPopupModal("Save?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal("Save?", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				ImGui::Text("Save change to the following items?");
 				float item_height = ImGui::GetTextLineHeightWithSpacing();
 				if (ImGui::BeginChild(ImGui::GetID("frame"), ImVec2(-FLT_MIN, 6.25f * item_height), ImGuiChildFlags_FrameStyle))
-					for (MyDocument* doc : CloseQueue)
-						if (doc->Dirty)
-							ImGui::Text("%s", doc->Name);
+					for (i32 doc : m_CloseQueue)
+						if (m_Documents[doc].Dirty)
+							ImGui::Text("%s", m_Documents[doc].Name.c_str());
 				ImGui::EndChild();
 
 				ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
 				if (ImGui::Button("Yes", button_size))
 				{
-					for (MyDocument* doc : CloseQueue)
+					for (int offset = 0; offset < m_CloseQueue.size(); offset++)
 					{
-						if (doc->Dirty)
-							doc->DoSave();
-						doc->DoForceClose();
+						SaveDoc(m_Documents[*(m_CloseQueue.rbegin() + offset)]);
+						m_Documents[*(m_CloseQueue.crbegin() + offset)] = *(m_Documents.crbegin() + offset);
 					}
-					CloseQueue.clear();
+					m_Documents.erase(m_Documents.cbegin() + m_Documents.size() - m_CloseQueue.size(), m_Documents.cend());
+					m_CloseQueue.clear();
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("No", button_size))
 				{
-					for (MyDocument* doc : CloseQueue)
-						doc->DoForceClose();
-					CloseQueue.clear();
+					for (int offset = 0; offset < m_CloseQueue.size(); offset++)
+						m_Documents[*(m_CloseQueue.crbegin() + offset)] = *(m_Documents.crbegin() + offset);
+					m_Documents.erase(m_Documents.cbegin() + m_Documents.size() - m_CloseQueue.size(), m_Documents.cend());
+					m_CloseQueue.clear();
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Cancel", button_size))
 				{
-					CloseQueue.clear();
+					m_CloseQueue.clear();
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::EndPopup();
@@ -187,72 +280,51 @@ void Editor::Render()
 }
 
 
-void Editor::GetTabName(MyDocument* doc, char* out_buf, size_t out_buf_size)
+void Editor::DisplayDocContents(const i32 n)
 {
-	snprintf(out_buf, out_buf_size, "%s###doc%d", doc->Name, doc->UID);
-}
+	Document& doc = m_Documents[n];
 
-void Editor::DisplayDocContents(MyDocument* doc)
-{
-	ImGui::PushID(doc);
-	ImGui::Text("Document \"%s\"", doc->Name);
-	ImGui::PushStyleColor(ImGuiCol_Text, doc->Color);
+	ImGui::PushID(doc.Id);
+	
+	ImGui::Text("Document \"%s\"", doc.Name.c_str());
 	ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.");
-	ImGui::PopStyleColor();
 
 	ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_R, ImGuiInputFlags_Tooltip);
 	if (ImGui::Button("Rename.."))
 	{
-		RenamingDoc = doc;
-		RenamingStarted = true;
+		m_RenamingDoc = &doc;
+		m_RenamingStarted = true;
 	}
 	ImGui::SameLine();
 
 	ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_M, ImGuiInputFlags_Tooltip);
 	if (ImGui::Button("Modify"))
-		doc->Dirty = true;
+		doc.Dirty = true;
 
 	ImGui::SameLine();
 	ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_Tooltip);
 	if (ImGui::Button("Save"))
-		doc->DoSave();
+		SaveDoc(doc);
 
 	ImGui::SameLine();
 	ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_W, ImGuiInputFlags_Tooltip);
 	if (ImGui::Button("Close"))
-		CloseQueue.push_back(doc);
-	ImGui::ColorEdit3("color", &doc->Color.x);  // Useful to test drag and drop and hold-dragged-to-open-tab behavior.
+		m_CloseQueue.push_back(n);
+
 	ImGui::PopID();
 }
 
-void Editor::DisplayDocContextMenu(MyDocument* doc)
+void Editor::DisplayDocContextMenu(const i32 n)
 {
 	if (!ImGui::BeginPopupContextItem())
 		return;
 
-	if (ImGui::MenuItem(std::format("Save {}", doc->Name).c_str(), "Ctrl+S", false, doc->Open))
-		doc->DoSave();
-	if (ImGui::MenuItem("Rename...", "Ctrl+R", false, doc->Open))
-		RenamingDoc = doc;
-	if (ImGui::MenuItem("Close", "Ctrl+W", false, doc->Open))
-		CloseQueue.push_back(doc);
+	Document& doc = m_Documents[n];
+	if (ImGui::MenuItem(std::format("Save {}", doc.Name).c_str(), "Ctrl+S", false, doc.Dirty))
+		SaveDoc(doc);
+	if (ImGui::MenuItem("Rename...", "Ctrl+R", false))
+		m_RenamingDoc = &doc;
+	if (ImGui::MenuItem("Close", "Ctrl+W", false))
+		m_CloseQueue.push_back(n);
 	ImGui::EndPopup();
-}
-
-// [Optional] Notify the system of Tabs/Windows closure that happened outside the regular tab interface.
-// If a tab has been closed programmatically (aka closed from another source such as the Checkbox() in the demo,
-// as opposed to clicking on the regular tab closing button) and stops being submitted, it will take a frame for
-// the tab bar to notice its absence. During this frame there will be a gap in the tab bar, and if the tab that has
-// disappeared was the selected one, the tab bar will report no selected tab during the frame. This will effectively
-// give the impression of a flicker for one frame.
-// We call SetTabItemClosed() to manually notify the Tab Bar or Docking system of removed tabs to avoid this glitch.
-// Note that this completely optional, and only affect tab bars with the ImGuiTabBarFlags_Reorderable flag.
-void Editor::NotifyOfDocumentsClosedElsewhere()
-{
-	for (MyDocument& doc : Documents)
-	{
-		if (!doc.Open && doc.OpenPrev)
-			ImGui::SetTabItemClosed(doc.Name);
-		doc.OpenPrev = doc.Open;
-	}
 }
