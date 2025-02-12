@@ -95,7 +95,10 @@ void History::UpdatePath(const fs::path& oldpath, const fs::path& newpath)
 {
 	auto res = stdr::find_if(Entries, [&oldpath](const Entry& f) { return f.Path.compare(oldpath) == 0; });
 	if (res != Entries.end())
+	{
+		Dirty = true;
 		res->Path = newpath;
+	}
 }
 
 void History::SetAsMostRecent(const fs::path& path)
@@ -158,3 +161,13 @@ void History::Remove(const size_t index)
 	}
 }
 // ################################################################## HISTORY ##################################################################
+
+// ################################################################## BF ##################################################################
+bool IsValidBF(const char c)
+{
+	return c == BF_INC || c == BF_DEC ||
+		   c == BF_OPN || c == BF_CLS ||
+		   c == BF_MVR || c == BF_MVL ||
+		   c == BF_OUT || c == BF_INP;
+}
+// ################################################################## BF ##################################################################

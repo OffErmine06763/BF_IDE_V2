@@ -63,7 +63,7 @@
     <ClCompile Include="Src\MyImGuiWidgets.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MyImGuiWidgets.cpp">
+    <ClCompile Include="Src\MyImGuiWidgets.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -111,6 +111,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Src\Utility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Shortcuts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

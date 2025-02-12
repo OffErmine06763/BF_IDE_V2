@@ -1,16 +1,16 @@
 #include "WorkingState.h"
 #include "App.h"
+#include "Shortcuts.h"
 
 #include <imgui.h>
 
-#include <iostream>
 
 namespace fs = std::filesystem;
 
 
 // ################################################################## WORKING ##################################################################
 WorkingState::WorkingState(const fs::path& dir)
-	: m_WorkDir(dir), m_Editor(dir)
+	: m_WorkDir(dir), m_Editor(this)
 {
 	//dbg << "Working Created: " << dir << '\n';
 }
@@ -19,38 +19,27 @@ WorkingState::~WorkingState()
 	//dbg << "Working Destroyed: " << m_WorkDir << '\n';
 }
 
+void WorkingState::ChangedFocus(const fs::path& dir)
+{
+	dbg << "WorkingState::ChangedFocus m_FocusedFile = " << dir << '\n';
+	m_FocusedFile = dir;
+}
 
+void WorkingState::ProcessShortcuts() 
+{ }
 void WorkingState::RenderMainMenu()
 {
 	if (ImGui::BeginMainMenuBar())
 	{
 		if (ImGui::BeginMenu("App"))
 		{
-			if (ImGui::MenuItem("Close"))
+			if (ImGui::MenuItem("Close", GS_CloseApp.Label))
 				App::RequestClose();
 			ImGui::EndMenu();
 		}
-		if (ImGui::BeginItemTooltip())
-		{
-			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-			ImGui::TextUnformatted("desc");
-			ImGui::PopTextWrapPos();
-			ImGui::EndTooltip();
-		}
-		//if (ImGui::BeginMenu("Edit"))
-		//{
-		//	if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-		//	if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-		//	ImGui::Separator();
-		//	if (ImGui::MenuItem("Cut", "CTRL+X")) {}
-		//	if (ImGui::MenuItem("Copy", "CTRL+C")) {}
-		//	if (ImGui::MenuItem("Paste", "CTRL+V")) {}
-		//	ImGui::EndMenu();
-		//}
 		ImGui::EndMainMenuBar();
 	}
 }
-
 void WorkingState::RenderEditor()
 {
 	m_Editor.Render();
@@ -64,22 +53,43 @@ void WorkingState::RenderEditor()
 FileState::FileState(const fs::path& workdir)
 	: WorkingState(workdir)
 {
-	dbg << "Working File Created: " << m_WorkDir << '\n';
+	dbg << "FileState::FileState m_WorkDir = " << m_WorkDir << '\n';
 	m_Editor.OpenFile(workdir);
 }
 FileState::~FileState()
 {
-	dbg << "Working File Created: " << m_WorkDir << '\n';
+	dbg << "FileState::~FileState m_WorkDir = " << m_WorkDir << '\n';
 }
 
 void FileState::Render()
 {
+	ProcessShortcuts();
 	RenderMainMenu();
 	RenderEditor();
+}
+void FileState::ProcessShortcuts()
+{
+	WorkingState::ProcessShortcuts();
 }
 void FileState::RenderMainMenu()
 {
 	WorkingState::RenderMainMenu();
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("Run"))
+		{
+			if (ImGui::MenuItem("Compile"))
+			{ 
+				dbg << "Compiling: " << m_FocusedFile << '\n';
+			}
+			if (ImGui::MenuItem("Run"))
+			{
+				dbg << "Running: " << m_FocusedFile << '\n';
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
 }
 // ################################################################## FILE ##################################################################
 
@@ -89,11 +99,11 @@ void FileState::RenderMainMenu()
 FolderState::FolderState(const fs::path& workdir)
 	: WorkingState(workdir)
 {
-	dbg << "Working Folder Created: " << m_WorkDir << '\n';
+	dbg << "FolderState::FolderState m_WorkDir = " << m_WorkDir << '\n';
 }
 FolderState::~FolderState()
 {
-	dbg << "Working Folder Created: " << m_WorkDir << '\n';
+	dbg << "FolderState::~FolderState m_WorkDir = " << m_WorkDir << '\n';
 }
 
 void FolderState::Render()
@@ -117,11 +127,11 @@ void FolderState::RenderFSTree()
 ProjectState::ProjectState(const fs::path& workdir)
 	: WorkingState(workdir)
 {
-	dbg << "Working Project Created: " << m_WorkDir << '\n';
+	dbg << "ProjectState::ProjectState m_WorkDir = " << m_WorkDir << '\n';
 }
 ProjectState::~ProjectState()
 {
-	dbg << "Working Project Created: " << m_WorkDir << '\n';
+	dbg << "ProjectState::~ProjectState m_WorkDir = " << m_WorkDir << '\n';
 }
 
 void ProjectState::Render()

@@ -265,4 +265,10 @@ namespace ImGui
 
         return &ms->IO;
     }
+
+
+    bool MyInputTextMultiline(const char* label, std::string& buf, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+    {
+        return InputTextMultiline(label, (char*)buf.c_str(), buf.capacity() + 1, size, flags, callback, user_data);
+    }
 }

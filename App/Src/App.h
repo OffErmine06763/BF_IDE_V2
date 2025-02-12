@@ -1,11 +1,12 @@
 #pragma once
 #include "Utility.h"
 
-#include <memory>
-#include <filesystem>
-
 
 class State;
+
+template <typename S, std::enable_if_t<std::is_base_of_v<State, S>, bool> = true>
+concept StateType = true;
+
 
 class App
 {
@@ -14,7 +15,7 @@ public:
 
 	static void Render(bool* done);
 	static inline void RequestClose() { Instance->m_IsOpen = false; }
-	template <class S, typename... Args, std::enable_if_t<std::is_base_of_v<State, S>, bool> = true>
+	template <StateType S, typename... Args>
 	static void RequestNewState(Args&&... args);
 	static void RequestOpenPath(const fs::path& path);
 	static History& GetHistory() { return Instance->m_History; }
@@ -25,6 +26,7 @@ private:
 	static std::unique_ptr<App> Instance;
 
 	void _Render();
+	void ProcessGlobalShortcuts();
 
 	std::unique_ptr<State> m_State = nullptr, m_NextState = nullptr;
 
@@ -34,11 +36,13 @@ private:
 
 public:
 	friend struct std::default_delete<App>;
+
+	static const fs::path HistoryPath;
 };
 
 
 
-template<class S, typename... Args, std::enable_if_t<std::is_base_of_v<State, S>, bool>>
+template<StateType S, typename... Args>
 void App::RequestNewState(Args&&... args)
 {
 	Instance->m_NextState = std::make_unique<S>(std::forward<Args>(args)...);

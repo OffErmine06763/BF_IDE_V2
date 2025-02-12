@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <vector>
 #include <ranges>
+#include <memory>
+
 
 // ################################################################## TYPES ##################################################################
 namespace stdv = std::views;
@@ -22,6 +24,10 @@ using i32 =  int32_t;
 using i64 =  int64_t;
 using f32 =  float  ;
 using f64 =  double ;
+template <typename T>
+using uptr = std::unique_ptr<T>;
+template <typename T>
+using sptr = std::shared_ptr<T>;
 // ################################################################## TYPES ##################################################################
 
 
@@ -93,7 +99,7 @@ private:
 };
 // ################################################################## HISTORY ##################################################################
 
-// DEBUG
+// ################################################################## DEBUG ##################################################################
 #ifdef _DEBUG
 struct Dbg { };
 static constexpr Dbg dbg;
@@ -109,8 +115,17 @@ static constexpr Dbg dbg;
 template <typename T>
 const Dbg& operator<<(const Dbg& dbg, const T& data)
 {
-	// std::cout << data;
 	return dbg;
 }
 #endif
-// DEBUG
+// ################################################################## DEBUG ##################################################################
+
+// ################################################################## BF ##################################################################
+constexpr char 
+	BF_INC = '+', BF_DEC = '-', 
+	BF_OPN = '[', BF_CLS = ']', 
+	BF_MVR = '>', BF_MVL = '<', 
+	BF_OUT = '.', BF_INP = ',';
+constexpr char BF_ALL[] = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
+bool IsValidBF(const char c);
+// ################################################################## BF ##################################################################

@@ -12,15 +12,26 @@ public:
 
 	void Render() override = 0;
 
+
 protected:
 	WorkingState(const fs::path& workdir);
 
+	void ChangedFocus(const fs::path& dir);
+
+	virtual void ProcessShortcuts();
 	virtual void RenderMainMenu();
 	virtual void RenderEditor();
 
+
+protected:
 	Editor m_Editor;
 
 	const fs::path m_WorkDir;
+	fs::path m_FocusedFile;
+
+
+public:
+	friend class Editor;
 };
 
 
@@ -35,9 +46,10 @@ public:
 
 	void Render() override;
 
-protected:
-	void RenderMainMenu() override;
 
+protected:
+	void ProcessShortcuts() override;
+	void RenderMainMenu() override;
 };
 
 
@@ -52,10 +64,10 @@ public:
 
 	void Render() override;
 
+
 protected:
 	void RenderMainMenu() override;
 	void RenderFSTree();
-
 };
 
 
@@ -70,8 +82,8 @@ public:
 
 	void Render() override;
 
+
 protected:
 	void RenderMainMenu() override;
 	void RenderFSTree();
-
 };

@@ -1,19 +1,22 @@
 #include "App.h"
+#include "Shortcuts.h"
 
 #include "States/WorkingState.h"
 #include "States/SelectProjectState.h"
 #include "States/OpenProjectState.h"
+
+#include <imgui.h>
 
 #include <format>
 
 
 
 std::unique_ptr<App> App::Instance = nullptr;
-static fs::path DEFAULT_HISTORY_PATH = fs::current_path() / "history.bfidedata";
+const fs::path App::HistoryPath = fs::current_path() / "history.bfidedata";
 
 
 App::App() :
-	m_History(DEFAULT_HISTORY_PATH)
+	m_History(HistoryPath)
 { }
 App::~App()
 { }
@@ -36,6 +39,7 @@ void App::Render(bool* done)
 }
 void App::_Render()
 {
+	ProcessGlobalShortcuts();
 	m_State->Render();
 
 	if (m_NewStateRequested)
@@ -45,6 +49,14 @@ void App::_Render()
 		m_State.swap(m_NextState);
 	}
 }
+
+
+void App::ProcessGlobalShortcuts()
+{
+	if (ImGui::IsKeyChordPressed(GS_CloseApp.Chord))
+		RequestClose();
+}
+
 
 void App::RequestOpenPath(const fs::path& path)
 {

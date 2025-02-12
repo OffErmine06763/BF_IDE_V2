@@ -1,32 +1,37 @@
 #pragma once
-#include <memory>
-#include <vector>
-#include <format>
-#include <imgui.h>
-
 #include "Utility.h"
+
+
+struct ImGuiInputTextCallbackData;
+class WorkingState;
 
 
 struct Document
 {
+	using idt = u32;
+
 	std::string Name;
 	fs::path Path;
-	i32 Id;
+	idt Id;
 	bool Dirty = false;
+	std::string Content;
+	u32 CursorPos = 0;
 
-	Document(const fs::path& path)
-		: Id(NextId++), Path(path), Name(path.filename().string())
-	{ }
+	Document(const fs::path& path);
 	void operator=(const Document& other)
 	{
 		Name = other.Name;
 		Path = other.Path;
 		Dirty = other.Dirty;
 		Id = other.Id;
+		Content = other.Content;
 	}
 
-	static i32 NextId;
+	static idt NextId;
 };
+
+std::ostream& operator<<(std::ostream& out, const Document& doc);
+
 
 
 /*
@@ -37,39 +42,61 @@ struct Document
 class Editor
 {
 public:
-	Editor(const fs::path& workdir);
+	using idt = Document::idt;
+	struct EditorCallbackUserData
+	{
+		Document* Doc;
+	};
+	static constexpr i32 InvalidIndex = -1;
+	static constexpr u32 RecentOpenSize = 10, RecentCloseSize = 10;
+
+public:
+	Editor(WorkingState* state);
 	~Editor() = default;
 
 	void Render();
 
-	i32 OpenFile(const fs::path& dir);
-	i32 OpenOrFocus(const fs::path& path);
+	idt OpenFile(const fs::path& dir);
+	idt OpenOrFocus(const fs::path& path);
 
-	bool Focus(const i32 id);
+	bool Focus(const idt id);
 
 	bool CloseFile(const fs::path& dir);
-	bool CloseFile(const i32 id);
+	bool CloseFile(const idt id);
 	void CloseAll();
 	
 	inline void RequestRedock() { m_WantRedock = true; }
 
-	void DisplayDocContents(const i32 n);
-	void DisplayDocContextMenu(const i32 n);
+	void DisplayDocContents(const u32 n);
+	void DisplayDocContextMenu(const u32 n);
+
 
 private:
-	void SaveDoc(Document& doc);
+	void RenderMainMenu();
+	void RenderBody();
+	void RenderClosingConfirmationUI();
+	void RenderRenamingDocUI();
+	void ProcessShortcuts();
 
-	void _Focus(const i32 ind);
+	void WantRename(const u32 ind);
 
-	const fs::path m_WorkDir;
+	void PerformSave(Document& doc);
+	void PerformClose(bool save);
+	void PerformRename(Document& doc, const std::string& name);
+
+	void _Focus(const u32 ind);
+	void _CloseFile(const u32 ind);
+
+
+private:
+	WorkingState* m_State;
 
 	bool m_WantRedock = false;
-	// bool m_CloseAllOnConfirmClose = false;
 	bool m_RenamingStarted = false;
+
+	i32 m_FocusInd = InvalidIndex, m_WantFocus = InvalidIndex, m_RenamingDocInd = InvalidIndex;
 
 	std::vector<Document> m_Documents;
 	std::vector<u32> m_CloseQueue;
-	Document* m_RenamingDoc = nullptr;
-
-	std::vector<fs::path> m_Recent;
+	std::vector<fs::path> m_RecOpen, m_RecClose;
 };
