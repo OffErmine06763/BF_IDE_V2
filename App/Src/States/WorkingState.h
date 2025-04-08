@@ -2,7 +2,7 @@
 #include "State.h"
 #include "Editor.h"
 #include "Utility.h"
-
+#include "Emulator.h"
 
 
 class WorkingState : public State 
@@ -50,6 +50,14 @@ public:
 protected:
 	void ProcessShortcuts() override;
 	void RenderMainMenu() override;
+	void RenderEmulation();
+
+private:
+	bf_mem_t m_EmuInput = 0;
+	bool m_Emulating = false;
+	bool m_EmuTabOpen = false;
+	std::string m_EmuOutput;
+	uptr<Emulator> m_Emulator;
 };
 
 

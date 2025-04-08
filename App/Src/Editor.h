@@ -32,7 +32,7 @@ struct Document
 
 std::ostream& operator<<(std::ostream& out, const Document& doc);
 
-
+struct ImVec2;
 
 /*
 * Utility class to handle tabs of opened files:
@@ -70,6 +70,8 @@ public:
 	void DisplayDocContents(const u32 n);
 	void DisplayDocContextMenu(const u32 n);
 
+	void Lock(bool lock);
+
 
 private:
 	void RenderMainMenu();
@@ -80,7 +82,7 @@ private:
 
 	void WantRename(const u32 ind);
 
-	void PerformSave(Document& doc);
+	void PerformSave(Document& doc) const;
 	void PerformClose(bool save);
 	void PerformRename(Document& doc, const std::string& name);
 
@@ -93,6 +95,7 @@ private:
 
 	bool m_WantRedock = false;
 	bool m_RenamingStarted = false;
+	bool m_Locked = false;
 
 	i32 m_FocusInd = InvalidIndex, m_WantFocus = InvalidIndex, m_RenamingDocInd = InvalidIndex;
 

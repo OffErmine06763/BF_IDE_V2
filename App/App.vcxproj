@@ -148,6 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Src\Emulator.cpp" />
     <ClCompile Include="Src\MyImGuiWidgets.cpp" />
     <ClCompile Include="Src\App.cpp" />
     <ClCompile Include="Src\Editor.cpp" />
@@ -168,6 +169,7 @@
   <ItemGroup>
     <ClInclude Include="Src\App.h" />
     <ClInclude Include="Src\Editor.h" />
+    <ClInclude Include="Src\Emulator.h" />
     <ClInclude Include="Src\Shortcuts.h" />
     <ClInclude Include="Src\States\OpenProjectState.h" />
     <ClInclude Include="Src\States\SelectProjectState.h" />

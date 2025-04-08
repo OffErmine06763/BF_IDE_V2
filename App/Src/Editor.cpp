@@ -125,8 +125,10 @@ void Editor::WantRename(const u32 ind)
 
 
 
-void Editor::PerformSave(Document& doc)
+void Editor::PerformSave(Document& doc) const
 {
+	if (m_Locked) return;
+
 	dbg << "Editor::PerformSave doc = " << doc << '\n';
 	std::ofstream out(doc.Path);
 	out << doc.Content;
@@ -135,6 +137,8 @@ void Editor::PerformSave(Document& doc)
 }
 void Editor::PerformClose(bool save)
 {
+	if (save && m_Locked) return;
+
 	// Update recently closed files
 	size_t offset = 0;
 	for (size_t ind : stdv::reverse(m_CloseQueue) | stdv::take(RecentCloseSize))
@@ -181,6 +185,8 @@ void Editor::PerformClose(bool save)
 }
 void Editor::PerformRename(Document& doc, const std::string& name)
 {
+	if (m_Locked) return;
+
 	doc.Name = name;
 	auto newpath = doc.Path.parent_path() / doc.Name;
 
@@ -211,9 +217,9 @@ void Editor::ProcessShortcuts()
 	if (m_FocusInd >= 0 && m_FocusInd < m_Documents.size())
 	{
 		Document& doc = m_Documents[m_FocusInd];
-		if (ImGui::IsKeyChordPressed(ES_Rename.Chord))
+		if (ImGui::IsKeyChordPressed(ES_Rename.Chord) && !m_Locked)
 			WantRename(m_FocusInd);
-		if (ImGui::IsKeyChordPressed(ES_Save.Chord))
+		if (ImGui::IsKeyChordPressed(ES_Save.Chord) && !m_Locked)
 			PerformSave(doc);
 		if (ImGui::IsKeyChordPressed(ES_CloseOne.Chord))
 			_CloseFile(m_FocusInd);
@@ -275,7 +281,7 @@ void Editor::RenderBody()
 
 	bool window_contents_visible = ImGui::Begin("Documents", nullptr, flags);
 
-	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+	ImGuiID dockspace_id = ImGui::GetID("EditorDockspace");
 	ImGui::DockSpace(dockspace_id, { 0, 0 }, ImGuiDockNodeFlags_None);
 
 	for (u32 n = 0; n < m_Documents.size(); n++)
@@ -421,13 +427,21 @@ void Editor::DisplayDocContextMenu(const u32 n)
 		return;
 
 	Document& doc = m_Documents[n];
-	if (ImGui::MenuItem(std::format("Save {}", doc.Name).c_str(), ES_Save.Label, false, doc.Dirty))
+	if (ImGui::MenuItem(std::format("Save {}", doc.Name).c_str(), ES_Save.Label, false, doc.Dirty && !m_Locked))
 		PerformSave(doc);
-	if (ImGui::MenuItem("Rename...", ES_Rename.Label))
+	if (ImGui::MenuItem("Rename...", ES_Rename.Label, false, !m_Locked))
 		WantRename(n);
 	if (ImGui::MenuItem("Close", ES_CloseOne.Label))
 		_CloseFile(n);
 	ImGui::EndPopup();
+}
+
+
+
+
+void Editor::Lock(bool lock)
+{
+	m_Locked = lock;
 }
 
 
