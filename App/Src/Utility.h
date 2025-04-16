@@ -5,6 +5,8 @@
 #include <vector>
 #include <ranges>
 #include <memory>
+#include <functional>
+#include <condition_variable>
 
 
 // ################################################################## TYPES ##################################################################
@@ -28,6 +30,14 @@ template <typename T>
 using uptr = std::unique_ptr<T>;
 template <typename T>
 using sptr = std::shared_ptr<T>;
+using callable = std::function<void(void)>;
+template <typename T>
+using consumer = std::function<void(T)>;
+template <typename T>
+using provider = std::function<T(void)>;
+
+template <typename T, typename X>
+inline constexpr T to(const X& x) { return static_cast<T>(x); }
 // ################################################################## TYPES ##################################################################
 
 

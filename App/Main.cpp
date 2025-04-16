@@ -115,7 +115,7 @@ int main(int, char**)
 	::RegisterClassExW(&wc);
 	auto windowsFlags = WS_OVERLAPPEDWINDOW;
 	// auto windowsFlags = /*WS_SIZEBOX |*/ WS_POPUP | WS_VISIBLE;
-	HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"What if instead of BrainFuck was BroFucksMe", windowsFlags, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+	HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"What if instead of BrainFuck was BroFucksMe", windowsFlags, 100, 100, 1280, 700, nullptr, nullptr, wc.hInstance, nullptr);
 
 	const DWORD DWMWA_CAPTION_COLOR = 35; // Use this for title bar color
 

@@ -9,8 +9,6 @@
 #include <ranges>
 
 
-#define to static_cast
-
 // Extra functions to add deletion support to ImGuiSelectionBasicStorage
 struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
 {

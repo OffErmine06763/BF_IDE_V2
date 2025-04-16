@@ -1,8 +1,12 @@
 #pragma once
 #include "State.h"
-#include "Editor.h"
+// #include "Editor.h"
 #include "Utility.h"
 #include "Emulator.h"
+
+// TAG: Toolbar 
+// #define IMGUI_DEFINE_MATH_OPERATORS
+// #include <imgui.h>
 
 
 class WorkingState : public State 
@@ -22,12 +26,22 @@ protected:
 	virtual void RenderMainMenu();
 	virtual void RenderEditor();
 
+	// TAG: Toolbar 
+	// virtual void RenderEmulation();
+	// virtual void RenderTools();
 
 protected:
-	Editor m_Editor;
 
 	const fs::path m_WorkDir;
 	fs::path m_FocusedFile;
+
+	/* TAG: Toolbar 
+	bool m_Emulating = false;
+	bool m_ShowEmulation = false, m_FirstShowEmulation = false;
+	bool m_ToolsVisible = false;
+	ImVec2 m_EditorSize = { 0, 0 }, m_EditorPos = { 0, 0 }, m_ToolsSize = { 0, 0 };
+	ImGuiID m_ToolsDockspaceID = 0;
+	*/
 
 
 public:
@@ -36,29 +50,7 @@ public:
 
 
 
-class FileState : public WorkingState
-{
-public:
-	static constexpr PathType Type = PathType::FILE;
 
-	FileState(const fs::path& workdir);
-	~FileState() override;
-
-	void Render() override;
-
-
-protected:
-	void ProcessShortcuts() override;
-	void RenderMainMenu() override;
-	void RenderEmulation();
-
-private:
-	bf_mem_t m_EmuInput = 0;
-	bool m_Emulating = false;
-	bool m_EmuTabOpen = false;
-	std::string m_EmuOutput;
-	uptr<Emulator> m_Emulator;
-};
 
 
 

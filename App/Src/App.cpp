@@ -4,6 +4,7 @@
 #include "States/WorkingState.h"
 #include "States/SelectProjectState.h"
 #include "States/OpenProjectState.h"
+#include "States/FileState.h"
 
 #include <imgui.h>
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "Utility.h"
-
+#include <functional>
 
 struct ImGuiInputTextCallbackData;
 class WorkingState;
@@ -51,10 +51,12 @@ public:
 	static constexpr u32 RecentOpenSize = 10, RecentCloseSize = 10;
 
 public:
-	Editor(WorkingState* state);
+	Editor() = default;
 	~Editor() = default;
 
-	void Render();
+	void SetOnFileChangedCallback(const std::function<void(const fs::path& file)>& cb) { m_FileChangedCB = cb; }
+
+	void Render(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
 
 	idt OpenFile(const fs::path& dir);
 	idt OpenOrFocus(const fs::path& path);
@@ -75,7 +77,7 @@ public:
 
 private:
 	void RenderMainMenu();
-	void RenderBody();
+	void RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
 	void RenderClosingConfirmationUI();
 	void RenderRenamingDocUI();
 	void ProcessShortcuts();
@@ -91,7 +93,7 @@ private:
 
 
 private:
-	WorkingState* m_State;
+	std::function<void(const fs::path&)> m_FileChangedCB;
 
 	bool m_WantRedock = false;
 	bool m_RenamingStarted = false;

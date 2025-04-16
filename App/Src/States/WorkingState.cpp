@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 
 // ################################################################## WORKING ##################################################################
 WorkingState::WorkingState(const fs::path& dir)
-	: m_WorkDir(dir), m_Editor(this)
+	: m_WorkDir(dir)//, m_Editor(this)
 {
 	//dbg << "Working Created: " << dir << '\n';
 }
@@ -42,7 +42,7 @@ void WorkingState::RenderMainMenu()
 }
 void WorkingState::RenderEditor()
 {
-	m_Editor.Render();
+	// m_Editor.Render();
 }
 // ################################################################## WORKING ##################################################################
 
@@ -50,115 +50,7 @@ void WorkingState::RenderEditor()
 
 
 // ################################################################## FILE ##################################################################
-FileState::FileState(const fs::path& workdir)
-	: WorkingState(workdir)
-{
-	dbg << "FileState::FileState m_WorkDir = " << m_WorkDir << '\n';
-	m_Editor.OpenFile(workdir);
-}
-FileState::~FileState()
-{
-	dbg << "FileState::~FileState m_WorkDir = " << m_WorkDir << '\n';
-	if (m_Emulator != nullptr)
-	{
-		m_Emulator->Stop();
-		m_Emulator->join();
-	}
-}
 
-void FileState::Render()
-{
-	ProcessShortcuts();
-	RenderMainMenu();
-	RenderEditor();
-	RenderEmulation();
-
-	if (m_Emulating && m_Emulator != nullptr && m_Emulator->Done())
-	{
-		m_Emulator->join();
-		m_Emulating = false;
-		m_Emulator = nullptr;
-		m_Editor.Lock(false);
-	}
-}
-void FileState::ProcessShortcuts()
-{
-	WorkingState::ProcessShortcuts();
-}
-void FileState::RenderMainMenu()
-{
-	WorkingState::RenderMainMenu();
-	if (ImGui::BeginMainMenuBar())
-	{
-		if (ImGui::BeginMenu("Run"))
-		{
-			if (ImGui::MenuItem("Compile"))
-			{ 
-				dbg << "Compiling: " << m_FocusedFile << '\n';
-			}
-			if (ImGui::MenuItem("Run", nullptr, nullptr, !m_Emulating))
-			{
-				dbg << "Running: " << m_FocusedFile << '\n';
-				m_Emulating = true;
-				m_EmuTabOpen = true;
-				m_EmuOutput.clear();
-				m_Editor.Lock(true);
-				m_Emulator = std::make_unique<Emulator>(m_FocusedFile, m_EmuOutput);
-			}
-			if (ImGui::MenuItem("Stop", nullptr, nullptr, m_Emulating))
-			{
-				dbg << "Stopping: " << m_FocusedFile << '\n';
-				m_Emulator->Stop();
-				m_Emulator->join();
-				m_Emulator = nullptr;
-				m_Emulating = false;
-				m_Editor.Lock(false);
-			}
-			ImGui::EndMenu();
-		}
-		ImGui::EndMainMenuBar();
-	}
-}
-void FileState::RenderEmulation() {
-	if (!m_EmuTabOpen)
-		return;
-
-	static ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize;
-
-	const ImGuiViewport* viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos({ viewport->WorkPos.x, viewport->WorkPos.y + viewport->WorkSize.y / 2 });
-	ImGui::SetNextWindowSize({ viewport->WorkSize.x, viewport->WorkSize.y / 2 });
-
-	ImGui::Begin("Emulation", &m_EmuTabOpen, flags);
-	if (!m_EmuTabOpen && m_Emulator != nullptr) // TODO: might wanna close the tab but keep emulation going, add button to reopen the tab
-	{
-		m_Emulator->Stop();
-		m_Emulator->join();
-		m_Emulator = nullptr;
-		m_Emulating = false;
-		m_Editor.Lock(false);
-	}
-
-	if (m_Emulator != nullptr)
-		m_Emulator->Lock(true);
-	
-	ImGui::Text(m_EmuOutput.c_str());
-
-	if (m_Emulator != nullptr && m_Emulator->WantsInput())
-	{
-		ImGui::Text(">>"); ImGui::SameLine();
-		ImGui::InputScalar("##input", ImGuiDataType_U8, &m_EmuInput, nullptr, nullptr, nullptr);
-		if (ImGui::Button("Confirm"))
-		{
-			m_Emulator->GiveInput(m_EmuInput);
-			m_EmuInput = 0;
-		}
-	}
-	if (m_Emulator != nullptr)
-		m_Emulator->Lock(false);
-
-	ImGui::End();
-}
 // ################################################################## FILE ##################################################################
 
 
@@ -216,3 +108,76 @@ void ProjectState::RenderFSTree()
 {
 }
 // ################################################################## PROJECT ##################################################################
+
+
+
+/* TAG: Toolbar 
+void WorkingState::RenderTools()
+{
+	static constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse;
+	const ImGuiViewport* viewport = ImGui::GetMainViewport();
+	m_ToolsSize.x = viewport->WorkSize.x;
+	ImGui::SetNextWindowSize(m_ToolsSize);
+
+	ImGui::Begin("Tools", nullptr, flags | (m_ToolsVisible ? 0 : ImGuiWindowFlags_NoResize));
+
+	m_ToolsSize.y = ImGui::GetWindowHeight();
+	if (m_ToolsSize.y < ImGui::GetFrameHeight())
+	{
+		m_ToolsVisible = false;
+		m_ToolsSize.y = ImGui::GetFrameHeight();
+	}
+
+	if (ImGui::BeginMenuBar())
+	{
+		if (ImGui::MenuItem("Close"))
+		{
+			m_ToolsVisible = false;
+			m_ToolsSize.y = 35;
+		}
+		ImGui::EndMenuBar();
+	}
+
+	if (m_ToolsVisible)
+	{
+		m_ToolsDockspaceID = ImGui::GetID("ToolsDockSpace");
+		ImGui::DockSpace(m_ToolsDockspaceID, { 0, 0 }, ImGuiDockNodeFlags_None);
+		// dbg << m_ToolsDockspaceID << '\n';
+
+		RenderEmulation();
+
+		if (!m_ShowEmulation)
+			m_ToolsVisible = false;
+	}
+
+	ImGui::SetWindowPos({ viewport->WorkPos.x, viewport->WorkPos.y + viewport->WorkSize.y - m_ToolsSize.y });
+	m_EditorSize.y -= m_ToolsSize.y;
+
+	ImGui::End();
+}
+void WorkingState::RenderEmulation()
+{
+	static const ImGuiWindowFlags flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse;
+
+	if (m_FirstShowEmulation)
+	{
+		m_ShowEmulation = true;
+		m_FirstShowEmulation = false;
+
+		m_ToolsSize.y = 200;
+		ImGui::SetNextWindowFocus();
+		ImGui::SetNextWindowDockID(m_ToolsDockspaceID);
+	}
+	if (m_ShowEmulation)
+	{
+		if (ImGui::Begin("Emulator", &m_ShowEmulation, flags))
+		{
+			//auto vp = ImGui::GetWindowViewport();
+			//dbg << vp->ID << ' ' << vp->ParentViewportId << ' ' << ImGui::GetWindowDockID() << '\n';
+			ImGui::Text("AAA");
+		}
+		ImGui::End();
+	}
+}
+*/
