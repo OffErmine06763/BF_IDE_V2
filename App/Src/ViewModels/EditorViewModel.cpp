@@ -1,8 +1,8 @@
 #include "EditorViewModel.h"
 #include "Views/EditorView.h"
 
-EditorViewModel::EditorViewModel(EditorView* view, const fs::path& workdir, const consumer<Document>& onOpen, const consumer<idt>& onFocus)
-	: m_View(view), m_Model(workdir, onOpen, onFocus)
+EditorViewModel::EditorViewModel(EditorView* view, const fs::path& workdir, const consumer<const Document&>& onFocus)
+	: m_View(view), m_Model(workdir, onFocus)
 {
 }
 
@@ -11,11 +11,9 @@ void EditorViewModel::OnCloseAll()
 	m_View->CloseAll();
 }
 
-void EditorViewModel::OnPerformSave(const idt id)
+void EditorViewModel::OnPerformSave(Document& doc)
 {
-	bool res = m_Model.PerformSave(id);
-	if (res)
-		m_View->Saved(id);
+	m_Model.PerformSave(doc);
 }
 
 void EditorViewModel::OnCloseFile(const idt id)
@@ -27,26 +25,28 @@ void EditorViewModel::OnOpenOrFocus(const fs::path& path)
 	m_Model.OpenOrFocus(path);
 }
 
-void EditorViewModel::OnFileChanged(const idt id)
+void EditorViewModel::OnFileChanged(const Document& doc)
 {
+	m_Model.FileChanged(doc);
 }
 
-void EditorViewModel::OnWantCloseFile(const idt id)
+void EditorViewModel::OnWantCloseFile(const u32 ind)
 {
+	m_View->CloseFile(ind);
 }
 
-void EditorViewModel::OnWantFileChange(const idt id)
+void EditorViewModel::OnWantFileChange(const Document& doc)
 {
-	bool res = m_Model.ChangeFile(id);
+	bool res = m_Model.ChangeFile(doc.Id);
 	if (res)
-		m_View->Focused(id);
+		m_View->Focused(doc);
 }
 
-void EditorViewModel::OnFileClosed(const std::vector<idt>& ids, bool save)
+void EditorViewModel::OnFileClosed(std::vector<u32> inds, bool save)
 {
-	bool res = m_Model.Close(ids, save);
+	bool res = m_Model.Close(inds, save);
 	if (res) 
-		m_View->PerformClose();
+		m_View->PerformedClose();
 }
 
 void EditorViewModel::OnCancelClose()
@@ -57,6 +57,12 @@ void EditorViewModel::OnPerformRename(const idt id, const std::string& name)
 {
 }
 
-void EditorViewModel::OnEdit(const idt id, const char change)
+void EditorViewModel::OnEdit(Document* doc, const char change)
 {
+	m_Model.Edited(doc, change);
+}
+
+void EditorViewModel::OnCursorMoved(Document* doc, const i32 pos)
+{
+	m_Model.MoveCursor(doc, pos);
 }

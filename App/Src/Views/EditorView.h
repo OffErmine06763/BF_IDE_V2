@@ -16,6 +16,7 @@ public:
 		EditorViewModel* VM;
 	};
 	static constexpr i32 InvalidIndex = -1;
+	static constexpr idt InvalidID = Document::InvalidID;
 
 public:
 	EditorView(const fs::path& workdir);
@@ -33,17 +34,15 @@ public:
 	// bool CloseFile(const fs::path& dir);
 	// bool CloseFile(const idt id);
 	void CloseAll();
-	void PerformClose();
+	void CloseFile(const u32 ind);
+	void PerformedClose();
 	// 
 	// inline void RequestRedock() { m_WantRedock = true; }
 	// 
 	// 
 	// void Lock(bool lock);
 
-	void SetDirty(const idt id);
-	void Saved(const idt id);
-	void Opened(Document doc);
-	void Focused(idt id);
+	void Focused(const Document& doc);
 
 	EditorViewModel* GetViewModel() { return &m_VM; }
 
@@ -58,28 +57,21 @@ private:
 	void DisplayDocContextMenu(const u32 n);
 
 	void StartRename(const u32 ind);
-	// 
-	// void PerformSave(Document& doc) const;
-	// void PerformRename(Document& doc, const std::string& name);
-	// 
-	void _Focus(const u32 ind);
-	// void _CloseFile(const u32 ind);
 
 
 private:
-	// std::function<void(const fs::path&)> m_FileChangedCB;
+	EditorViewModel m_VM;
+
 
 	bool m_WantRedock = false;
 	bool m_RenamingStarted = false;
 	bool m_Locked = false;
 
-	i32 m_FocusInd = InvalidIndex, m_WantFocus = InvalidIndex, m_RenamingDocInd = InvalidIndex;
+	i32 m_FocusInd = InvalidIndex, m_RenamingDocInd = InvalidIndex;
+	idt m_WantFocus = InvalidID;
 
 	std::vector<u32> m_CloseQueue;
-	std::vector<fs::path> m_RecOpen, m_RecClose;
-	 
-	std::vector<Document> m_Documents;
-	// stdr::ref_view<const EditorModel::document_collection_t> m_Documents;
 
-	EditorViewModel m_VM;
+	const std::vector<fs::path>& m_RecOpen, &m_RecClose;
+	stdr::ref_view<std::vector<Document>> m_Documents;
 };

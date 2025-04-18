@@ -15,3 +15,7 @@ const Shortcut
 	ES_CloseOne = { ImGuiMod_Ctrl | ImGuiKey_W, "Ctrl+W" },
 	ES_Rename	= { ImGuiMod_Ctrl | ImGuiKey_R, "Ctrl+R" },
 	ES_Save		= { ImGuiMod_Ctrl | ImGuiKey_S, "Ctrl+S" };
+// BF
+const Shortcut 
+	BFS_Emulate       = { ImGuiMod_Ctrl | ImGuiKey_E, "Ctrl+E" },
+	BFS_StopEmulation = { ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_E, "Ctrl+Shift+E" };

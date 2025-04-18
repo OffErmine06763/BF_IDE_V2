@@ -4,6 +4,7 @@
 struct Document
 {
 	using idt = u32;
+	static constexpr idt InvalidID = 0;
 
 	std::string Name;
 	fs::path Path;
@@ -32,27 +33,32 @@ class EditorModel
 {
 public:
 	using idt = Document::idt;
-	using document_collection_t = std::vector<Document>;
 	static constexpr i32 InvalidIndex = -1;
 	static constexpr u32 RecentOpenSize = 10, RecentCloseSize = 10;
 
 public:
-	EditorModel(const fs::path& workdir, const consumer<Document>& onOpen, const consumer<idt>& onFocus);
+	EditorModel(const fs::path& workdir, const consumer<const Document&>& onFocus);
 
-	bool Close(const std::vector<idt>& ids, bool save);
+	bool Close(std::vector<u32> inds, bool save);
 	void OpenOrFocus(const fs::path& path);
 
-	const std::vector<fs::path>& GetRecentOpen() const { return m_RecOpen; }
+	const std::vector<fs::path>& GetRecentOpen()  const { return m_RecOpen; }
 	const std::vector<fs::path>& GetRecentClose() const { return m_RecClose; }
-	const std::vector<Document>& GetDocuments() const { return m_Documents; }
+	const stdr::ref_view<std::vector<Document>> GetDocuments() { return m_Documents; }
 
 	void PerformSave(Document& doc) const;
-	bool PerformSave(idt id);
 	void PerformRename(Document& doc, const std::string& name);
 
 	bool ChangeFile(const idt id);
+	void FileChanged(const Document& doc);
 
 	void Lock(bool lock) { m_Locked = lock; }
+
+	void MoveCursor(Document* doc, const i32 pos);
+
+	void Edited(Document* doc, const char change);
+
+	void SetOnFileChangedCallback(const consumer<fs::path>& cb) { m_OnFileChanged = cb; }
 
 private:
 	std::vector<Document> m_Documents;
@@ -61,6 +67,6 @@ private:
 	bool m_Locked = false;
 	i32 m_FocusInd = InvalidIndex;
 
-	consumer<Document> m_OnFileOpen;
-	consumer<idt> m_OnFileFocus;
+	consumer<fs::path> m_OnFileChanged;
+	consumer<const Document&> m_OnFileFocus;
 };

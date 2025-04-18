@@ -10,12 +10,7 @@
 class Emulator : public std::thread
 {
 public:
-	using ocb_t = std::function<void(const std::string&)>;
-	using icb_t = std::function<void(void)>;
-	using tcb_t = std::function<void(void)>;
-
-public:
-	Emulator(const fs::path& file, const ocb_t& ocb, const icb_t& icb, const tcb_t& tcb);
+	Emulator(const fs::path& file, const consumer<const std::string&>& ocb, const callable& icb, const callable& tcb);
 
 	void Stop();
 
@@ -23,7 +18,6 @@ public:
 	inline bool WantsInput() const { return m_WantInput; }
 
 	void GiveInput(bf_mem_t input);
-	void Lock(bool lock) { lock ? m_Mutex.lock() : m_Mutex.unlock(); }
 
 private:
 	void EmulateFile(const fs::path& file);
@@ -36,7 +30,7 @@ private:
 	uint32_t m_Address = 0;
 	std::array<bf_mem_t, BF_MEMSIZE> m_Memory = { 0 };
 
-	ocb_t m_OutputCB;
-	icb_t m_InputCB;
-	tcb_t m_TerminationCB;
+	consumer<const std::string&> m_OutputCB;
+	callable m_InputCB;
+	callable m_TerminationCB;
 };

@@ -5,7 +5,7 @@
 #include <fstream>
 
 
-Document::idt Document::NextId = 0;
+Document::idt Document::NextId = 1;
 
 Document::Document(const fs::path& path)
 	: Id(NextId++), Path(path), Name(path.filename().string())
@@ -22,27 +22,14 @@ std::ostream& operator<<(std::ostream& out, const Document& doc)
 }
 
 
-EditorModel::EditorModel(const fs::path& workdir, const consumer<Document>& onOpen, const consumer<idt>& onFocus)
-	: m_OnFileFocus(onFocus), m_OnFileOpen(onOpen)
+EditorModel::EditorModel(const fs::path& workdir, const consumer<const Document&>& onFocus)
+	: m_OnFileFocus(onFocus)
 {
 }
 
-bool EditorModel::Close(const std::vector<idt>& ids, bool save)
+bool EditorModel::Close(std::vector<u32> inds, bool save)
 {
 	if (save && m_Locked) return false;
-
-	std::vector<size_t> inds;
-	for (idt id : ids)
-	{
-		for (size_t i = 0; i < m_Documents.size(); i++)
-		{
-			if (m_Documents[i].Id == id)
-			{
-				inds.push_back(i);
-				break;
-			}
-		}
-	}
 
 	// Update recently closed files
 	for (size_t ind : inds | stdv::take(RecentCloseSize))
@@ -84,7 +71,7 @@ bool EditorModel::Close(const std::vector<idt>& ids, bool save)
 		// TODO: move focus to the previous focused element (keep navigation history)
 		m_FocusInd = m_Documents.empty() ? InvalidIndex : 0;
 		dbg << "EditorView::PerformClose m_WantFocus = " << m_FocusInd << '\n';
-		m_OnFileFocus(m_Documents[m_FocusInd].Id);
+		m_OnFileFocus(m_Documents[m_FocusInd]);
 	}
 
 	return true;
@@ -98,7 +85,7 @@ void EditorModel::OpenOrFocus(const fs::path& dir)
 		auto itr = stdr::find(m_RecOpen, dir);
 		m_RecOpen.erase(itr);
 		m_RecOpen.insert(m_RecOpen.cbegin(), dir);
-		m_OnFileFocus(itd->Id);
+		m_OnFileFocus(*itd);
 		return;
 	}
 
@@ -118,8 +105,7 @@ void EditorModel::OpenOrFocus(const fs::path& dir)
 			m_RecOpen.resize(RecentOpenSize);
 	}
 
-	m_OnFileOpen(newdoc);
-	m_OnFileFocus(newdoc.Id);
+	m_OnFileFocus(*m_Documents.crbegin());
 }
 
 
@@ -143,12 +129,25 @@ void EditorModel::PerformRename(Document& doc, const std::string& name)
 }
 bool EditorModel::ChangeFile(const idt id)
 {
-	auto it = stdr::find_if(m_Documents, [id](const idt d) { return d == id; }, &Document::Id);
+	auto it = stdr::find(m_Documents, id, &Document::Id);
 	if (it == m_Documents.end())
 		return false;
 	m_FocusInd = to<i32>(std::distance(m_Documents.begin(), it));
-	m_OnFileFocus(id);
+	m_OnFileFocus(*it);
 	return true;
+}
+void EditorModel::FileChanged(const Document& doc)
+{
+	if (m_OnFileChanged)
+		m_OnFileChanged(doc.Path);
+}
+void EditorModel::MoveCursor(Document* doc, const i32 pos)
+{
+	doc->CursorPos = pos;
+}
+void EditorModel::Edited(Document* doc, const char change)
+{
+	doc->Dirty = true;
 }
 void EditorModel::PerformSave(Document& doc) const
 {
@@ -161,14 +160,4 @@ void EditorModel::PerformSave(Document& doc) const
 	doc.Dirty = false;
 
 	auto a = m_Documents | stdv::all;
-}
-bool EditorModel::PerformSave(idt id)
-{
-	if (m_Locked) return false;
-
-	auto it = stdr::find_if(m_Documents, [id](const idt d) { return d == id; }, &Document::Id);
-	if (it == m_Documents.end())
-		return false;
-	PerformSave(m_Documents[std::distance(m_Documents.begin(), it)]);
-	return true;
 }

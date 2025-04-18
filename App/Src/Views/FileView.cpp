@@ -65,9 +65,15 @@ void FileView::EmulationOutputChanged()
 void FileView::EmulationWantsInput(bool wants)
 {
 	m_EmuWantsInput = wants;
+	if (wants)
+		m_EmuInput = 0;
 }
 void FileView::ProcessShortcuts()
 {
+	if (ImGui::IsKeyChordPressed(BFS_Emulate.Chord))
+		m_VM.StartEmulation();
+	else if (ImGui::IsKeyChordPressed(BFS_StopEmulation.Chord))
+		m_VM.StopEmulation();
 }
 void FileView::RenderMainMenu()
 {
@@ -83,9 +89,9 @@ void FileView::RenderMainMenu()
 		{
 			if (ImGui::MenuItem("Compile"))
 				dbg << "Compiling: " << m_VM.GetWorkDir() << '\n';
-			if (ImGui::MenuItem("Run", nullptr, nullptr, m_CanEmulate))
+			if (ImGui::MenuItem("Run", BFS_Emulate.Label, nullptr, m_CanEmulate))
 				m_VM.StartEmulation();
-			if (ImGui::MenuItem("Stop", nullptr, nullptr, !m_CanEmulate))
+			if (ImGui::MenuItem("Stop", BFS_StopEmulation.Label, nullptr, !m_CanEmulate))
 				m_VM.StopEmulation();
 			ImGui::EndMenu();
 		}
@@ -117,6 +123,7 @@ void FileView::RenderEmulation() {
 	if (m_EmuWantsInput)
 	{
 		ImGui::Text(">>"); ImGui::SameLine();
+		ImGui::SetKeyboardFocusHere();
 		ImGui::InputScalar("##input", ImGuiDataType_U8, &m_EmuInput, nullptr, nullptr, nullptr);
 		if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::Button("Confirm"))
 			m_VM.EmulationInput(m_EmuInput);

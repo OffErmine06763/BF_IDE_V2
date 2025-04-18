@@ -56,10 +56,6 @@ static int DocumentEditorCallback(ImGuiInputTextCallbackData* data);
 //	_Focus(to<i32>(std::distance(m_Documents.begin(), it)));
 //	return true;
 //}
-void EditorView::_Focus(const u32 ind)
-{
-	m_WantFocus = ind;
-}
 //
 //bool EditorView::CloseFile(const fs::path& dir)
 //{
@@ -92,11 +88,13 @@ void EditorView::CloseAll()
 	m_CloseQueue.resize(m_Documents.size());
 	std::iota(m_CloseQueue.begin(), m_CloseQueue.end(), 0);
 }
-
-void EditorView::PerformClose()
+void EditorView::CloseFile(const u32 ind)
+{
+	m_CloseQueue.push_back(ind);
+}
+void EditorView::PerformedClose()
 {
 	m_CloseQueue.clear();
-	m_Documents = m_VM.GetDocuments();
 }
 
 void EditorView::StartRename(const u32 ind)
@@ -105,24 +103,15 @@ void EditorView::StartRename(const u32 ind)
 	m_RenamingStarted = true;
 }
 
-void EditorView::Opened(Document doc)
+void EditorView::Focused(const Document& doc)
 {
-	auto& dir = doc.Path;
-	m_RecOpen = m_VM.GetRecentOpen();
-	m_Documents.push_back(doc);
-}
-
-void EditorView::Focused(idt id)
-{
-	auto it = stdr::find(m_Documents, id, &Document::Id);
-	if (it == m_Documents.end())
-		return;
-	_Focus(to<u32>(std::distance(m_Documents.begin(), it)));
+	m_WantFocus = doc.Id;
 }
 
 
 EditorView::EditorView(const fs::path& workdir)
-	: m_VM(this, workdir, [this](Document doc) { Opened(doc); }, [this](idt id) { Focused(id); })
+	: m_VM(this, workdir, [this](const Document& doc) { Focused(doc); }), 
+	m_Documents(m_VM.GetDocuments()), m_RecClose(m_VM.GetRecentClose()), m_RecOpen(m_VM.GetRecentOpen())
 {
 }
 
@@ -131,6 +120,15 @@ void EditorView::Render(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar
 	ProcessShortcuts();
 	RenderMainMenu();
 	RenderBody(/* pos, size // TAG: Toolbar */);
+
+	static u64 count = 0;
+	count++;
+	if (count == 144) 
+	{
+		count = 0;
+		for (auto& d : m_Documents)
+			dbg << "\tDocument: " << d.Name << " [" << d.Id << "]\n";
+	}
 }
 void EditorView::ProcessShortcuts()
 {
@@ -138,11 +136,11 @@ void EditorView::ProcessShortcuts()
 		m_VM.OnCloseAll();
 	if (m_FocusInd >= 0 && m_FocusInd < m_Documents.size())
 	{
-		const Document& doc = m_Documents[m_FocusInd];
+		Document& doc = m_Documents[m_FocusInd];
 		if (ImGui::IsKeyChordPressed(ES_Rename.Chord) && !m_Locked)
 			StartRename(m_FocusInd);
 		if (ImGui::IsKeyChordPressed(ES_Save.Chord) && !m_Locked)
-			m_VM.OnPerformSave(doc.Id);
+			m_VM.OnPerformSave(doc);
 		if (ImGui::IsKeyChordPressed(ES_CloseOne.Chord))
 			m_VM.OnCloseFile(doc.Id);
 	}
@@ -162,7 +160,7 @@ void EditorView::RenderMainMenu()
 			if (ImGui::BeginMenu("Recent Open", !m_RecOpen.empty()))
 			{
 				std::vector<fs::path> toopen; // can't open files inside loop because it would update the recent files list
-				for (fs::path& rec : m_RecOpen)
+				for (const fs::path& rec : m_RecOpen)
 					if (ImGui::MenuItem((rec.filename().string() + "##open").c_str()))
 						toopen.push_back(rec);
 				for (auto& p : toopen)
@@ -171,7 +169,7 @@ void EditorView::RenderMainMenu()
 			}
 			if (ImGui::BeginMenu("Recent Close", !m_RecClose.empty()))
 			{
-				for (fs::path& rec : m_RecClose)
+				for (const fs::path& rec : m_RecClose)
 					if (ImGui::MenuItem((rec.filename().string() + "##close").c_str()))
 						m_VM.OnOpenOrFocus(rec);
 				ImGui::EndMenu();
@@ -212,28 +210,28 @@ void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Too
 
 	for (u32 n = 0; n < m_Documents.size(); n++)
 	{
-		Document& doc = m_Documents[n];
+		const Document& doc = m_Documents[n];
 
 		ImGui::SetNextWindowDockID(dockspace_id, m_WantRedock ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
 		ImGuiWindowFlags window_flags = (doc.Dirty ? ImGuiWindowFlags_UnsavedDocument : 0) | ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-		bool notwantclose = true;
-		if (m_WantFocus == n)
+		if (m_WantFocus == doc.Id)
 		{
 			ImGui::SetNextWindowFocus();
 			m_FocusInd = n;
-			m_VM.OnFileChanged(doc.Id);
-			// if (m_FileChangedCB) m_FileChangedCB(doc.Path);
-			m_WantFocus = InvalidIndex;
+			m_VM.OnFileChanged(doc);
+			m_WantFocus = InvalidID;
 		}
+
+		bool notwantclose = true;
 		bool visible = ImGui::Begin(doc.Name.c_str(), &notwantclose, window_flags);
 
 		if (!notwantclose)
-			m_VM.OnWantCloseFile(doc.Id);
+			m_VM.OnWantCloseFile(n);
 		if (ImGui::IsItemClicked() && n != m_FocusInd)
 		{
 			m_FocusInd = n;
-			m_VM.OnWantFileChange(doc.Id);
+			m_VM.OnWantFileChange(doc);
 			// if (m_FileChangedCB) m_FileChangedCB(doc.Path);
 		}
 
@@ -260,13 +258,10 @@ void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Too
 }
 void EditorView::RenderClosingConfirmationUI()
 {
-	std::vector<idt> ids(m_CloseQueue.size());
-	stdr::transform(m_CloseQueue, ids.begin(), [this](u32 ind) { return m_Documents[ind].Id; });
-
-	size_t close_queue_unsaved_documents = stdr::count_if(m_CloseQueue, &Document::Dirty, [this](const u32 n) -> const Document& { return m_Documents[n]; });
-	if (close_queue_unsaved_documents == 0)
+	size_t unsaved = stdr::count_if(m_CloseQueue, &Document::Dirty, [this](const u32 n) -> const Document& { return m_Documents[n]; });
+	if (unsaved == 0)
 	{
-		m_VM.OnFileClosed(ids, false);
+		m_VM.OnFileClosed(m_CloseQueue, false);
 		return;
 	}
 
@@ -285,13 +280,13 @@ void EditorView::RenderClosingConfirmationUI()
 		ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
 		if (ImGui::Button("Yes", button_size))
 		{
-			m_VM.OnFileClosed(ids, true);
+			m_VM.OnFileClosed(m_CloseQueue, true);
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("No", button_size))
 		{
-			m_VM.OnFileClosed(ids, false);
+			m_VM.OnFileClosed(m_CloseQueue, false);
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
@@ -307,7 +302,7 @@ void EditorView::RenderClosingConfirmationUI()
 void EditorView::RenderRenamingDocUI()
 {
 	static char name[256] = "";
-	Document& doc = m_Documents[m_RenamingDocInd];
+	const Document& doc = m_Documents[m_RenamingDocInd];
 	if (m_RenamingStarted)
 	{
 		memcpy(name, doc.Name.c_str(), 256);
@@ -358,9 +353,9 @@ void EditorView::DisplayDocContextMenu(const u32 n)
 	if (!ImGui::BeginPopupContextItem())
 		return;
 
-	const Document& doc = m_Documents[n];
+	Document& doc = m_Documents[n];
 	if (ImGui::MenuItem(std::format("Save {}", doc.Name).c_str(), ES_Save.Label, false, doc.Dirty && !m_Locked))
-		m_VM.OnPerformSave(doc.Id);
+		m_VM.OnPerformSave(doc);
 	if (ImGui::MenuItem("Rename...", ES_Rename.Label, false, !m_Locked))
 		StartRename(n);
 	if (ImGui::MenuItem("Close", ES_CloseOne.Label))
@@ -408,17 +403,17 @@ int DocumentEditorCallback(ImGuiInputTextCallbackData* data)
 	{
 		// Callback on any edit. Note that InputText() already returns true on edit + you can always use IsItemEdited(). The callback is useful to manipulate the underlying buffer while focus is active.
 		dbg << "DocumentEditorCallback EventFlag = Edit\n";
-		VM->OnEdit(doc->Id, data->EventChar);
-		// doc->Dirty = true;
+		VM->OnEdit(doc, data->EventChar);
 	}
 	else if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways)
 	{
 		// Callback on each iteration. User code may query cursor position, modify text buffer.
-		doc->CursorPos = data->CursorPos;
+		if (doc->CursorPos != data->CursorPos)
+			VM->OnCursorMoved(doc, data->CursorPos);
 
 		static u64 count = 0;
 		count++;
-		if (count == 144ui64 * 5)
+		if (count == 144)
 		{
 			count = 0;
 			// data->InsertChars(0, "]");
@@ -427,20 +422,4 @@ int DocumentEditorCallback(ImGuiInputTextCallbackData* data)
 	}
 
 	return 0;
-}
-
-
-
-void EditorView::SetDirty(const idt id)
-{
-	auto it = stdr::find_if(m_Documents, [id](const Document& doc) { return doc.Id == id; });
-	if (it != m_Documents.end())
-		it->Dirty = true;
-}
-
-void EditorView::Saved(const idt id)
-{
-	auto it = stdr::find_if(m_Documents, [id](const idt& doc) { return doc == id; }, &Document::Id);
-	if (it != m_Documents.end())
-		it->Dirty = false;
 }

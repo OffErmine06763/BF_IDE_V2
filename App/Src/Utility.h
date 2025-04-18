@@ -140,4 +140,6 @@ constexpr char BF_ALL[] = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_O
 constexpr uint32_t BF_MEMSIZE = 256;
 using bf_mem_t = uint8_t;
 bool IsValidBF(const char c);
+
+constexpr auto EmulationSleep = 1ns;
 // ################################################################## BF ##################################################################

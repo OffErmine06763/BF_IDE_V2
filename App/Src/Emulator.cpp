@@ -8,7 +8,7 @@
 #include <imgui.h>
 
 
-Emulator::Emulator(const fs::path& file, const ocb_t& ocb, const icb_t& icb, const tcb_t& tcb)
+Emulator::Emulator(const fs::path& file, const consumer<const std::string&>& ocb, const callable& icb, const callable& tcb)
 	: thread([this, file]() { EmulateFile(file); }), m_OutputCB(ocb), m_InputCB(icb), m_TerminationCB(tcb)
 { }
 
@@ -21,10 +21,11 @@ void Emulator::EmulateFile(const fs::path& file)
 	m_Running = true;
 	std::stack<uint64_t> open;
 	for (uint64_t i = 0; i < content.length(); i++) {
-		if (!m_Running)
-			break;
-
+		std::this_thread::sleep_for(EmulationSleep); // TODO: allow different emulation modes, like as fast as possible / slow that highlights the current instruction
+		
 		std::unique_lock<std::mutex> lock(m_Mutex);
+		if (!m_Running)	break;
+
 		char c = content[i];
 		switch (c)
 		{
@@ -50,7 +51,6 @@ void Emulator::EmulateFile(const fs::path& file)
 	}
 	m_Running = false;
 	m_Done = true;
-	// TODO: notify the outside
 	m_TerminationCB();
 }
 
@@ -64,9 +64,9 @@ void Emulator::Stop()
 
 void Emulator::GiveInput(bf_mem_t input) 
 {
+	std::lock_guard<std::mutex> lock(m_Mutex);
 	if (!m_WantInput) return;
 
-	std::lock_guard<std::mutex> lock(m_Mutex);
 	m_Memory[m_Address] = input;
 	m_WantInput = false;
 	m_InputCondition.notify_all();
