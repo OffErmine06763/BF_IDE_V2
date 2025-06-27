@@ -7,7 +7,7 @@ class State;
 template <typename S, std::enable_if_t<std::is_base_of_v<State, S>, bool> = true>
 concept StateType = true;
 
-
+// TODO: Razer Chroma SDK Wyvern to set lighting effects on razer devices
 class App
 {
 public:
