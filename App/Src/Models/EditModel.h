@@ -2,13 +2,14 @@
 #include "Utility.h"
 #include "Emulator.h"
 #include "EditorModel.h"
+#include "Events/Event.h"
 
 
-class FileModel
+class EditModel
 {
 public:
-	FileModel(const fs::path& workdir, EditorModel* editor, const callable& onEmuEnd, const callable& onOutput, const callable& onInput);
-	~FileModel();
+	EditModel(const fs::path& workdir, EditorModel* editor);
+	~EditModel();
 
 	bool StartEmulation();
 	bool StopEmulation();
@@ -17,13 +18,17 @@ public:
 	fs::path GetWorkDir() const { return m_WorkDir; }
 	const std::string& GetEmulationOutput() const { return m_EmuOutput; }
 
+	listener_id SubEmuTerminated(callable cb) { return m_EmulationTerminatedEvent.Subscribe(cb); }
+	listener_id SubEmuOutput(callable cb) { return m_EmulationOutputEvent.Subscribe(cb); }
+	listener_id SubEmuInput(callable cb) { return m_EmulationInputEvent.Subscribe(cb); }
+
+
 private:
 	void OnEditorFileChanged(const fs::path& dir);
 	void OnEmulationTerminated();
 
 private:
 	EditorModel* m_Editor;
-	fs::path m_FocusedFile;
 	const fs::path m_WorkDir;
 
 
@@ -31,7 +36,6 @@ private:
 	std::string m_EmuOutput;
 	uptr<Emulator> m_Emulator;
 
-	callable m_OnEmulationTerminated;
-	callable m_OnEmulationOutput, m_OnEmulationInput;
+	Event<void> m_EmulationTerminatedEvent, m_EmulationOutputEvent, m_EmulationInputEvent;
 	bool m_EmuWantsInput = false;
 };

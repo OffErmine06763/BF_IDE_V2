@@ -1,8 +1,8 @@
 #include "EditorViewModel.h"
 #include "Views/EditorView.h"
 
-EditorViewModel::EditorViewModel(EditorView* view, const fs::path& workdir, const consumer<const Document&>& onFocus)
-	: m_View(view), m_Model(workdir, onFocus)
+EditorViewModel::EditorViewModel(EditorView* view, EditorModel* model)
+	: m_View(view), m_Model(model)
 {
 }
 
@@ -13,7 +13,7 @@ void EditorViewModel::OnCloseAll()
 
 void EditorViewModel::OnPerformSave(Document& doc)
 {
-	m_Model.PerformSave(doc);
+	m_Model->PerformSave(doc);
 }
 
 void EditorViewModel::OnCloseFile(const idt id)
@@ -22,13 +22,9 @@ void EditorViewModel::OnCloseFile(const idt id)
 
 void EditorViewModel::OnOpenOrFocus(const fs::path& path)
 {
-	m_Model.OpenOrFocus(path);
+	m_Model->OpenOrFocus(path);
 }
 
-void EditorViewModel::OnFileChanged(const Document& doc)
-{
-	m_Model.FileChanged(doc);
-}
 
 void EditorViewModel::OnWantCloseFile(const u32 ind)
 {
@@ -37,15 +33,15 @@ void EditorViewModel::OnWantCloseFile(const u32 ind)
 
 void EditorViewModel::OnWantFileChange(const Document& doc)
 {
-	bool res = m_Model.ChangeFile(doc.Id);
+	bool res = m_Model->ChangeFile(doc.Id);
 	if (res)
 		m_View->Focused(doc);
 }
 
 void EditorViewModel::OnFileClosed(std::vector<u32> inds, bool save)
 {
-	bool res = m_Model.Close(inds, save);
-	if (res) 
+	bool res = m_Model->Close(inds, save);
+	if (res)
 		m_View->PerformedClose();
 }
 
@@ -59,10 +55,10 @@ void EditorViewModel::OnPerformRename(const idt id, const std::string& name)
 
 void EditorViewModel::OnEdit(Document* doc, const char change)
 {
-	m_Model.Edited(doc, change);
+	m_Model->Edited(doc, change);
 }
 
 void EditorViewModel::OnCursorMoved(Document* doc, const i32 pos)
 {
-	m_Model.MoveCursor(doc, pos);
+	m_Model->MoveCursor(doc, pos);
 }

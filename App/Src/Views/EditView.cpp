@@ -1,21 +1,21 @@
-#include "FileView.h"
+#include "EditView.h"
 #include "Shortcuts.h"
 
 #include <imgui.h>
 
 
 
-FileView::FileView(const fs::path& workdir)
-	: m_EditorView(workdir), m_VM(this, m_EditorView.GetViewModel()->GetModel(), workdir)
+EditView::EditView(EditModel* model, EditorModel* editor)
+	: m_EditorView(editor), m_VM(this, model, editor)
 {
-	dbg << "FileView::FileView m_WorkDir = " << workdir << '\n';
+	dbg << "EditView::EditView m_WorkDir = " << m_VM.GetWorkDir() << '\n';
 }
-FileView::~FileView()
+EditView::~EditView()
 {
-	dbg << "FileView::~FileView m_WorkDir = " << m_VM.GetWorkDir() << '\n';
+	dbg << "EditView::~EditView m_WorkDir = " << m_VM.GetWorkDir() << '\n';
 }
 
-void FileView::Render()
+void EditView::Render()
 {
 	ProcessShortcuts();
 	RenderMainMenu();
@@ -38,44 +38,44 @@ void FileView::Render()
 	// 	m_Editor.Lock(false);
 	// }
 }
-void FileView::OpenEmulationTab()
+void EditView::OpenEmulationTab()
 {
 	m_EmuTabOpen = true;
 }
-void FileView::CloseEmulationTab()
+void EditView::CloseEmulationTab()
 {
 	m_EmuTabOpen = false;
 }
-void FileView::EmulationStarted()
+void EditView::EmulationStarted()
 {
 	m_CanEmulate = false;
 	m_EmuInput = 0;
 	m_EmuOutput.clear();
 }
-void FileView::EmulationStopped()
+void EditView::EmulationStopped()
 {
 	m_CanEmulate = true;
 	m_EmuWantsInput = false;
 }
-void FileView::EmulationOutputChanged()
+void EditView::EmulationOutputChanged()
 {
 	std::lock_guard<std::mutex> lock(m_EmuMutex);
 	m_EmuOutput = m_VM.GetEmulationOutput();
 }
-void FileView::EmulationWantsInput(bool wants)
+void EditView::EmulationWantsInput(bool wants)
 {
 	m_EmuWantsInput = wants;
 	if (wants)
 		m_EmuInput = 0;
 }
-void FileView::ProcessShortcuts()
+void EditView::ProcessShortcuts()
 {
 	if (ImGui::IsKeyChordPressed(BFS_Emulate.Chord))
 		m_VM.StartEmulation();
 	else if (ImGui::IsKeyChordPressed(BFS_StopEmulation.Chord))
 		m_VM.StopEmulation();
 }
-void FileView::RenderMainMenu()
+void EditView::RenderMainMenu()
 {
 	if (ImGui::BeginMainMenuBar())
 	{
@@ -98,7 +98,7 @@ void FileView::RenderMainMenu()
 		ImGui::EndMainMenuBar();
 	}
 }
-void FileView::RenderEmulation() {
+void EditView::RenderEmulation() {
 	// TAG: Toolbar 
 	// WorkingState::RenderEmulation();
 	if (!m_EmuTabOpen)
@@ -131,7 +131,7 @@ void FileView::RenderEmulation() {
 
 	ImGui::End();
 }
-void FileView::RenderEditor()
+void EditView::RenderEditor()
 {
 	m_EditorView.Render();
 }

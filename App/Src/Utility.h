@@ -7,6 +7,7 @@
 #include <memory>
 #include <functional>
 #include <condition_variable>
+#include <variant>
 
 
 // ################################################################## TYPES ##################################################################
@@ -26,6 +27,12 @@ using i32 =  int32_t;
 using i64 =  int64_t;
 using f32 =  float  ;
 using f64 =  double ;
+
+// PROPERTIES
+using prop_id = u8;
+using listener_id = u32;
+
+// FUNCTIONS
 template <typename T>
 using uptr = std::unique_ptr<T>;
 template <typename T>
@@ -38,6 +45,21 @@ using provider = std::function<T(void)>;
 
 template <typename T, typename X>
 inline constexpr T to(const X& x) { return static_cast<T>(x); }
+
+
+// CONCEPTS
+template <typename T, typename Variant>
+struct variant_contains : std::false_type {};
+template <typename T, typename... Types>
+struct variant_contains<T, std::variant<Types...>> : std::disjunction<std::is_same<T, Types>...> {};
+
+template <typename T, typename Variant>
+concept InVariant = variant_contains<T, Variant>::value;
+
+template <typename T, typename U>
+concept not_same_as = !std::same_as<T, U>;
+template <typename T>
+concept not_void = !std::is_void_v<T>;
 // ################################################################## TYPES ##################################################################
 
 
@@ -62,6 +84,7 @@ std::ostream& operator<<(std::ostream& out, const WorkingDirectory& d);
 
 // ################################################################## HISTORY ##################################################################
 // TODO: add callbacks for changes?
+// TODO: move out of Utility.h
 struct History
 {
 public:

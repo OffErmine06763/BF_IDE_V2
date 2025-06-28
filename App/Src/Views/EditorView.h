@@ -1,5 +1,6 @@
 #pragma once
 #include "Utility.h"
+#include "Models/EditorModel.h"
 #include "ViewModels/EditorViewModel.h"
 
 
@@ -19,7 +20,7 @@ public:
 	static constexpr idt InvalidID = Document::InvalidID;
 
 public:
-	EditorView(const fs::path& workdir);
+	EditorView(EditorModel* model);
 	~EditorView() = default;
 
 	// void SetOnFileChangedCallback(const consumer<const fs::path&>& cb) { m_FileChangedCB = cb; }
@@ -73,5 +74,5 @@ private:
 	std::vector<u32> m_CloseQueue;
 
 	const std::vector<fs::path>& m_RecOpen, &m_RecClose;
-	stdr::ref_view<std::vector<Document>> m_Documents;
+	std::vector<Document>& m_Documents;
 };

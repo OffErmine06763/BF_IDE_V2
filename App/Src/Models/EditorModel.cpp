@@ -22,9 +22,10 @@ std::ostream& operator<<(std::ostream& out, const Document& doc)
 }
 
 
-EditorModel::EditorModel(const fs::path& workdir, const consumer<const Document&>& onFocus)
-	: m_OnFileFocus(onFocus)
+
+EditorModel::EditorModel()
 {
+
 }
 
 bool EditorModel::Close(std::vector<u32> inds, bool save)
@@ -43,7 +44,7 @@ bool EditorModel::Close(std::vector<u32> inds, bool save)
 		}
 		else
 		{
-			m_RecClose.insert(m_RecClose.cbegin(), dir); // todo: push_back and render in reverse
+			m_RecClose.insert(m_RecClose.cbegin(), dir); // TODO: push_back and render in reverse
 		}
 	}
 	if (m_RecClose.size() > RecentCloseSize)
@@ -56,6 +57,15 @@ bool EditorModel::Close(std::vector<u32> inds, bool save)
 	// [1, 2, 3, 4, 5, 6, 7, 8, 9]
 	// [1, 2, x, x, x, 6, x, 8, 9]
 	// [1, 2, 6, 9, 8, 6, 9, 8, 9]
+	// MAYBE: scan the docs list from the first removed up to the first non removed one (inds is sorted)
+	// then replace the first removed index with that, move both forward by one and repeat.
+	// Each iteration ignores the inds list as the elements that shouldn't be removed have been moved and have to be replaced
+	// The current approach takes |inds| steps, but changes the order,
+	// the new one takes |docs| - inds[0] steps, but maintains the order
+	// [1, 2, 3, 4, 5, 6, 7, 8, 9]
+	// [1, 2, 3, x, x, 6, x, 8, 9]
+	// [1, 2, 3, 6, x, x, x, 8, 9]
+	// [1, 2, 3, 6, 8, 9, x, x, x]
 	for (size_t offset = 0; offset < inds.size(); offset++)
 	{
 		Document& dst = m_Documents[*(inds.crbegin() + offset)];
@@ -68,29 +78,32 @@ bool EditorModel::Close(std::vector<u32> inds, bool save)
 
 	if (closefocus)
 	{
-		// TODO: move focus to the previous focused element (keep navigation history)
+		// TODO: move focus to the previous focused element (keep navigation history, 
+		// note: the relative order in the docs list might change, must store the ID)
 		m_FocusInd = m_Documents.empty() ? InvalidIndex : 0;
-		dbg << "EditorView::PerformClose m_WantFocus = " << m_FocusInd << '\n';
-		m_OnFileFocus(m_Documents[m_FocusInd]);
+		dbg << "EditorModel::Close new focus index = " << m_FocusInd << '\n';
+		m_FocusEvent.Notify(m_Documents[m_FocusInd]);
 	}
 
+	m_CloseEvent.Notify();
 	return true;
 }
-
 void EditorModel::OpenOrFocus(const fs::path& dir)
 {
 	auto itd = stdr::find(m_Documents, dir, &Document::Path);
+	// if the file is already open => focus
 	if (itd != m_Documents.end())
 	{
 		auto itr = stdr::find(m_RecOpen, dir);
 		m_RecOpen.erase(itr);
 		m_RecOpen.insert(m_RecOpen.cbegin(), dir);
-		m_OnFileFocus(*itd);
+		m_FocusEvent.Notify(m_Documents[m_FocusInd]);
 		return;
 	}
 
 	Document newdoc = { dir };
 	m_Documents.push_back(newdoc);
+	m_FocusInd = m_Documents.size() - 1;
 
 	auto itr = stdr::find(m_RecOpen, dir);
 	if (itr != m_RecOpen.end())
@@ -105,10 +118,20 @@ void EditorModel::OpenOrFocus(const fs::path& dir)
 			m_RecOpen.resize(RecentOpenSize);
 	}
 
-	m_OnFileFocus(*m_Documents.crbegin());
+	m_FocusEvent.Notify(m_Documents[m_FocusInd]);
 }
 
 
+void EditorModel::PerformSave(Document& doc) const
+{
+	if (m_Locked) return;
+
+	dbg << "EditorModel::PerformSave doc = " << doc << '\n';
+	std::ofstream out(doc.Path);
+	out << doc.Content;
+	out.close();
+	doc.Dirty = false;
+}
 void EditorModel::PerformRename(Document& doc, const std::string& name)
 {
 	if (m_Locked) return;
@@ -117,7 +140,7 @@ void EditorModel::PerformRename(Document& doc, const std::string& name)
 	auto newpath = doc.Path.parent_path() / doc.Name;
 
 	std::filesystem::rename(doc.Path, newpath);
-	App::GetHistory().UpdatePath(doc.Path, newpath); // TODO: this should be in FileModel
+	App::GetHistory().UpdatePath(doc.Path, newpath); // TODO: this should be in EditModel
 
 	auto it = stdr::find(m_RecOpen, doc.Path);
 	if (it != m_RecOpen.end())
@@ -127,37 +150,44 @@ void EditorModel::PerformRename(Document& doc, const std::string& name)
 		*it = newpath;
 	doc.Path = newpath;
 }
+
 bool EditorModel::ChangeFile(const idt id)
 {
 	auto it = stdr::find(m_Documents, id, &Document::Id);
 	if (it == m_Documents.end())
 		return false;
 	m_FocusInd = to<i32>(std::distance(m_Documents.begin(), it));
-	m_OnFileFocus(*it);
+	
+	m_FocusEvent.Notify(m_Documents[m_FocusInd]);
 	return true;
 }
-void EditorModel::FileChanged(const Document& doc)
-{
-	if (m_OnFileChanged)
-		m_OnFileChanged(doc.Path);
-}
+
 void EditorModel::MoveCursor(Document* doc, const i32 pos)
 {
 	doc->CursorPos = pos;
 }
+
 void EditorModel::Edited(Document* doc, const char change)
 {
 	doc->Dirty = true;
 }
-void EditorModel::PerformSave(Document& doc) const
-{
-	if (m_Locked) return;
 
-	dbg << "EditorView::PerformSave doc = " << doc << '\n';
-	std::ofstream out(doc.Path);
-	out << doc.Content;
-	out.close();
-	doc.Dirty = false;
 
-	auto a = m_Documents | stdv::all;
-}
+
+//listener_id EditorModel::Subscribe(Prop prop, callable& cb)
+//{
+//	m_Observers[prop][m_NextId] = cb;
+//	return m_NextId++;
+//}
+//bool EditorModel::Unsubscribe(Prop prop, listener_id id)
+//{
+//	return m_Observers[prop].erase(id) == 1;
+//}
+//u64 EditorModel::Unsubscribe(listener_id id)
+//{
+//	u64 res = 0;
+//	for (const auto& [prop, _] : m_Observers)
+//		if (Unsubscribe(prop, id))
+//			res++;
+//	return res;
+//}

@@ -1,10 +1,11 @@
 #include "App.h"
 #include "Shortcuts.h"
 
-#include "States/WorkingState.h"
+// #include "States/WorkingState.h"
 #include "States/SelectProjectState.h"
 #include "States/OpenProjectState.h"
-#include "States/FileState.h"
+// #include "States/FileState.h"
+#include "States/EditState.h"
 
 #include <imgui.h>
 
@@ -27,7 +28,8 @@ void App::Init()
 	{
 		Instance = std::unique_ptr<App>(new App());
 		// Instance->m_State = std::make_unique<SelectProjectState>(); // create state only after initialization
-		Instance->m_State = std::make_unique<FileState>(Instance->m_History.begin()->Path);
+		//Instance->m_State = std::make_unique<FileState>(Instance->m_History.begin()->Path);
+		Instance->m_State = std::make_unique<EditState>(Instance->m_History.begin()->Path);
 	}
 }
 
@@ -63,19 +65,20 @@ void App::RequestOpenPath(const fs::path& path)
 {
 	Instance->m_History.SetAsMostRecent(path);
 	const PathType type = GetPathType(path);
-	switch (type)
-	{
-	case PathType::FILE: 
-		RequestNewState<FileState>(path);
-		return;
-	case PathType::FOLDER:
-		RequestNewState<FolderState>(path);
-		return;
-	case PathType::PROJECT:
-		RequestNewState<ProjectState>(path);
-		return;
-	default:
-		dbg << "RequestOpenPath: Invalid path... do nothing\n";
-		break;
-	}
+	RequestNewState<EditState>(path);
+	//switch (type)
+	//{
+	//case PathType::FILE: 
+	//	RequestNewState<FileState>(path);
+	//	return;
+	//case PathType::FOLDER:
+	//	RequestNewState<FolderState>(path);
+	//	return;
+	//case PathType::PROJECT:
+	//	RequestNewState<ProjectState>(path);
+	//	return;
+	//default:
+	//	dbg << "RequestOpenPath: Invalid path... do nothing\n";
+	//	break;
+	//}
 }

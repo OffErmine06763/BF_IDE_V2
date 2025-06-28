@@ -109,10 +109,10 @@ void EditorView::Focused(const Document& doc)
 }
 
 
-EditorView::EditorView(const fs::path& workdir)
-	: m_VM(this, workdir, [this](const Document& doc) { Focused(doc); }), 
-	m_Documents(m_VM.GetDocuments()), m_RecClose(m_VM.GetRecentClose()), m_RecOpen(m_VM.GetRecentOpen())
+EditorView::EditorView(EditorModel* model)
+	: m_VM(this, model), m_Documents(m_VM.GetDocuments()), m_RecClose(m_VM.GetRecentClose()), m_RecOpen(m_VM.GetRecentOpen())
 {
+	m_VM.SubscribeFocus([this](const Document& doc) { Focused(doc); });
 }
 
 void EditorView::Render(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */)
@@ -219,7 +219,7 @@ void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Too
 		{
 			ImGui::SetNextWindowFocus();
 			m_FocusInd = n;
-			m_VM.OnFileChanged(doc);
+			//m_VM.OnFileChanged(doc);
 			m_WantFocus = InvalidID;
 		}
 

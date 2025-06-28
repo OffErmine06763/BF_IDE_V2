@@ -1,16 +1,16 @@
 #pragma once
 #include "Utility.h"
-#include "ViewModels/FileViewModel.h"
+#include "ViewModels/EditViewModel.h"
 #include "Views/EditorView.h"
 
 
-class FileView
+class EditView
 {
 public:
 	static constexpr PathType Type = PathType::FILE;
 
-	FileView(const fs::path& workdir);
-	~FileView();
+	EditView(EditModel* model, EditorModel* editor);
+	~EditView();
 
 	void Render();
 
@@ -35,7 +35,7 @@ protected:
 private:
 	EditorView m_EditorView;
 	
-	FileViewModel m_VM;
+	EditViewModel m_VM;
 
 	bf_mem_t m_EmuInput = 0;
 	bool m_EmuTabOpen = false;
