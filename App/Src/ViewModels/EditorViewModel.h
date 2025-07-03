@@ -11,8 +11,6 @@ public:
 public:
 	EditorViewModel(EditorView* view, EditorModel* model);
 
-	EditorModel* GetModel() { return m_Model; }
-
 	void OnCloseAll();
 	void OnPerformSave(Document& id);
 	void OnCloseFile(const idt id);
@@ -28,6 +26,8 @@ public:
 	const std::vector<fs::path>& GetRecentOpen()  const { return m_Model->GetRecentOpen(); }
 	const std::vector<fs::path>& GetRecentClose() const { return m_Model->GetRecentClose(); }
 	std::vector<Document>& GetDocuments() { return m_Model->GetDocuments(); }
+	
+	const Document* GetFocusedFile() { return m_Model->GetFocusedFile(); }
 
 	listener_id SubscribeFocus(consumer<const Document&> cb) { return m_Model->SubscribeFocus(cb); }
 

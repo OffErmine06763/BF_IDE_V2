@@ -43,4 +43,5 @@ private:
 	std::string m_EmuOutput;
 	std::mutex m_EmuMutex;
 	bool m_EmuWantsInput = false;
+	bool m_EmuFocusInput = false;
 };

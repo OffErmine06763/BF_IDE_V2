@@ -66,7 +66,10 @@ void EditView::EmulationWantsInput(bool wants)
 {
 	m_EmuWantsInput = wants;
 	if (wants)
+	{
 		m_EmuInput = 0;
+		m_EmuFocusInput = true;
+	}
 }
 void EditView::ProcessShortcuts()
 {
@@ -123,7 +126,11 @@ void EditView::RenderEmulation() {
 	if (m_EmuWantsInput)
 	{
 		ImGui::Text(">>"); ImGui::SameLine();
-		ImGui::SetKeyboardFocusHere();
+		if (m_EmuFocusInput)
+		{
+			ImGui::SetKeyboardFocusHere();
+			m_EmuFocusInput = false;
+		}
 		ImGui::InputScalar("##input", ImGuiDataType_U8, &m_EmuInput, nullptr, nullptr, nullptr);
 		if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::Button("Confirm"))
 			m_VM.EmulationInput(m_EmuInput);

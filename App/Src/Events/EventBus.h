@@ -10,6 +10,7 @@
 	listener_id Subscribe(const Prop prop, callable callable) { return m_EventBus.Subscribe(prop, callable); }							\
 	bool Unsubscribe(Prop prop, listener_id id) { m_EventBus.Unsubscribe(prop, id); }
 
+
 template <typename... T>
 class EventBus {
 public:

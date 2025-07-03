@@ -66,7 +66,7 @@ public:
 	void MoveCursor(Document* doc, const i32 pos);
 	void Edited(Document* doc, const char change);
 
-	const Document& GetFocusedFile() const { return m_Documents[m_FocusInd]; }
+	const Document* GetFocusedFile() const { return m_FocusInd == InvalidIndex ? nullptr : &(m_Documents[m_FocusInd]); }
 
 
 	//CREATE_BUS_FORWARDING_SUB(bus_t, Prop, m_EventBus)

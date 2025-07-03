@@ -21,7 +21,7 @@ EditModel::~EditModel()
 	if (m_Emulating)
 	{
 		m_Emulator->Stop();
-		m_Emulator->join();
+		m_Emulator->join(); // FIXME: exception when closing the app after emulation, but m_Emulating == false
 	}
 }
 
@@ -36,7 +36,7 @@ bool EditModel::StartEmulation()
 	m_Editor->Lock(true);
 	if (m_Emulator && m_Emulator->joinable())
 		m_Emulator->join();
-	m_Emulator = std::make_unique<Emulator>(m_Editor->GetFocusedFile().Path,
+	m_Emulator = std::make_unique<Emulator>(m_Editor->GetFocusedFile()->Path,
 		[this](const std::string& output) { m_EmuOutput.append(output); m_EmulationOutputEvent.Notify(); },
 		[this]() { m_EmuWantsInput = true; m_EmulationInputEvent.Notify(); },
 		[this]() { OnEmulationTerminated(); });

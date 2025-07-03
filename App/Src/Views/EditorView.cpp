@@ -11,78 +11,17 @@
 static int DocumentEditorCallback(ImGuiInputTextCallbackData* data);
 
 
-//EditorView::idt EditorView::OpenFile(const fs::path& dir)
-//{
-//	auto itd = stdr::find(m_Documents, dir, &Document::Path);
-//	if (itd != m_Documents.end())
-//	{
-//		auto itr = stdr::find(m_RecOpen, dir);
-//		m_RecOpen.erase(itr);
-//		m_RecOpen.insert(m_RecOpen.cbegin(), dir);
-//		return itd->Id;
-//	}
-//
-//	Document newdoc = { dir };
-//	m_Documents.push_back(newdoc);
-//	if (m_FocusInd < 0 && m_WantFocus < 0)
-//		m_WantFocus = to<i32>(m_Documents.size() - 1);
-//
-//	auto itr = stdr::find(m_RecOpen, dir);
-//	if (itr != m_RecOpen.end())
-//	{
-//		m_RecOpen.erase(itr);
-//		m_RecOpen.insert(m_RecOpen.cbegin(), dir);
-//	}
-//	else
-//	{
-//		m_RecOpen.insert(m_RecOpen.cbegin(), dir); // TODO: push_back and render in reverse
-//		if (m_RecOpen.size() > RecentOpenSize)
-//			m_RecOpen.resize(RecentOpenSize);
-//	}
-//	return newdoc.Id;
-//}
-//EditorView::idt EditorView::OpenOrFocus(const fs::path& path)
-//{
-//	auto id = OpenFile(path);
-//	Focus(id);
-//	return id;
-//}
-//
-//bool EditorView::Focus(const idt id)
-//{
-//	auto it = stdr::find(m_Documents, id, &Document::Id);
-//	if (it == m_Documents.end())
-//		return false;
-//	_Focus(to<i32>(std::distance(m_Documents.begin(), it)));
-//	return true;
-//}
-//
-//bool EditorView::CloseFile(const fs::path& dir)
-//{
-//	auto it = stdr::find_if(m_Documents, [&dir](const Document& doc) { return doc.Path.compare(dir) == 0; });
-//	if (it == m_Documents.end())
-//		return false;
-//	_CloseFile(to<u32>(std::distance(m_Documents.begin(), it)));
-//	return true;
-//}
-//bool EditorView::CloseFile(const idt id)
-//{
-//	auto it = stdr::find_if(m_Documents, [id](const Document& doc) { return doc.Id == id; });
-//	//auto it = stdr::lower_bound(m_Documents, id, stdr::less{}, &Document::Id);
-//	if (it == m_Documents.end())
-//		return false;
-//	_CloseFile(to<u32>(std::distance(m_Documents.begin(), it)));
-//	return true;
-//}
-//void EditorView::_CloseFile(const u32 ind)
-//{
-//	/*auto it = stdr::lower_bound(m_CloseQueue, ind);
-//	if (it == m_CloseQueue.end())
-//		m_CloseQueue.push_back(ind);
-//	else
-//		m_CloseQueue.insert(it, ind);*/
-//	m_CloseQueue.push_back(ind);
-//}
+
+
+EditorView::EditorView(EditorModel* model)
+	: m_VM(this, model), m_Documents(m_VM.GetDocuments()), m_RecClose(m_VM.GetRecentClose()), m_RecOpen(m_VM.GetRecentOpen())
+{
+	m_VM.SubscribeFocus([this](const Document& doc) { Focused(doc); });
+	auto focus = m_VM.GetFocusedFile();
+	if (focus)
+		m_FocusInd = std::distance(m_Documents.begin(), stdr::find(m_Documents, focus->Id, &Document::Id));
+}
+
 void EditorView::CloseAll()
 {
 	m_CloseQueue.resize(m_Documents.size());
@@ -108,12 +47,6 @@ void EditorView::Focused(const Document& doc)
 	m_WantFocus = doc.Id;
 }
 
-
-EditorView::EditorView(EditorModel* model)
-	: m_VM(this, model), m_Documents(m_VM.GetDocuments()), m_RecClose(m_VM.GetRecentClose()), m_RecOpen(m_VM.GetRecentOpen())
-{
-	m_VM.SubscribeFocus([this](const Document& doc) { Focused(doc); });
-}
 
 void EditorView::Render(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */)
 {
@@ -219,7 +152,6 @@ void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Too
 		{
 			ImGui::SetNextWindowFocus();
 			m_FocusInd = n;
-			//m_VM.OnFileChanged(doc);
 			m_WantFocus = InvalidID;
 		}
 
@@ -229,11 +161,7 @@ void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Too
 		if (!notwantclose)
 			m_VM.OnWantCloseFile(n);
 		if (ImGui::IsItemClicked() && n != m_FocusInd)
-		{
-			m_FocusInd = n;
 			m_VM.OnWantFileChange(doc);
-			// if (m_FileChangedCB) m_FileChangedCB(doc.Path);
-		}
 
 		DisplayDocContextMenu(n);
 		if (visible)

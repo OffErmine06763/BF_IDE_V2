@@ -52,7 +52,7 @@ bool EditorModel::Close(std::vector<u32> inds, bool save)
 
 	// Erase files from the document list
 	std::sort(inds.begin(), inds.end());
-	bool closefocus = stdr::binary_search(inds, to<u32>(m_FocusInd));
+	bool closefocus = m_FocusInd == -1 ? false : stdr::binary_search(inds, to<u32>(m_FocusInd));
 
 	// [1, 2, 3, 4, 5, 6, 7, 8, 9]
 	// [1, 2, x, x, x, 6, x, 8, 9]
@@ -82,7 +82,8 @@ bool EditorModel::Close(std::vector<u32> inds, bool save)
 		// note: the relative order in the docs list might change, must store the ID)
 		m_FocusInd = m_Documents.empty() ? InvalidIndex : 0;
 		dbg << "EditorModel::Close new focus index = " << m_FocusInd << '\n';
-		m_FocusEvent.Notify(m_Documents[m_FocusInd]);
+		if (m_FocusInd != InvalidIndex) // TODO: must notify of lost focus
+			m_FocusEvent.Notify(m_Documents[m_FocusInd]);
 	}
 
 	m_CloseEvent.Notify();
@@ -153,6 +154,7 @@ void EditorModel::PerformRename(Document& doc, const std::string& name)
 
 bool EditorModel::ChangeFile(const idt id)
 {
+	dbg << "Changing file to " << id << '\n';
 	auto it = stdr::find(m_Documents, id, &Document::Id);
 	if (it == m_Documents.end())
 		return false;

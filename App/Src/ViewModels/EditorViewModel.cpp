@@ -33,9 +33,7 @@ void EditorViewModel::OnWantCloseFile(const u32 ind)
 
 void EditorViewModel::OnWantFileChange(const Document& doc)
 {
-	bool res = m_Model->ChangeFile(doc.Id);
-	if (res)
-		m_View->Focused(doc);
+	m_Model->ChangeFile(doc.Id);
 }
 
 void EditorViewModel::OnFileClosed(std::vector<u32> inds, bool save)
