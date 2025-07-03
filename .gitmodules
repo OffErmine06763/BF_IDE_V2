@@ -2,3 +2,6 @@
 	path = App/vendor/imgui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
+[submodule "VirtualTerminal"]
+	path = VirtualTerminal
+	url = https://github.com/OffErmine06763/VirtualTerminal
