@@ -7,13 +7,9 @@
 
 EditView::EditView(EditModel* model, EditorModel* editor)
 	: m_EditorView(editor), m_VM(this, model, editor)
-{
-	dbg << "EditView::EditView m_WorkDir = " << m_VM.GetWorkDir() << '\n';
-}
+{ }
 EditView::~EditView()
-{
-	dbg << "EditView::~EditView m_WorkDir = " << m_VM.GetWorkDir() << '\n';
-}
+{ }
 
 void EditView::Render()
 {
@@ -38,13 +34,9 @@ void EditView::Render()
 	// 	m_Editor.Lock(false);
 	// }
 }
-void EditView::OpenEmulationTab()
+void EditView::OpenEmulationTab(bool open)
 {
-	m_EmuTabOpen = true;
-}
-void EditView::CloseEmulationTab()
-{
-	m_EmuTabOpen = false;
+	m_EmuTabOpen = open;
 }
 void EditView::EmulationStarted()
 {
@@ -64,6 +56,7 @@ void EditView::EmulationOutputChanged()
 }
 void EditView::EmulationWantsInput(bool wants)
 {
+	std::lock_guard<std::mutex> lock(m_EmuMutex);
 	m_EmuWantsInput = wants;
 	if (wants)
 	{
@@ -121,7 +114,6 @@ void EditView::RenderEmulation() {
 
 	m_EmuMutex.lock();
 	ImGui::Text(m_EmuOutput.c_str());
-	m_EmuMutex.unlock();
 
 	if (m_EmuWantsInput)
 	{
@@ -133,8 +125,15 @@ void EditView::RenderEmulation() {
 		}
 		ImGui::InputScalar("##input", ImGuiDataType_U8, &m_EmuInput, nullptr, nullptr, nullptr);
 		if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::Button("Confirm"))
+		{
+			// NOTE: must guarantee m_EmuWantsInput happens before any EmulationWantsInput(true)
+			m_EmuWantsInput = false;
 			m_VM.EmulationInput(m_EmuInput);
+		}
 	}
+
+	// release the lock after sending the input to the VM as another requested input will be set after rendering/sending.
+	m_EmuMutex.unlock();
 
 	ImGui::End();
 }

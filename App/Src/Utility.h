@@ -9,6 +9,9 @@
 #include <condition_variable>
 #include <variant>
 
+#ifdef _DEBUG
+#include <Terminal.h>
+#endif
 
 // ################################################################## TYPES ##################################################################
 namespace stdv = std::views;
@@ -43,6 +46,7 @@ using consumer = std::function<void(T)>;
 template <typename T>
 using provider = std::function<T(void)>;
 
+
 template <typename T, typename X>
 inline constexpr T to(const X& x) { return static_cast<T>(x); }
 
@@ -60,6 +64,18 @@ template <typename T, typename U>
 concept not_same_as = !std::same_as<T, U>;
 template <typename T>
 concept not_void = !std::is_void_v<T>;
+
+
+// BINDING
+#define BIND(fn) [this]() { this->fn(); }
+template <class C, typename R = void, typename I> requires not_void<I>
+constexpr std::function<R(I)> bind(C* _this, R(C::* fn)(I)) {
+	return [_this, fn](I data) -> R { return (_this->*fn)(data); };
+}
+template <class C, typename R = void>
+constexpr std::function<R(void)> bind(C* _this, R(C::* fn)()) {
+	return [_this, fn]() -> R { return (_this->*fn)(); };
+}
 // ################################################################## TYPES ##################################################################
 
 
@@ -132,26 +148,50 @@ private:
 };
 // ################################################################## HISTORY ##################################################################
 
-// ################################################################## DEBUG ##################################################################
+// ################################################################## LOGGING ##################################################################
 #ifdef _DEBUG
+#define LOG(x) std::cout << x;
+#define LOG_APP(x) std::cout << APP_LEVEL << x << RESET;
+#define LOG_GRAPHICS(x) std::cout << GRAPHICS_LEVEL << x << RESET;
+
 struct Dbg { };
-static constexpr Dbg dbg;
+inline static constexpr Dbg dbg;
 template <typename T>
-const Dbg& operator<<(const Dbg& dbg, const T& data)
+inline const Dbg& operator<<(const Dbg& dbg, const T& data)
 {
 	std::cout << data;
 	return dbg;
 }
+inline const Dbg& operator<<(const Dbg& dbg, std::ostream& (*manip)(std::ostream&))
+{
+	std::cout << manip;
+	return dbg;
+}
+
+static constexpr auto
+	APP_LEVEL = Terminal::TEXT_F_BGREEN,
+	//STATE_LEVEL = Terminal::TEXT_F_BYELLOW,
+	GRAPHICS_LEVEL = Terminal::TEXT_F_BCYAN,
+	RESET = Terminal::TEXT_RESET;
+
 #else
+#define LOG(x)
+#define LOG_APP(x)
+#define LOG_GRAPHICS(x)
+
 struct Dbg { };
-static constexpr Dbg dbg;
+inline static constexpr Dbg dbg;
 template <typename T>
-const Dbg& operator<<(const Dbg& dbg, const T& data)
+inline const Dbg& operator<<(const Dbg& dbg, const T& data)
+{
+	return dbg;
+}
+inline const Dbg& operator<<(const Dbg& dbg, std::ostream& (*manip)(std::ostream&))
 {
 	return dbg;
 }
 #endif
-// ################################################################## DEBUG ##################################################################
+// ################################################################## LOGGING ##################################################################
 
 // ################################################################## BF ##################################################################
 constexpr char 

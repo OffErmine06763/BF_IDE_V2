@@ -18,19 +18,21 @@ Document::Document(const fs::path& path)
 
 std::ostream& operator<<(std::ostream& out, const Document& doc)
 {
-	return out << "[Id = " << doc.Id << ", Path = " << doc.Path << ", Dirty = " << doc.Dirty << ']';
+	return out << "[Id = " << doc.Id << ", Name = " << doc.Name << ", Dirty = " << doc.Dirty << ']';
 }
 
 
-
-EditorModel::EditorModel()
-{
-
-}
 
 bool EditorModel::Close(std::vector<u32> inds, bool save)
 {
 	if (save && m_Locked) return false;
+
+	LOG("Closing files: ");
+#ifdef _DEBUG
+	for (const auto& i : inds)
+		LOG(i << ' ');
+	LOG('\n');
+#endif
 
 	// Update recently closed files
 	for (size_t ind : inds | stdv::take(RecentCloseSize))
@@ -95,6 +97,7 @@ void EditorModel::OpenOrFocus(const fs::path& dir)
 	// if the file is already open => focus
 	if (itd != m_Documents.end())
 	{
+		LOG("Focusing file " << dir << '\n');
 		auto itr = stdr::find(m_RecOpen, dir);
 		m_RecOpen.erase(itr);
 		m_RecOpen.insert(m_RecOpen.cbegin(), dir);
@@ -102,6 +105,7 @@ void EditorModel::OpenOrFocus(const fs::path& dir)
 		return;
 	}
 
+	LOG("Opening file " << dir << '\n');
 	Document newdoc = { dir };
 	m_Documents.push_back(newdoc);
 	m_FocusInd = m_Documents.size() - 1;
@@ -127,7 +131,7 @@ void EditorModel::PerformSave(Document& doc) const
 {
 	if (m_Locked) return;
 
-	dbg << "EditorModel::PerformSave doc = " << doc << '\n';
+	LOG("Saving file " << doc << '\n');
 	std::ofstream out(doc.Path);
 	out << doc.Content;
 	out.close();
@@ -137,6 +141,7 @@ void EditorModel::PerformRename(Document& doc, const std::string& name)
 {
 	if (m_Locked) return;
 
+	LOG("Renaming file " << doc << " to " << name << '\n');
 	doc.Name = name;
 	auto newpath = doc.Path.parent_path() / doc.Name;
 
@@ -154,10 +159,14 @@ void EditorModel::PerformRename(Document& doc, const std::string& name)
 
 bool EditorModel::ChangeFile(const idt id)
 {
-	dbg << "Changing file to " << id << '\n';
 	auto it = stdr::find(m_Documents, id, &Document::Id);
 	if (it == m_Documents.end())
+	{
+		LOG("Requested focus id " << id << " missing\n");
 		return false;
+	}
+
+	LOG("Changing focus to id " << id << '\n');
 	m_FocusInd = to<i32>(std::distance(m_Documents.begin(), it));
 	
 	m_FocusEvent.Notify(m_Documents[m_FocusInd]);

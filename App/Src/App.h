@@ -45,6 +45,7 @@ public:
 template<StateType S, typename... Args>
 void App::RequestNewState(Args&&... args)
 {
+	LOG_APP("Next state " << S::Name << '\n');
 	Instance->m_NextState = std::make_unique<S>(std::forward<Args>(args)...);
 	Instance->m_NewStateRequested = true;
 }

@@ -53,15 +53,6 @@ void EditorView::Render(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar
 	ProcessShortcuts();
 	RenderMainMenu();
 	RenderBody(/* pos, size // TAG: Toolbar */);
-
-	static u64 count = 0;
-	count++;
-	if (count == 144) 
-	{
-		count = 0;
-		for (auto& d : m_Documents)
-			dbg << "\tDocument: " << d.Name << " [" << d.Id << "]\n";
-	}
 }
 void EditorView::ProcessShortcuts()
 {
@@ -314,7 +305,7 @@ int DocumentEditorCallback(ImGuiInputTextCallbackData* data)
 		std::string* str = &doc->Content;
 		str->resize(data->BufTextLen);
 		data->Buf = (char*)str->c_str();
-		dbg << "DocumentEditorCallback EventFlag = Resize\n";
+		LOG_GRAPHICS("DocumentEditorCallback Resize\n");
 	}
 	else if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
 	{
@@ -330,7 +321,7 @@ int DocumentEditorCallback(ImGuiInputTextCallbackData* data)
 	else if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit)
 	{
 		// Callback on any edit. Note that InputText() already returns true on edit + you can always use IsItemEdited(). The callback is useful to manipulate the underlying buffer while focus is active.
-		dbg << "DocumentEditorCallback EventFlag = Edit\n";
+		LOG_GRAPHICS("DocumentEditorCallback Edit\n");
 		VM->OnEdit(doc, data->EventChar);
 	}
 	else if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways)
@@ -341,11 +332,11 @@ int DocumentEditorCallback(ImGuiInputTextCallbackData* data)
 
 		static u64 count = 0;
 		count++;
-		if (count == 144)
+		if (count == 144 * 5)
 		{
 			count = 0;
 			// data->InsertChars(0, "]");
-			dbg << "DocumentEditorCallback EventFlag = Always\n";
+			LOG_GRAPHICS("DocumentEditorCallback Always\n");
 		}
 	}
 

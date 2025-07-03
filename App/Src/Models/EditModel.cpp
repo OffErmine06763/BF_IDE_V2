@@ -1,14 +1,14 @@
 #include "EditModel.h"
 
 
-#define BIND(T, fn) [this](T p) { this->fn(p); }
-#define BIND_MODEL(T, fn, model, event) model.Subscribe<T>(event, BIND(T, fn))
+//#define BIND(T, fn) [this](T p) { this->fn(p); }
+//#define BIND_MODEL(T, fn, model, event) model.Subscribe<T>(event, BIND(T, fn))
 
 
 EditModel::EditModel(const fs::path& workdir, EditorModel* editor)
 	: m_Editor(editor)
 {
-	m_Editor->SubscribeFocus([this](const Document& doc) { OnEditorFileChanged(doc.Path); });
+	//m_Editor->SubscribeFocus([this](const Document& doc) { OnEditorFileChanged(doc.Path); });
 	m_Editor->OpenOrFocus(workdir);
 
 	//m_Editor.Subscribe<Document::idt>(EditorModel::FOCUS, [this](Document::idt param) { this->Test(param); });
@@ -18,17 +18,15 @@ EditModel::EditModel(const fs::path& workdir, EditorModel* editor)
 }
 EditModel::~EditModel()
 {
+	// FIXME: exception when closing the app after emulation, but m_Emulating == false
 	if (m_Emulating)
-	{
-		m_Emulator->Stop();
-		m_Emulator->join(); // FIXME: exception when closing the app after emulation, but m_Emulating == false
-	}
+		_StopEmulation();
 }
 
 
 bool EditModel::StartEmulation()
 {
-	dbg << "Running: " << m_Editor->GetFocusedFile() << '\n';
+	LOG("Starting Emulation of " << m_Editor->GetFocusedFile() << '\n');
 	if (m_Emulating) return false;
 
 	m_Emulating = true;
@@ -51,11 +49,9 @@ bool EditModel::StartEmulation()
 }
 bool EditModel::StopEmulation()
 {
-	dbg << "Stopping: " << m_Editor->GetFocusedFile() << '\n';
 	if (!m_Emulating) return false;
 
-	m_Emulator->Stop();
-	m_Emulator->join();
+	_StopEmulation();
 	m_Editor->Lock(false);
 	m_Emulating = false;
 
@@ -70,13 +66,21 @@ bool EditModel::EmulationInput(bf_mem_t input)
 }
 void EditModel::OnEmulationTerminated()
 {
+	LOG("Emulation Terminated\n");
 	m_Editor->Lock(false);
 	m_Emulating = false;
 	m_EmulationTerminatedEvent.Notify();
 }
 
 
-void EditModel::OnEditorFileChanged(const fs::path& dir)
+void EditModel::_StopEmulation()
 {
-	dbg << "EditModel::OnEditorFileChanged focused file = " << dir << '\n';
+	LOG("Stopping Emulation\n");
+	m_Emulator->Stop();
+	m_Emulator->join();
 }
+
+//void EditModel::OnEditorFileChanged(const fs::path& dir)
+//{
+//	dbg << "EditModel::OnEditorFileChanged focused file = " << dir << '\n';
+//}

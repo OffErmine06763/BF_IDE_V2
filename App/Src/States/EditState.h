@@ -15,6 +15,8 @@ public:
 
 	void Render() override;
 
+	static constexpr auto Name = "EditState";
+
 private:
 	fs::path m_Workdir;
 

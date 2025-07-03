@@ -14,8 +14,7 @@ public:
 
 	void Render();
 
-	void OpenEmulationTab();
-	void CloseEmulationTab();
+	void OpenEmulationTab(bool open = true);
 
 	void EmulationStarted();
 	void EmulationStopped();

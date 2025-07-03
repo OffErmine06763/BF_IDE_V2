@@ -17,18 +17,28 @@ std::unique_ptr<App> App::Instance = nullptr;
 const fs::path App::HistoryPath = fs::current_path() / "history.bfidedata";
 
 
-App::App() :
-	m_History(HistoryPath)
+App::App()
+	: m_History(HistoryPath)
 { }
 App::~App()
-{ }
+{
+	LOG_APP("Destroying Application\n");
+#ifdef _DEBUG
+	Terminal::ResetConsole();
+#endif
+}
 void App::Init()
 {
 	if (Instance == nullptr)
 	{
+#ifdef _DEBUG
+		Terminal::SetUpConsole(); // TODO: handle exceptions
+#endif
+
+		LOG_APP("Initializing Application\n");
 		Instance = std::unique_ptr<App>(new App());
-		// Instance->m_State = std::make_unique<SelectProjectState>(); // create state only after initialization
-		//Instance->m_State = std::make_unique<FileState>(Instance->m_History.begin()->Path);
+		// create state only after initialization
+		//Instance->m_State = std::make_unique<SelectProjectState>();
 		Instance->m_State = std::make_unique<EditState>(Instance->m_History.begin()->Path);
 	}
 }
@@ -63,22 +73,7 @@ void App::ProcessGlobalShortcuts()
 
 void App::RequestOpenPath(const fs::path& path)
 {
+	LOG_APP("Opening " << path << '\n');
 	Instance->m_History.SetAsMostRecent(path);
-	const PathType type = GetPathType(path);
 	RequestNewState<EditState>(path);
-	//switch (type)
-	//{
-	//case PathType::FILE: 
-	//	RequestNewState<FileState>(path);
-	//	return;
-	//case PathType::FOLDER:
-	//	RequestNewState<FolderState>(path);
-	//	return;
-	//case PathType::PROJECT:
-	//	RequestNewState<ProjectState>(path);
-	//	return;
-	//default:
-	//	dbg << "RequestOpenPath: Invalid path... do nothing\n";
-	//	break;
-	//}
 }

@@ -24,8 +24,9 @@ public:
 
 
 private:
-	void OnEditorFileChanged(const fs::path& dir);
+	//void OnEditorFileChanged(const fs::path& dir);
 	void OnEmulationTerminated();
+	void _StopEmulation();
 
 private:
 	EditorModel* m_Editor;

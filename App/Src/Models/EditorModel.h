@@ -47,7 +47,8 @@ public:
 
 
 public:
-	EditorModel();
+	EditorModel() = default;
+	~EditorModel() = default;
 
 	void Lock(bool lock) { m_Locked = lock; }
 

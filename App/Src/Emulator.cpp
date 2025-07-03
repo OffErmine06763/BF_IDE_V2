@@ -26,8 +26,7 @@ void Emulator::EmulateFile(const fs::path& file)
 		std::unique_lock<std::mutex> lock(m_Mutex);
 		if (!m_Running)	break;
 
-		char c = content[i];
-		switch (c)
+		switch (content[i])
 		{
 		case BF_INC: m_Memory[m_Address]++; break; // TODO: warning for overflows
 		case BF_DEC: m_Memory[m_Address]--; break;

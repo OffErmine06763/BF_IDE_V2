@@ -35,14 +35,12 @@ void EditViewModel::CloseApp()
 
 void EditViewModel::CloseEmulationTab()
 {
-	m_View->CloseEmulationTab();
+	m_View->OpenEmulationTab(false);
 }
 
 void EditViewModel::EmulationInput(bf_mem_t input)
 {
 	bool res = m_Model->EmulationInput(input);
-	if (res)
-		m_View->EmulationWantsInput(false);
 }
 
 void EditViewModel::OnEmulationTerminated()

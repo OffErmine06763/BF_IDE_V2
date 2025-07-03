@@ -7,6 +7,8 @@ public:
 
 	virtual void Render() {};
 
+	static constexpr auto Name = "State";
+
 protected:
 	State() = default;
 
