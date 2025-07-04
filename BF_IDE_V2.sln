@@ -11,12 +11,20 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VirtualTerminal", "VirtualT
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Compiler Debug|x64 = Compiler Debug|x64
+		Compiler Debug|x86 = Compiler Debug|x86
+		Compiler Release|x64 = Compiler Release|x64
+		Compiler Release|x86 = Compiler Release|x86
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9844F487-609D-46D4-8D02-E6DFE712980E}.Compiler Debug|x64.ActiveCfg = Debug|x64
+		{9844F487-609D-46D4-8D02-E6DFE712980E}.Compiler Debug|x86.ActiveCfg = Compiler Debug|Win32
+		{9844F487-609D-46D4-8D02-E6DFE712980E}.Compiler Release|x64.ActiveCfg = Release|x64
+		{9844F487-609D-46D4-8D02-E6DFE712980E}.Compiler Release|x86.ActiveCfg = Release|Win32
 		{9844F487-609D-46D4-8D02-E6DFE712980E}.Debug|x64.ActiveCfg = Debug|x64
 		{9844F487-609D-46D4-8D02-E6DFE712980E}.Debug|x64.Build.0 = Debug|x64
 		{9844F487-609D-46D4-8D02-E6DFE712980E}.Debug|x86.ActiveCfg = Debug|Win32
@@ -25,6 +33,14 @@ Global
 		{9844F487-609D-46D4-8D02-E6DFE712980E}.Release|x64.Build.0 = Release|x64
 		{9844F487-609D-46D4-8D02-E6DFE712980E}.Release|x86.ActiveCfg = Release|Win32
 		{9844F487-609D-46D4-8D02-E6DFE712980E}.Release|x86.Build.0 = Release|Win32
+		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Compiler Debug|x64.ActiveCfg = Compiler Debug|x64
+		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Compiler Debug|x64.Build.0 = Compiler Debug|x64
+		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Compiler Debug|x86.ActiveCfg = Compiler Debug|Win32
+		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Compiler Debug|x86.Build.0 = Compiler Debug|Win32
+		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Compiler Release|x64.ActiveCfg = Compiler Release|x64
+		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Compiler Release|x64.Build.0 = Compiler Release|x64
+		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Compiler Release|x86.ActiveCfg = Compiler Release|Win32
+		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Compiler Release|x86.Build.0 = Compiler Release|Win32
 		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Debug|x64.ActiveCfg = Debug|x64
 		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Debug|x64.Build.0 = Debug|x64
 		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Debug|x86.ActiveCfg = Debug|Win32
@@ -33,6 +49,10 @@ Global
 		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Release|x64.Build.0 = Release|x64
 		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Release|x86.ActiveCfg = Release|Win32
 		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Release|x86.Build.0 = Release|Win32
+		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Debug|x64.ActiveCfg = Debug|x64
+		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Debug|x86.ActiveCfg = Compiler Debug|Win32
+		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Release|x64.ActiveCfg = Release|x64
+		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Release|x86.ActiveCfg = Release|Win32
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Debug|x64.ActiveCfg = Debug|x64
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Debug|x64.Build.0 = Debug|x64
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Debug|x86.ActiveCfg = Debug|Win32

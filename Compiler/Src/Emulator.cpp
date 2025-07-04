@@ -5,8 +5,6 @@
 #include <stack>
 #include <format>
 
-#include <imgui.h>
-
 
 Emulator::Emulator(const fs::path& file, const consumer<const std::string&>& ocb, const callable& icb, const callable& tcb)
 	: thread([this, file]() { EmulateFile(file); }), m_OutputCB(ocb), m_InputCB(icb), m_TerminationCB(tcb)
@@ -14,6 +12,8 @@ Emulator::Emulator(const fs::path& file, const consumer<const std::string&>& ocb
 
 void Emulator::EmulateFile(const fs::path& file)
 {
+	LOG_COMP("Starting Emulation of " << file.filename() << '\n');
+
 	std::ifstream in(file);
 	std::string content = { std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>() };
 	in.close();
@@ -48,12 +48,16 @@ void Emulator::EmulateFile(const fs::path& file)
 		default: break;
 		}
 	}
+	
+	LOG_COMP("Done Emulating " << file.filename() << '\n');
+	
 	m_Running = false;
 	m_Done = true;
+	m_WantInput = false;
 	m_TerminationCB();
 }
 
-void Emulator::Stop() 
+void Emulator::Stop()
 {
 	std::lock_guard<std::mutex> lock(m_Mutex);
 	m_Running = false;

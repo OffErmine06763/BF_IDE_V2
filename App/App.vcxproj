@@ -78,7 +78,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)VirtualTerminal\Src;$(ProjectDir)Src;$(ProjectDir)vendor\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Compiler\Src;$(SolutionDir)VirtualTerminal\Src;$(ProjectDir)Src;$(ProjectDir)vendor\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -97,7 +97,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)VirtualTerminal\Src;$(ProjectDir)Src;$(ProjectDir)vendor\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Compiler\Src;$(SolutionDir)VirtualTerminal\Src;$(ProjectDir)Src;$(ProjectDir)vendor\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -116,7 +116,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)VirtualTerminal\Src;$(ProjectDir)Src;$(ProjectDir)vendor\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Compiler\Src;$(SolutionDir)VirtualTerminal\Src;$(ProjectDir)Src;$(ProjectDir)vendor\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -135,7 +135,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)VirtualTerminal\Src;$(ProjectDir)Src;$(ProjectDir)vendor\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Compiler\Src;$(SolutionDir)VirtualTerminal\Src;$(ProjectDir)Src;$(ProjectDir)vendor\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -147,11 +147,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MainApp.cpp" />
     <ClCompile Include="Src\Events\Event.cpp" />
     <ClCompile Include="Src\Events\EventBus.cpp" />
     <ClCompile Include="Src\Events\Observable.cpp" />
-    <ClCompile Include="Src\Emulator.cpp" />
     <ClCompile Include="Src\Models\EditorModel.cpp" />
     <ClCompile Include="Src\Models\EditModel.cpp" />
     <ClCompile Include="Src\Models\Model.cpp" />
@@ -180,7 +179,6 @@
     <ClInclude Include="Src\Events\EventBus.h" />
     <ClInclude Include="Src\Events\Observable.h" />
     <ClInclude Include="Src\App.h" />
-    <ClInclude Include="Src\Emulator.h" />
     <ClInclude Include="Src\Models\EditModel.h" />
     <ClInclude Include="Src\Models\EditorModel.h" />
     <ClInclude Include="Src\Models\Model.h" />

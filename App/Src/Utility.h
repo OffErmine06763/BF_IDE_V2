@@ -150,9 +150,10 @@ private:
 
 // ################################################################## LOGGING ##################################################################
 #ifdef _DEBUG
-#define LOG(x) std::cout << x;
-#define LOG_APP(x) std::cout << APP_LEVEL << x << RESET;
-#define LOG_GRAPHICS(x) std::cout << GRAPHICS_LEVEL << x << RESET;
+#define LOG(x) std::cout << x
+#define LOG_APP(x) std::cout << APP_LEVEL << x << RESET
+#define LOG_COMP(x) std::cout << COMP_LEVEL << x << RESET
+#define LOG_GRAPHICS(x) std::cout << GRAPHICS_LEVEL << x << RESET
 
 struct Dbg { };
 inline static constexpr Dbg dbg;
@@ -170,13 +171,14 @@ inline const Dbg& operator<<(const Dbg& dbg, std::ostream& (*manip)(std::ostream
 
 static constexpr auto
 	APP_LEVEL = Terminal::TEXT_F_BGREEN,
-	//STATE_LEVEL = Terminal::TEXT_F_BYELLOW,
+	COMP_LEVEL = Terminal::TEXT_F_BYELLOW,
 	GRAPHICS_LEVEL = Terminal::TEXT_F_BCYAN,
 	RESET = Terminal::TEXT_RESET;
 
 #else
 #define LOG(x)
 #define LOG_APP(x)
+#define LOG_COMP(x)
 #define LOG_GRAPHICS(x)
 
 struct Dbg { };

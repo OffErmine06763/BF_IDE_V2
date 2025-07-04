@@ -18,15 +18,16 @@ EditModel::EditModel(const fs::path& workdir, EditorModel* editor)
 }
 EditModel::~EditModel()
 {
-	// FIXME: exception when closing the app after emulation, but m_Emulating == false
 	if (m_Emulating)
-		_StopEmulation();
+		m_Emulator->Stop();
+	if (m_Emulator && m_Emulator->joinable())
+		m_Emulator->join();
 }
 
 
 bool EditModel::StartEmulation()
 {
-	LOG("Starting Emulation of " << m_Editor->GetFocusedFile() << '\n');
+	LOG("Starting Emulation of " << m_Editor->GetFocusedFile()->Name << '\n');
 	if (m_Emulating) return false;
 
 	m_Emulating = true;
