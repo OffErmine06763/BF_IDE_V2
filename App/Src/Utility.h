@@ -3,11 +3,15 @@
 #include <iostream>
 #include <filesystem>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
+#include <stack>
 #include <ranges>
 #include <memory>
 #include <functional>
 #include <condition_variable>
 #include <variant>
+#include <optional>
 
 #ifdef _DEBUG
 #include <Terminal.h>
@@ -76,6 +80,41 @@ template <class C, typename R = void>
 constexpr std::function<R(void)> bind(C* _this, R(C::* fn)()) {
 	return [_this, fn]() -> R { return (_this->*fn)(); };
 }
+
+
+// EXPECTED
+template <typename E, typename U>
+struct expected
+{
+	std::variant<E, U> content;
+	
+	expected(E e) {
+		content = e;
+	}
+	expected(U u) {
+		content = u;
+	}
+	expected(const expected<E, U>& other) {
+		content = other.content;
+	}
+	void operator=(const expected<E, U>& other) {
+		content = other.content;
+	}
+	~expected() {};
+
+	std::optional<E> getE() {
+		return std::holds_alternative<E>(content) ? std::optional<E>{ std::get<E>(content) } : std::nullopt;
+	}
+	std::optional<U> getU() {
+		return std::holds_alternative<U>(content) ? std::optional<U>{ std::get<U>(content) } : std::nullopt;
+	}
+	template <typename T> requires InVariant<T, std::variant<E, U>>
+	std::optional<T> get() {
+		return std::holds_alternative<T>(content) ? std::get<T>(content) : std::nullopt;
+	}
+
+	bool success() { return std::holds_alternative<E>(content); }
+};
 // ################################################################## TYPES ##################################################################
 
 
@@ -150,10 +189,10 @@ private:
 
 // ################################################################## LOGGING ##################################################################
 #ifdef _DEBUG
-#define LOG(x) std::cout << x
-#define LOG_APP(x) std::cout << APP_LEVEL << x << RESET
-#define LOG_COMP(x) std::cout << COMP_LEVEL << x << RESET
-#define LOG_GRAPHICS(x) std::cout << GRAPHICS_LEVEL << x << RESET
+#define LOG(x) dbg << x
+#define LOG_APP(x) dbg << APP_LEVEL << x << RESET
+#define LOG_COMP(x) dbg << COMP_LEVEL << x << RESET
+#define LOG_GRAPHICS(x) dbg << GRAPHICS_LEVEL << x << RESET
 
 struct Dbg { };
 inline static constexpr Dbg dbg;
@@ -161,6 +200,13 @@ template <typename T>
 inline const Dbg& operator<<(const Dbg& dbg, const T& data)
 {
 	std::cout << data;
+	return dbg;
+}
+template <typename T> /*requires std::is_arithmetic_v<T>*/
+inline const Dbg& operator<<(const Dbg& dbg, const std::vector<T>& data)
+{
+	for (const auto& i : data)
+		std::cout << i << ' ';
 	return dbg;
 }
 inline const Dbg& operator<<(const Dbg& dbg, std::ostream& (*manip)(std::ostream&))
@@ -201,7 +247,8 @@ constexpr char
 	BF_OPN = '[', BF_CLS = ']', 
 	BF_MVR = '>', BF_MVL = '<', 
 	BF_OUT = '.', BF_INP = ',';
-constexpr char BF_ALL[] = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
+constexpr char BF_ALL_L[] = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
+const std::unordered_set<char> BF_ALL_S = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
 constexpr uint32_t BF_MEMSIZE = 256;
 using bf_mem_t = uint8_t;
 bool IsValidBF(const char c);

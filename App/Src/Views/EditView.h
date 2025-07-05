@@ -7,8 +7,6 @@
 class EditView
 {
 public:
-	static constexpr PathType Type = PathType::FILE;
-
 	EditView(EditModel* model, EditorModel* editor);
 	~EditView();
 

@@ -4,7 +4,6 @@
 #include <imgui.h>
 
 
-
 EditView::EditView(EditModel* model, EditorModel* editor)
 	: m_EditorView(editor), m_VM(this, model, editor)
 { }
@@ -34,36 +33,7 @@ void EditView::Render()
 	// 	m_Editor.Lock(false);
 	// }
 }
-void EditView::OpenEmulationTab(bool open)
-{
-	m_EmuTabOpen = open;
-}
-void EditView::EmulationStarted()
-{
-	m_CanEmulate = false;
-	m_EmuInput = 0;
-	m_EmuOutput.clear();
-}
-void EditView::EmulationStopped()
-{
-	m_CanEmulate = true;
-	m_EmuWantsInput = false;
-}
-void EditView::EmulationOutputChanged()
-{
-	std::lock_guard<std::mutex> lock(m_EmuMutex);
-	m_EmuOutput = m_VM.GetEmulationOutput();
-}
-void EditView::EmulationWantsInput(bool wants)
-{
-	std::lock_guard<std::mutex> lock(m_EmuMutex);
-	m_EmuWantsInput = wants;
-	if (wants)
-	{
-		m_EmuInput = 0;
-		m_EmuFocusInput = true;
-	}
-}
+
 void EditView::ProcessShortcuts()
 {
 	if (ImGui::IsKeyChordPressed(BFS_Emulate.Chord))
@@ -84,7 +54,7 @@ void EditView::RenderMainMenu()
 		if (ImGui::BeginMenu("Run"))
 		{
 			if (ImGui::MenuItem("Compile"))
-				dbg << "Compiling: " << m_VM.GetWorkDir() << '\n';
+				LOG_GRAPHICS("Compiling: " << m_VM.GetWorkDir() << '\n');
 			if (ImGui::MenuItem("Run", BFS_Emulate.Label, nullptr, m_CanEmulate))
 				m_VM.StartEmulation();
 			if (ImGui::MenuItem("Stop", BFS_StopEmulation.Label, nullptr, !m_CanEmulate))
@@ -95,8 +65,6 @@ void EditView::RenderMainMenu()
 	}
 }
 void EditView::RenderEmulation() {
-	// TAG: Toolbar 
-	// WorkingState::RenderEmulation();
 	if (!m_EmuTabOpen)
 		return;
 
@@ -140,4 +108,35 @@ void EditView::RenderEmulation() {
 void EditView::RenderEditor()
 {
 	m_EditorView.Render();
+}
+
+void EditView::OpenEmulationTab(bool open)
+{
+	m_EmuTabOpen = open;
+}
+void EditView::EmulationStarted()
+{
+	m_CanEmulate = false;
+	m_EmuInput = 0;
+	m_EmuOutput.clear();
+}
+void EditView::EmulationStopped()
+{
+	m_CanEmulate = true;
+	m_EmuWantsInput = false;
+}
+void EditView::EmulationOutputChanged()
+{
+	std::lock_guard<std::mutex> lock(m_EmuMutex);
+	m_EmuOutput = m_VM.GetEmulationOutput();
+}
+void EditView::EmulationWantsInput(bool wants)
+{
+	std::lock_guard<std::mutex> lock(m_EmuMutex);
+	m_EmuWantsInput = wants;
+	if (wants)
+	{
+		m_EmuInput = 0;
+		m_EmuFocusInput = true;
+	}
 }

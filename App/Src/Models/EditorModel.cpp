@@ -27,12 +27,7 @@ bool EditorModel::Close(std::vector<u32> inds, bool save)
 {
 	if (save && m_Locked) return false;
 
-	LOG("Closing files: ");
-#ifdef _DEBUG
-	for (const auto& i : inds)
-		LOG(i << ' ');
-	LOG('\n');
-#endif
+	LOG("Closing files: " << inds << '\n');
 
 	// Update recently closed files
 	for (size_t ind : inds | stdv::take(RecentCloseSize))
