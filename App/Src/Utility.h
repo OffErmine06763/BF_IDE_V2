@@ -1,17 +1,23 @@
 #pragma once
 #include <inttypes.h>
+
 #include <iostream>
+#include <fstream>
 #include <filesystem>
+
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
 #include <stack>
-#include <ranges>
-#include <memory>
-#include <functional>
-#include <condition_variable>
-#include <variant>
+
 #include <optional>
+#include <variant>
+
+#include <ranges>
+#include <functional>
+
+#include <memory>
+#include <condition_variable>
 
 #ifdef _DEBUG
 #include <Terminal.h>
@@ -34,6 +40,23 @@ using i32 =  int32_t;
 using i64 =  int64_t;
 using f32 =  float  ;
 using f64 =  double ;
+
+template <typename K, typename V>
+using hmap = std::unordered_map<K, V>;
+template <typename V>
+using hset = std::unordered_set<V>;
+
+template <typename T>
+using coord = std::pair<T, T>;
+template <typename T>
+std::ostream& operator<<(std::ostream& out, const coord<T>& c) {
+	return out << std::format("[{}:{}]", c.first, c.second);
+}
+template <typename T>
+coord<T> operator+(const coord<T> a, const coord<T>& b) {
+	return { a.first + b.first, a.second + b.second };
+}
+
 
 // PROPERTIES
 using prop_id = u8;
@@ -68,6 +91,11 @@ template <typename T, typename U>
 concept not_same_as = !std::same_as<T, U>;
 template <typename T>
 concept not_void = !std::is_void_v<T>;
+
+template<typename T, typename... Args>
+constexpr bool is_one_of = (std::is_same_v<T, Args> || ...);
+template <auto Value, auto... Accepted>
+constexpr bool v_is_one_of = ((Value == Accepted) || ...);
 
 
 // BINDING
@@ -148,6 +176,11 @@ public:
 		fs::path Path;
 		bool Fav;
 	};
+	using storage = std::vector<Entry>;
+	using it   = storage::iterator;
+	using rit  = storage::reverse_iterator;
+	using cit  = storage::const_iterator;
+	using crit = storage::const_reverse_iterator;
 
 	History(const fs::path& path);
 	~History();
@@ -176,11 +209,11 @@ public:
 	inline size_t Size() const { return Entries.size(); }
 
 	inline const History::Entry& operator[](const size_t i) const { return Entries[i]; }
-	inline std::vector<Entry>::const_reverse_iterator begin() const { return Entries.crbegin(); }
-	inline std::vector<Entry>::const_reverse_iterator end() const { return Entries.crend(); }
+	inline crit begin() const { return Entries.crbegin(); }
+	inline crit end() const { return Entries.crend(); }
 
 private:
-	std::vector<Entry> Entries;
+	storage Entries;
 
 	fs::path SaveFile;
 	bool Dirty = false;
