@@ -61,9 +61,158 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 }
 
 
-expected<std::shared_ptr<Program>, std::string> Compiler::Parse(const TokenizeResult& tr)
+class Parser
 {
-	auto program = std::make_shared<Program>();
+public:
+	Parser(const TokenizeResult& tr)
+		: tr(tr), it(tr.cbegin()), next(++tr.cbegin())
+	{
+	}
+
+	bool HasNext() { return next != tr.cend(); }
+	bool Done() { return it == tr.cend(); }
+	auto Get() { return *it; }
+	auto Peek() { return *next; }
+	auto Consume()
+	{
+		auto res = *it;
+		it = next;
+		++next;
+		return res;
+	};
+	void Back()
+	{
+		next = it;
+		--it;
+	}
+
+private:
+	TokenizeResult::CIterator it, next;
+	const TokenizeResult& tr;
+};
+
+expected<Loop, std::string> ParseLoop(Parser& parser)
+{
+	Loop loop;
+	const auto& [start, _] = parser.Consume();
+
+	while (!parser.Done())
+	{
+		const auto& [token, count] = parser.Consume();
+		expected<Loop, std::string> subLoop = { "" };
+
+		switch (token.type)
+		{
+		case INC: case DEC: case LEFT: case RIGHT: case I: case O:
+			loop.body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type) } });
+			break;
+		case LOOPS:
+			parser.Back();
+			subLoop = ParseLoop(parser);
+			if (!subLoop.success())
+				return subLoop.getU().value();
+			loop.body.push_back(Stmt{ subLoop.getE().value() });
+			break;
+		case LOOPE:
+			return loop;
+		case GOTO:
+			loop.body.push_back(Stmt{ Goto{ std::to_string(token.ID) } });
+			break;
+		case LABEL:
+			return { "Cannot decleare a label inside a loop\n" };
+		case RETURN:
+			loop.body.push_back(Stmt{ Return{} });
+			break;
+		}
+	}
+	return { "Unmatched [ at position ("s + std::to_string(start.ID) + ")\n"s };
+}
+
+expected<Label, std::string> ParseLabel(Parser& parser)
+{
+	Label label = { std::to_string((parser.Consume()).first.ID) };
+	while (!parser.Done())
+	{
+		const auto& [token, count] = parser.Consume();
+		expected<Loop, std::string> subLoop = { "" };
+
+		switch (token.type)
+		{
+		case INC: case DEC: case LEFT: case RIGHT: case I: case O:
+			label.body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type) } });
+			break;
+		case LOOPS:
+			parser.Back();
+			subLoop = ParseLoop(parser);
+			if (!subLoop.success())
+				return subLoop.getU().value();
+			label.body.push_back(Stmt{ subLoop.getE().value() });
+			break;
+		case LOOPE:
+			return { "Unmatched ] at position ("s + std::to_string(token.ID) + ")\n"s };
+		case GOTO:
+			label.body.push_back(Stmt{ Goto{ std::to_string(token.ID) } });
+			break;
+		case LABEL:
+			parser.Back();
+			return label;
+		}
+	}
+	
+	return label;
+}
+
+expected<Block, std::string> ParseBlock(Parser& parser)
+{
+	Block block;
+	while (!parser.Done())
+	{
+		const auto& [token, count] = parser.Consume();
+		expected<Loop, std::string> subLoop = { "" };
+		expected<Label, std::string> subLabel = { "" };
+
+		switch (token.type)
+		{
+		case INC: case DEC: case LEFT: case RIGHT: case I: case O:
+			block.items.push_back(BlockItem{ Stmt{ Operation{ OpFromTType((TType)token.type) } } });
+			break;
+		case LOOPS:
+			parser.Back();
+			subLoop = ParseLoop(parser);
+			if (!subLoop.success())
+				return subLoop.getU().value();
+			block.items.push_back(BlockItem{ Stmt{ subLoop.getE().value() } });
+			break;
+		case LOOPE:
+			return { "Unmatched ] at position ("s + std::to_string(token.ID) + ")\n"s };
+		case GOTO:
+			block.items.push_back(BlockItem{ Stmt{ Goto{ std::to_string(token.ID) } } });
+			break;
+		case LABEL:
+			parser.Back();
+			subLabel = ParseLabel(parser);
+			if (!subLabel.success())
+				return subLabel.getU().value();
+			block.items.push_back(BlockItem{ Decl{ subLabel.getE().value() } });
+			break;
+		}
+	}
+
+	return block;
+}
+
+expected<TranslationUnit, std::string> Compiler::Parse(const TokenizeResult& tr)
+{
+	TranslationUnit tu;
+	Parser parser = { tr };
+	auto res = ParseBlock(parser);
+	if (!res.success())
+		return res.getU().value();
+
+	tu.body = res.getE().value();
+	return tu;
+
+	/*auto program = std::make_shared<ASTNode>();
 	std::stack<std::vector<std::shared_ptr<ASTNode>>*> loopStack;
 	std::vector<std::shared_ptr<ASTNode>>* currentBlock = &program->statements;
 
@@ -72,16 +221,16 @@ expected<std::shared_ptr<Program>, std::string> Compiler::Parse(const TokenizeRe
 	const auto& ss = tr.symbolsS;
 
 	for (size_t i = 0; i < tokens.size(); ++i) {
-		const Token ch = tokens[i];
+		const Token token = tokens[i];
 		std::shared_ptr<ASTNode> node = nullptr;
 
-		switch (ch.type()) {
-		case TType::RIGHT: node = std::make_shared<ASTNode>(ch.type()); break;
-		case TType::LEFT: node = std::make_shared<ASTNode>(ch.type()); break;
-		case TType::INC: node = std::make_shared<ASTNode>(ch.type()); break;
-		case TType::DEC: node = std::make_shared<ASTNode>(ch.type()); break;
-		case TType::O: node = std::make_shared<ASTNode>(ch.type()); break;
-		case TType::I: node = std::make_shared<ASTNode>(ch.type()); break;
+		switch (token.type) {
+		case TType::RIGHT: node = std::make_shared<ASTNode>(token.type); break;
+		case TType::LEFT: node = std::make_shared<ASTNode>(token.type); break;
+		case TType::INC: node = std::make_shared<ASTNode>(token.type); break;
+		case TType::DEC: node = std::make_shared<ASTNode>(token.type); break;
+		case TType::O: node = std::make_shared<ASTNode>(token.type); break;
+		case TType::I: node = std::make_shared<ASTNode>(token.type); break;
 
 		case TType::LOOPS: {
 			auto loop = std::make_shared<Loop>();
@@ -92,7 +241,11 @@ expected<std::shared_ptr<Program>, std::string> Compiler::Parse(const TokenizeRe
 		}
 		case TType::LOOPE: {
 			if (loopStack.empty())
-				return std::format("Unmatched ']' at token {}", i);
+			{
+				std::stringstream ss;
+				ss << "Unmatched ']' at position " << tr.loop.at(token.ID());
+				return ss.str();
+			}
 			currentBlock = loopStack.top();
 			loopStack.pop();
 			continue;
@@ -108,5 +261,5 @@ expected<std::shared_ptr<Program>, std::string> Compiler::Parse(const TokenizeRe
 	if (!loopStack.empty())
 		return std::format("Unmatched '[' in source code.");
 
-	return program;
+	return program;*/
 }

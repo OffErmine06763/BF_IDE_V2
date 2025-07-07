@@ -8,14 +8,34 @@ int main(int argc, char** argv)
 {
 	// TODO: allow args to use the compiler/emulator
 
-	//std::string code = "+-[[]]]//<><>\nmain:\tmain//+";
-
 	auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
-	if (expTokens.getE().has_value())
+	//auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
+	auto& out = std::cout;
+	//std::ofstream out{ "Generated/generated.txt" };
+
+	// TODO: functional optional
+	// expT.if_present(std::cout << val).map(Compiler::Parse)...
+	
+	if (expTokens.success())
 	{
-		auto val = expTokens.getE().value();
-		std::cout << val << '\n';
+		auto tokens = expTokens.getE().value();
+		out << tokens << '\n';
+		auto expParse = Compiler::Parse(tokens);
+
+		if (expParse.success())
+		{
+			auto ast = expParse.getE().value();
+			out << ast << '\n';
+		}
+		else
+		{
+			out << expParse.getU().value() << '\n';
+			return 0;
+		}
 	}
 	else
-		std::cout << expTokens.getU().value() << '\n';
+	{
+		out << expTokens.getU().value() << '\n';
+		return 0;
+	}
 }

@@ -270,16 +270,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MainComp.cpp" />
+    <ClCompile Include="Src\AST.cpp" />
     <ClCompile Include="Src\Compiler.cpp" />
     <ClCompile Include="Src\Emulator.cpp" />
     <ClCompile Include="Src\Token.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\AST.h" />
     <ClInclude Include="Src\Compiler.h" />
     <ClInclude Include="Src\Emulator.h" />
     <ClInclude Include="Src\Token.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Res\badapple.bf" />
     <None Include="Res\Code.bf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
