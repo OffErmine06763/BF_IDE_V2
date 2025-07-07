@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Compiler", "Compiler\Compil
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VirtualTerminal", "VirtualTerminal\VirtualTerminal.vcxproj", "{3F571F42-ABBF-41FC-A3B3-9497A53392D8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CompilerTests", "CompilerTests\CompilerTests.vcxproj", "{6496086F-6BB3-FBB4-7823-9294A76D6738}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Compiler Debug|x64 = Compiler Debug|x64
@@ -61,6 +63,18 @@ Global
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Release|x64.Build.0 = Release|x64
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Release|x86.ActiveCfg = Release|Win32
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Release|x86.Build.0 = Release|Win32
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Compiler Debug|x64.ActiveCfg = Debug|x64
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Compiler Debug|x86.ActiveCfg = Debug|Win32
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Compiler Release|x64.ActiveCfg = Release|x64
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Compiler Release|x86.ActiveCfg = Release|Win32
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Debug|x64.ActiveCfg = Debug|x64
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Debug|x64.Build.0 = Debug|x64
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Debug|x86.ActiveCfg = Debug|Win32
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Debug|x86.Build.0 = Debug|Win32
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Release|x64.ActiveCfg = Release|x64
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Release|x64.Build.0 = Release|x64
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Release|x86.ActiveCfg = Release|Win32
+		{6496086F-6BB3-FBB4-7823-9294A76D6738}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

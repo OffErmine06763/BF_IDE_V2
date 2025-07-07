@@ -26,6 +26,7 @@
 // ################################################################## TYPES ##################################################################
 namespace stdv = std::views;
 namespace stdr = std::ranges;
+namespace stdc = std::chrono;
 namespace fs = std::filesystem;
 using namespace std::string_literals;
 using namespace std::chrono_literals;
@@ -55,6 +56,11 @@ std::ostream& operator<<(std::ostream& out, const coord<T>& c) {
 template <typename T>
 coord<T> operator+(const coord<T> a, const coord<T>& b) {
 	return { a.first + b.first, a.second + b.second };
+}
+template <typename T>
+std::string operator+(const std::string& left, const coord<T>& right)
+{
+	return left + std::to_string(right.first) + ':' + std::to_string(right.second);
 }
 
 

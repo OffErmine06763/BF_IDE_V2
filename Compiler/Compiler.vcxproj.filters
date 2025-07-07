@@ -49,4 +49,7 @@
     <None Include="Res\Code.bf" />
     <None Include="Res\badapple.bf" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Generated\generated.txt" />
+  </ItemGroup>
 </Project>

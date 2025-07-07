@@ -285,6 +285,9 @@
     <None Include="Res\badapple.bf" />
     <None Include="Res\Code.bf" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Generated\generated.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

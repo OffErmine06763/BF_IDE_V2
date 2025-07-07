@@ -2,7 +2,7 @@
 
 
 // TTYPE
-const std::unordered_map<TType, std::string> Token::ToString = {
+const hmap<TType, std::string> Token::ToString = {
 		{ NONE, "NONE" },
 		{ INC, "INCREMENT" },
 		{ DEC, "DECREMENT" },
@@ -16,7 +16,17 @@ const std::unordered_map<TType, std::string> Token::ToString = {
 		{ GOTO, "GOTO" },
 		{ INCLUDE, "INCLUDE" },
 };
-const std::unordered_map<char, TType> Token::ToType = {
+const hmap<TType, char> Token::ToSymbol = {
+		{ INC, '+'},
+		{ DEC, '-'},
+		{ LEFT, '<'},
+		{ RIGHT, '>'},
+		{ LOOPS, '['},
+		{ LOOPE, ']'},
+		{ O, '.'},
+		{ I, ','},
+};
+const hmap<char, TType> Token::ToType = {
 		{ '+', INC},
 		{ '-', DEC},
 		{ '<', LEFT},

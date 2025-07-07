@@ -26,7 +26,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 				continue;
 			}
 			else
-				return { std::format("Invalid Comment at position {}:{}", row, col) };
+				return { GetInvalidCommentError(row, col) };
 		}
 		else if (BF_ALL_S.contains(c))
 		{
@@ -40,6 +40,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 			size_t start = i;
 			do {
 				i++;
+				col++;
 			} while (i < content.length() && std::isalnum(content[i]));
 
 			if (content[i] == ':')
@@ -48,11 +49,13 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 			{
 				res.AddToken({ TType::GOTO }, content.substr(start, i - start));
 				i--;
+				col--;
 			}
+			col++;
 			continue;
 		}
 		else if (c != ' ' && c != '\t' && c != '\n')
-			return { std::format("Unrecognized Token '{}' at position {}:{}", c, row, col)};
+			return { GetUnreconTokenError(c, row, col) };
 
 		col++;
 	}
@@ -66,8 +69,7 @@ class Parser
 public:
 	Parser(const TokenizeResult& tr)
 		: tr(tr), it(tr.cbegin()), next(++tr.cbegin())
-	{
-	}
+	{}
 
 	bool HasNext() { return next != tr.cend(); }
 	bool Done() { return it == tr.cend(); }
@@ -77,14 +79,19 @@ public:
 	{
 		auto res = *it;
 		it = next;
-		++next;
+		if (!Done())
+			++next;
 		return res;
 	};
 	void Back()
 	{
 		next = it;
-		--it;
+		if (it != tr.cbegin())
+			--it;
 	}
+
+	std::string Symbol(const u32 id) { return tr.symbolsI.at(id); }
+	coord<u32> Position(const u32 id) { return tr.loop.at(id); }
 
 private:
 	TokenizeResult::CIterator it, next;
@@ -127,10 +134,9 @@ expected<Loop, std::string> ParseLoop(Parser& parser)
 	}
 	return { "Unmatched [ at position ("s + std::to_string(start.ID) + ")\n"s };
 }
-
 expected<Label, std::string> ParseLabel(Parser& parser)
 {
-	Label label = { std::to_string((parser.Consume()).first.ID) };
+	Label label = { parser.Symbol((parser.Consume()).first.ID) };
 	while (!parser.Done())
 	{
 		const auto& [token, count] = parser.Consume();
@@ -149,9 +155,9 @@ expected<Label, std::string> ParseLabel(Parser& parser)
 			label.body.push_back(Stmt{ subLoop.getE().value() });
 			break;
 		case LOOPE:
-			return { "Unmatched ] at position ("s + std::to_string(token.ID) + ")\n"s };
+			return { "Unmatched ] at position "s + parser.Position(token.ID) + '\n' };
 		case GOTO:
-			label.body.push_back(Stmt{ Goto{ std::to_string(token.ID) } });
+			label.body.push_back(Stmt{ Goto{ parser.Symbol(token.ID) } });
 			break;
 		case LABEL:
 			parser.Back();
@@ -161,7 +167,6 @@ expected<Label, std::string> ParseLabel(Parser& parser)
 	
 	return label;
 }
-
 expected<Block, std::string> ParseBlock(Parser& parser)
 {
 	Block block;
@@ -184,9 +189,9 @@ expected<Block, std::string> ParseBlock(Parser& parser)
 			block.items.push_back(BlockItem{ Stmt{ subLoop.getE().value() } });
 			break;
 		case LOOPE:
-			return { "Unmatched ] at position ("s + std::to_string(token.ID) + ")\n"s };
+			return { "Unmatched ] at position "s + parser.Position(token.ID) + '\n'};
 		case GOTO:
-			block.items.push_back(BlockItem{ Stmt{ Goto{ std::to_string(token.ID) } } });
+			block.items.push_back(BlockItem{ Stmt{ Goto{ parser.Symbol(token.ID) } } });
 			break;
 		case LABEL:
 			parser.Back();

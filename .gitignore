@@ -366,3 +366,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /App/history.bfidedata
 /Compiler/Res/badapple.bf
+/Compiler/Generated/generated.txt

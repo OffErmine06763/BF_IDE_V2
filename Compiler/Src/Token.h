@@ -25,26 +25,19 @@ enum TType : u8
 };
 std::ostream& operator<<(std::ostream& out, const TType& token);
 
-struct TToken
-{
-	
-};
-
 struct Token
 {
 	static const hmap<TType, std::string> ToString;
+	static const hmap<TType, char> ToSymbol;
 	static const hmap<char, TType> ToType;
-	static const u8 MAX_COUNT = (1 << 4) - 1;
-	//static constexpr u8 CountShift = 4, IDShift = 8;
-	//static constexpr u32 TypeMask = MASK, CountMask = 0b1111'1111 - TypeMask, IDMask = std::numeric_limits<u32>::max() - CountMask - TypeMask;
-	//static constexpr u32 Increment = (1 << Token::CountShift);
+	static const u8 MAX_COUNT = (1 << 8) - 1;
 
 	// TODO: different Types can use different divisions of the pack,
 	// eg. + doesn't need an ID, the extra bits can be used for count
 	// however the max count = 255, so idk
 	u32 type : 4;
-	u32 count : 4;
-	u32 ID : 24;
+	u32 count : 8;
+	u32 ID : 20;
 
 	Token(const TType type = NONE, const u8 count = 0, const u32 id = 0);
 	Token(const Token& other);

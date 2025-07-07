@@ -23,6 +23,14 @@ const hmap<OpType, std::string> Operation::ToString = {
 		{ OpType::I, "INPUT" },
 		{ OpType::O, "OUTPUT" },
 };
+const hmap<OpType, char> Operation::ToSymbol = {
+		{ OpType::INC, '+'},
+		{ OpType::DEC, '-'},
+		{ OpType::LEFT, '<'},
+		{ OpType::RIGHT, '>'},
+		{ OpType::I, ','},
+		{ OpType::O, '.'},
+};
 
 std::ostream& operator<<(std::ostream& out, const Loop& lo)
 {
@@ -81,3 +89,5 @@ std::ostream& operator<<(std::ostream& out, const TranslationUnit& tu)
 {
 	return out << tu.body;
 }
+
+//MERGE IDENTICAL CONSECUTIVE NODE AND REDUCE SPACE CPLXTY

@@ -49,6 +49,7 @@ struct Operation
 	OpType type;
 
 	static const hmap<OpType, std::string> ToString;
+	static const hmap<OpType, char> ToSymbol;
 };
 
 struct Goto
