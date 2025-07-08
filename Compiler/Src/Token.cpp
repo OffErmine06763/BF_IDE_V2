@@ -166,42 +166,23 @@ TokenizeResult::CIterator& TokenizeResult::CIterator::operator--()
 		count--;
 	return *this;
 }
+TokenizeResult::CIterator& TokenizeResult::CIterator::operator++(int)
+{
+	auto& res = *this;
+	operator++();
+	return res;
+}
+TokenizeResult::CIterator& TokenizeResult::CIterator::operator--(int)
+{
+	auto& res = *this;
+	operator--();
+	return res;
+}
 bool TokenizeResult::CIterator::operator!=(const CIterator& other) const
 {
 	return it != other.it || count != other.count;
 }
 bool TokenizeResult::CIterator::operator==(const CIterator& other) const
-{
-	return !(*this != other);
-}
-
-TokenizeResult::Iterator& TokenizeResult::Iterator::operator++()
-{
-	if (count == it->count)
-	{
-		++it;
-		count = 0;
-	}
-	else
-		count++;
-	return *this;
-}
-TokenizeResult::Iterator& TokenizeResult::Iterator::operator--()
-{
-	if (count == 0)
-	{
-		--it;
-		count = it->count;
-	}
-	else
-		count--;
-	return *this;
-}
-bool TokenizeResult::Iterator::operator!=(const Iterator& other) const
-{
-	return it != other.it && count != other.count;
-}
-bool TokenizeResult::Iterator::operator==(const Iterator& other) const
 {
 	return !(*this != other);
 }

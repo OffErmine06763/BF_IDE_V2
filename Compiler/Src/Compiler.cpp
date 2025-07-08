@@ -68,8 +68,11 @@ class Parser
 {
 public:
 	Parser(const TokenizeResult& tr)
-		: tr(tr), it(tr.cbegin()), next(++tr.cbegin())
-	{}
+		: tr(tr), it(tr.cbegin()), next(tr.cbegin())
+	{
+		if (!Done())
+			next++;
+	}
 
 	bool HasNext() { return next != tr.cend(); }
 	bool Done() { return it == tr.cend(); }
@@ -91,11 +94,12 @@ public:
 	}
 	void MoveToNextToken()
 	{
-		while ((*it).second != 0)
+		if (!Done() && (*it).second != 0)
 		{
-			Consume();
-			if (Done())
-				break;
+			it.ForceNext();
+			next = it;
+			if (!Done())
+				next++;
 		}
 	}
 
@@ -107,83 +111,134 @@ private:
 	const TokenizeResult& tr;
 };
 
-expected<Loop, std::string> ParseLoop(Parser& parser)
+expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
 {
-	Loop loop;
-	const auto& [start, _] = parser.Consume();
+	const auto& [start, iteration] = parser.Consume();
+	Loop loop = { start.count, start.ID };
+	std::vector<Stmt> body;
+	parser.MoveToNextToken();
 
 	while (!parser.Done())
 	{
-		const auto& [token, count] = parser.Consume();
+		const auto& [token, iteration] = parser.Consume();
 		expected<Loop, std::string> subLoop = { "" };
+		u32 id, subcount;
+		Loop sub;
 
 		switch (token.type)
 		{
 		case T_INC: case T_DEC: case T_LEFT: case T_RIGHT: case T_I: case T_O:
-			loop.body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type), token.count } });
+			body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type), token.count } });
 			parser.MoveToNextToken();
 			break;
 		case T_LOOPS:
 			parser.Back();
-			subLoop = ParseLoop(parser);
+			subLoop = ParseLoop(parser, tu);
 			if (!subLoop.success())
+			{
+				tu.bodies.insert({ loop.ID, body });
 				return subLoop.getU().value();
-			loop.body.push_back(Stmt{ subLoop.getE().value() });
+			}
+			body.push_back(Stmt{ subLoop.getE().value() });
 			break;
 		case T_LOOPE:
-			return loop;
+			// decrementing by iteration to account for subloops like [+[-]]
+			// the subloop will advance within the same ] token.
+			subcount = token.count - iteration;
+			if (subcount == loop.count)
+			{
+				// if #] == #[ return
+				parser.MoveToNextToken();
+				tu.bodies.insert({ loop.ID, body });
+				return loop;
+			}
+			else if (subcount > loop.count)
+			{
+				// i have to consume loop.count times (i have already consumed the first ], and count is 0-indexed)
+				// if #] > #[ we close the current loop, and return to the superloop
+				for (int i = iteration; i < loop.count; i++)
+					parser.Consume();
+				tu.bodies.insert({ loop.ID, body });
+				return loop;
+			}
+
+			// otherwise create a subloop that replaces the body
+			// [[[[[+]]-]]-] == [[[token-]]-] == [token-]
+			// MAYBE: multiple nested loops with no instructions is between are pointless, but not forbidden,
+			//  maybe it would be better not to do this optimization at all and use less memory (but im already using 20bit ID).
+			parser.MoveToNextToken();
+			id = tu.NextID++;
+			sub = Loop{ subcount, id };
+			tu.bodies.insert({ id, std::move(body) });
+			body.clear();
+			body.push_back(Stmt{ sub });
+			loop.count -= subcount + 1; // 0 indexed, must subtract 1 more
+			break;
 		case T_GOTO:
-			loop.body.push_back(Stmt{ Goto{ 0, token.ID } });
+			body.push_back(Stmt{ Goto{ token.count, token.ID } });
+			parser.MoveToNextToken();
 			break;
 		case T_LABEL:
-			return { "Cannot decleare a label inside a loop\n" };
+			tu.bodies.insert({ loop.ID, body });
+			return { "Cannot declare a label inside a loop\n" };
 		case T_RETURN:
-			loop.body.push_back(Stmt{ Return{} });
+			body.push_back(Stmt{ Return{} });
 			break;
 		}
 	}
-	return { "Unmatched [ at position ("s + std::to_string(start.ID) + ")\n"s };
+	tu.bodies.insert({ loop.ID, body });
+	return { Compiler::GetUnmatchedOpenError(parser.Position(start.ID)) };
 }
-expected<Label, std::string> ParseLabel(Parser& parser)
+expected<Label, std::string> ParseLabel(Parser& parser, TranslationUnit& tu)
 {
 	Label label = { parser.Consume().first.ID };
+	std::vector<Stmt> body;
+	// TODO: if theres another label with the same name -> error "label redefinition" (currently no position information)
+
 	while (!parser.Done())
 	{
-		const auto& [token, count] = parser.Consume();
+		const auto& [token, iteration] = parser.Consume();
 		expected<Loop, std::string> subLoop = { "" };
 
 		switch (token.type)
 		{
 		case T_INC: case T_DEC: case T_LEFT: case T_RIGHT: case T_I: case T_O:
-			label.body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type), token.count } });
+			body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type), token.count } });
 			parser.MoveToNextToken();
 			break;
 		case T_LOOPS:
 			parser.Back();
-			subLoop = ParseLoop(parser);
+			subLoop = ParseLoop(parser, tu);
 			if (!subLoop.success())
+			{
+				tu.bodies.insert({ label.ID, body });
 				return subLoop.getU().value();
-			label.body.push_back(Stmt{ subLoop.getE().value() });
+			}
+			body.push_back(Stmt{ subLoop.getE().value() });
 			break;
 		case T_LOOPE:
-			return { "Unmatched ] at position "s + parser.Position(token.ID) + '\n' };
+			tu.bodies.insert({ label.ID, body });
+			return { Compiler::GetUnmatchedCloseError(parser.Position(token.ID)) };
 		case T_GOTO:
-			label.body.push_back(Stmt{ Goto{ 0, token.ID } });
+			body.push_back(Stmt{ Goto{ token.count, token.ID } });
+			parser.MoveToNextToken();
 			break;
 		case T_LABEL:
 			parser.Back();
-			return label;
+			tu.bodies.insert({ label.ID, body });
+			return label; // the next label will be parsed by the caller
 		}
 	}
 	
+	tu.bodies.insert({ label.ID, body });
 	return label;
 }
-expected<Block, std::string> ParseBlock(Parser& parser)
+expected<Block, std::string> ParseBlock(Parser& parser, TranslationUnit& tu)
 {
 	Block block;
 	while (!parser.Done())
 	{
-		const auto& [token, count] = parser.Consume();
+		const auto& [token, iteration] = parser.Consume();
 		expected<Loop, std::string> subLoop = { "" };
 		expected<Label, std::string> subLabel = { "" };
 
@@ -195,19 +250,20 @@ expected<Block, std::string> ParseBlock(Parser& parser)
 			break;
 		case T_LOOPS:
 			parser.Back();
-			subLoop = ParseLoop(parser);
+			subLoop = ParseLoop(parser, tu);
 			if (!subLoop.success())
 				return subLoop.getU().value();
 			block.items.push_back(BlockItem{ Stmt{ subLoop.getE().value() } });
 			break;
 		case T_LOOPE:
-			return { "Unmatched ] at position "s + parser.Position(token.ID) + '\n'};
+			return { Compiler::GetUnmatchedCloseError(parser.Position(token.ID)) };
 		case T_GOTO:
-			block.items.push_back(BlockItem{ Stmt{ Goto{ 0, token.ID } } });
+			block.items.push_back(BlockItem{ Stmt{ Goto{ token.count, token.ID } } });
+			parser.MoveToNextToken();
 			break;
 		case T_LABEL:
 			parser.Back();
-			subLabel = ParseLabel(parser);
+			subLabel = ParseLabel(parser, tu);
 			if (!subLabel.success())
 				return subLabel.getU().value();
 			block.items.push_back(BlockItem{ Decl{ subLabel.getE().value() } });
@@ -223,12 +279,14 @@ expected<TranslationUnit, std::string> Compiler::Parse(const TokenizeResult& tr)
 	TranslationUnit tu;
 	tu.symbolsI = tr.symbolsI;
 	tu.symbolsS = tr.symbolsS;
+	tu.NextID = tr.NextID;
 
 	Parser parser = { tr };
-	auto res = ParseBlock(parser);
+	auto res = ParseBlock(parser, tu);
 	if (!res.success())
 		return res.getU().value();
 
+	// TODO: check that all gotos math a label (no includes for now)
 	tu.body = res.getE().value();
 	return tu;
 }

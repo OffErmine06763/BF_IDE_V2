@@ -11,34 +11,62 @@ namespace CompilerTests
 	public:
 		TEST_METHOD(TestTokenize)
 		{
-			auto res = Compiler::Tokenize("+++++++++++++++++-[[+]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
+			auto res = Compiler::Tokenize("+++++++++++++++++-[[+[-]]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
 			Assert::IsTrue(res.success(), wstring("The provided code is valid, however:\n"s + (res.success() ? "" : res.getU().value())).c_str());
 
 			std::string recon = Reconstruct(res.getE().value());
-			std::string strip = Strip("+++++++++++++++++-[[+]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
+			std::string strip = Strip("+++++++++++++++++-[[+[-]]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
 			Assert::AreEqual(strip, recon, L"The generated tokens do not match the given code");
 
 			res = Compiler::Tokenize("+++d;+++"s);
-			Assert::IsTrue(!res.success(), wstring("The provided code has an invalid char ';', however tokenization succeeded"s).c_str());
+			Assert::IsFalse(res.success(), wstring("The provided code has an invalid char ';', however tokenization succeeded"s).c_str());
 			Assert::AreEqual(Compiler::GetUnreconTokenError(';', 0, 4), res.getU().value());
 
 			res = Compiler::Tokenize("+++d/;+++"s);
-			Assert::IsTrue(!res.success(), wstring("The provided code has an invalid comment, however tokenization succeeded"s).c_str());
+			Assert::IsFalse(res.success(), wstring("The provided code has an invalid comment, however tokenization succeeded"s).c_str());
 			Assert::AreEqual(Compiler::GetInvalidCommentError(0, 4), res.getU().value());
 		}
 
 
 		TEST_METHOD(TestParse)
 		{
-			auto tokens = Compiler::Tokenize("+++++++++++++++++-[[+]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
+			auto tokens = Compiler::Tokenize("+++++++++++++++++-[[+[-]]+]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
 			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getU().value())).c_str());
 
 			auto parse = Compiler::Parse(tokens.getE().value());
 			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getU().value())).c_str());
 
 			std::string recon = Reconstruct(parse.getE().value());
-			std::string strip = Strip("+++++++++++++++++-[[+]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
+			std::string strip = Strip("+++++++++++++++++-[[+[-]]+]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
+
+
+
+			tokens = Compiler::Tokenize("+[[[+]]-]"s);
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getU().value())).c_str());
+
+			parse = Compiler::Parse(tokens.getE().value());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getU().value())).c_str());
+
+			recon = Reconstruct(parse.getE().value());
+			strip = Strip("+[[[+]]-]"s);
+			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
+
+
+
+			tokens = Compiler::Tokenize("+[[[+]]-"s);
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getU().value())).c_str());
+
+			parse = Compiler::Parse(tokens.getE().value());
+			Assert::IsFalse(parse.success(), wstring("The provided code is invalid, however parsing succeeded:\n"s).c_str());
+			Assert::AreEqual(Compiler::GetUnmatchedOpenError({ 0, 1 }), parse.getU().value());
+
+			tokens = Compiler::Tokenize("+[[+]]-]"s);
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getU().value())).c_str());
+
+			parse = Compiler::Parse(tokens.getE().value());
+			Assert::IsFalse(parse.success(), wstring("The provided code is invalid, however parsing succeeded:\n"s).c_str());
+			Assert::AreEqual(Compiler::GetUnmatchedCloseError({ 0, 7 }), parse.getU().value());
 		}
 
 
@@ -121,10 +149,10 @@ namespace CompilerTests
 	private:
 		std::string _Reconstruct(const Loop& l, const TranslationUnit& tu)
 		{
-			std::string res = "[";
-			for (const auto& s : l.body)
+			std::string res = std::string(l.count + 1, '[');
+			for (const auto& s : tu.bodies.at(l.ID))
 				res += _Reconstruct(s, tu);
-			res += "]";
+			res += std::string(l.count + 1, ']');
 			return res;
 		}
 		std::string _Reconstruct(const Goto& g, const TranslationUnit& tu)
@@ -152,7 +180,7 @@ namespace CompilerTests
 		std::string _Reconstruct(const Label& l, const TranslationUnit& tu)
 		{
 			std::string res = tu.symbolsI.at(l.ID) + ':';
-			for (const auto& s : l.body)
+			for (const auto& s : tu.bodies.at(l.ID))
 				res += _Reconstruct(s, tu);
 			return res;
 		}

@@ -12,6 +12,7 @@ int main(int argc, char** argv)
 	//auto& out = std::cout;
 	std::ofstream out{ "Generated/generated.txt" };
 
+	stdc::nanoseconds total = 0ns;
 
 	// TOKENIZATION
 
@@ -21,16 +22,17 @@ int main(int argc, char** argv)
 	auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
 	
 	stdc::time_point end = stdc::high_resolution_clock::now();
+	total += end - start;
 	std::cout << "Tokenization done in: " << to<stdc::milliseconds>(end - start) << '\n';
 
 	if (!expTokens.success())
 	{
-		out << "TOKENS\n" << expTokens.getU().value() << '\n';
+		out << expTokens.getU().value() << '\n';
 		return 0;
 	}
 
 	auto tokens = expTokens.getE().value();
-	out << tokens << '\n';
+	out << "TOKENS\n" << tokens << '\n';
 
 
 	// PARSING
@@ -40,14 +42,17 @@ int main(int argc, char** argv)
 	auto expParse = Compiler::Parse(tokens);
 	
 	end = stdc::high_resolution_clock::now();
+	total += end - start;
 	std::cout << "Parsing done in: " << to<stdc::milliseconds>(end - start) << '\n';
 
 	if (!expParse.success())
 	{
-		out << "AST\n" << expParse.getU().value() << '\n';
+		out << expParse.getU().value() << '\n';
 		return 0;
 	}
 
 	auto ast = expParse.getE().value();
-	out << ast << '\n';
+	out << "AST\n" << ast << '\n';
+
+	std::cout << "Compilation done in: " << to<stdc::milliseconds>(total) << '\n';
 }

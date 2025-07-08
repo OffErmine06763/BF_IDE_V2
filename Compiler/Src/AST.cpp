@@ -57,7 +57,7 @@ void PrintStatement(const Stmt& s, std::ostream& out, const TranslationUnit& tu,
 	{
 		const Loop& lo = std::get<Loop>(s.value);
 		out << "LOOP_START\n";
-		for (const Stmt& i : lo.body)
+		for (const Stmt& i : tu.bodies.at(lo.ID))
 		{
 			PrintStatement(i, out, tu, indent + 1);
 			out << '\n';
@@ -68,10 +68,7 @@ void PrintStatement(const Stmt& s, std::ostream& out, const TranslationUnit& tu,
 
 std::ostream& operator<<(std::ostream& out, const Loop& lo)
 {
-	out << "[\n";
-	for (const auto& i : lo.body)
-		out << i << '\n';
-	out << "]";
+	out << "[ " << lo.ID << " cnt " << lo.count << "\n]";
 	return out;
 }
 std::ostream& operator<<(std::ostream& out, const Operation& o)
@@ -99,8 +96,6 @@ std::ostream& operator<<(std::ostream& out, const Stmt& s)
 std::ostream& operator<<(std::ostream& out, const Label& la)
 {
 	out << la.ID << '\n';
-	for (const auto& i : la.body)
-		out << i << '\n';
 	return out;
 }
 std::ostream& operator<<(std::ostream& out, const Decl& d)
@@ -134,7 +129,7 @@ std::ostream& operator<<(std::ostream& out, const TranslationUnit& tu)
 			const Decl& d = std::get<Decl>(bi.value);
 			const Label& la = d.label;
 			out << "LABEL id " << la.ID << ' ' << tu.symbolsI.at(la.ID) << '\n';
-			for (const Stmt& s : la.body)
+			for (const Stmt& s : tu.bodies.at(la.ID))
 			{
 				PrintStatement(s, out, tu, 1);
 				out << '\n';

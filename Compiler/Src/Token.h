@@ -2,6 +2,7 @@
 #include <Utility.h>
 
 
+// NOTE: consecutive labels and gotos are not compressed, as it's currently not possible to know where each is located
 enum TType : u8
 {
 	T_INC   = 0b00000000,
@@ -75,32 +76,28 @@ struct TokenizeResult
 	{
 		explicit CIterator(tokencit_t it) : it(it) {}
 
-		const std::pair<const Token&, u8> operator*() const { return { *it, count }; }
+		CIterator& ForceNext() { count = 0; it++; return *this; }
+
+		const std::pair<const Token&, u8>& operator*() const { return { *it, count }; }
 		CIterator& operator++();
+		CIterator& operator++(int);
 		CIterator& operator--();
+		CIterator& operator--(int);
 		bool operator!=(const CIterator& other) const;
 		bool operator==(const CIterator& other) const;
 
-	private:
 		tokencit_t it;
 		u8 count = 0;
 	};
-	struct Iterator
+	struct Iterator : public CIterator
 	{
-		explicit Iterator(tokenit_t it) : it(it) {}
+		explicit Iterator(tokenit_t it) : CIterator(it) {}
 
-		std::pair<Token&, u8> operator*() const { return { *it, count }; }
-		Iterator& operator++();
-		Iterator& operator--();
-		bool operator!=(const Iterator& other) const;
-		bool operator==(const Iterator& other) const;
-
-	private:
-		tokenit_t it;
-		u8 count = 0;
+		std::pair<Token&, u8> operator*() const { return { const_cast<Token&>(*it), count }; }
+		Iterator& operator++() { CIterator::operator++(); return *this; }
+		Iterator& operator--() { CIterator::operator--(); return *this; };
 	};
 
-private:
 	u32 NextID = 1;
 };
 std::ostream& operator<<(std::ostream& out, const TokenizeResult& tokens);

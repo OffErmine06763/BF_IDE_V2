@@ -61,8 +61,7 @@ coord<T> operator+(const coord<T> a, const coord<T>& b) {
 	return { a.first + b.first, a.second + b.second };
 }
 template <typename T>
-std::string operator+(const std::string& left, const coord<T>& right)
-{
+std::string operator+(const std::string& left, const coord<T>& right) {
 	return left + std::to_string(right.first) + ':' + std::to_string(right.second);
 }
 

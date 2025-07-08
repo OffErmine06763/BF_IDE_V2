@@ -47,7 +47,7 @@ OpType OpFromTType(const TType& type);
 struct Operation
 {
 	u16 type : 4;
-	u16 count : 8;
+	u16 count : 8 = 0;
 
 	static const hmap<OpType, std::string> ToString;
 	static const hmap<OpType, char> ToSymbol;
@@ -55,7 +55,7 @@ struct Operation
 
 struct Goto
 {
-	u32 count : 8;
+	u32 count : 8 = 0;
 	u32 ID : 20;
 	//std::string name;
 };
@@ -65,12 +65,14 @@ struct Stmt;
 struct Label
 {
 	u32 ID : 20;
-	std::vector<Stmt> body; // TODO: keep a single vector and a reference to a subrange, since all bodies are consecutive
+	//std::vector<Stmt> body; // TODO: keep a single vector and a reference to a subrange, since all bodies are consecutive
 };
 
 struct Loop
 {
-	std::vector<Stmt> body;
+	u32 count : 8 = 0;
+	u32 ID : 20;
+	//std::vector<Stmt> body;
 };
 
 struct Return
@@ -127,6 +129,9 @@ struct TranslationUnit
 
 	hmap<u32, std::string> symbolsI;
 	hmap<std::string_view, u32> symbolsS;
+	hmap<u32, std::vector<Stmt>> bodies;
+
+	u32 NextID = 0;
 };
 
 

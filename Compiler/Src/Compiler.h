@@ -30,4 +30,10 @@ public:
 	static std::string GetInvalidCommentError(const u32 row, const u32 col) {
 		return std::format("Invalid Comment at position [{}:{}]", row, col);
 	}
+	static std::string GetUnmatchedOpenError(const coord<u32>& pos) {
+		return "Unmatched [ at position "s + pos + '\n';
+	}
+	static std::string GetUnmatchedCloseError(const coord<u32>& pos) {
+		return "Unmatched ] at position "s + pos + '\n';
+	}
 };
