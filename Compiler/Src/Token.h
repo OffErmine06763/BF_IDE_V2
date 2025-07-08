@@ -4,24 +4,24 @@
 
 enum TType : u8
 {
-	INC   = 0b00000000,
-	DEC   = 0b00000001,
-	LEFT  = 0b00000010,
-	RIGHT = 0b00000011,
-	LOOPS = 0b00000100,
-	LOOPE = 0b00000101,
-	I     = 0b00000110,
-	O     = 0b00000111,
+	T_INC   = 0b00000000,
+	T_DEC   = 0b00000001,
+	T_LEFT  = 0b00000010,
+	T_RIGHT = 0b00000011,
+	T_LOOPS = 0b00000100,
+	T_LOOPE = 0b00000101,
+	T_I     = 0b00000110,
+	T_O     = 0b00000111,
 
-	LABEL   = 0b00001000,
-	GOTO    = 0b00001001,
-	INCLUDE = 0b00001010,
-	RETURN  = 0b00001011,
+	T_LABEL   = 0b00001000,
+	T_GOTO    = 0b00001001,
+	T_INCLUDE = 0b00001010,
+	T_RETURN  = 0b00001011,
 
-	EXT  = 0b00001000,
-	NONE = 0b00001111,
-	MAX  = NONE,
-	MASK = NONE,
+	T_EXT  = 0b00001000,
+	T_NONE = 0b00001111,
+	T_MAX  = T_NONE,
+	T_MASK = T_NONE,
 };
 std::ostream& operator<<(std::ostream& out, const TType& token);
 
@@ -39,10 +39,10 @@ struct Token
 	u32 count : 8;
 	u32 ID : 20;
 
-	Token(const TType type = NONE, const u8 count = 0, const u32 id = 0);
+	Token(const TType type = T_NONE, const u8 count = 0, const u32 id = 0);
 	Token(const Token& other);
 
-	inline static bool IsMapped(TType type) { return type & EXT; }
+	inline static bool IsMapped(TType type) { return type & T_EXT; }
 };
 std::ostream& operator<<(std::ostream& out, const Token& token);
 

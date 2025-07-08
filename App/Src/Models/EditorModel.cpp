@@ -21,7 +21,7 @@ std::ostream& operator<<(std::ostream& out, const Document& doc)
 	return out << "[Id = " << doc.Id << ", Name = " << doc.Name << ", Dirty = " << doc.Dirty << ']';
 }
 
-
+// TODO: warning for nested loops like [[...]] and <>><, it just makes no sense
 
 bool EditorModel::Close(std::vector<u32> inds, bool save)
 {

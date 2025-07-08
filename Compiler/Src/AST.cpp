@@ -4,33 +4,67 @@ OpType OpFromTType(const TType& type)
 {
 	switch (type)
 	{
-	case INC: return OpType::INC;
-	case DEC: return OpType::DEC;
-	case LEFT: return OpType::LEFT;
-	case RIGHT: return OpType::RIGHT;
-	case I: return OpType::I;
-	case O: return OpType::O;
-	default: return OpType::NONE;
+	case T_INC: return O_INC;
+	case T_DEC: return O_DEC;
+	case T_LEFT: return O_LEFT;
+	case T_RIGHT: return O_RIGHT;
+	case T_I: return O_I;
+	case T_O: return O_O;
+	default: return O_NONE;
 	}
 }
 
 const hmap<OpType, std::string> Operation::ToString = {
-		{ OpType::NONE, "NONE" },
-		{ OpType::INC, "INCREMENT" },
-		{ OpType::DEC, "DECREMENT" },
-		{ OpType::LEFT, "LEFT" },
-		{ OpType::RIGHT, "RIGHT" },
-		{ OpType::I, "INPUT" },
-		{ OpType::O, "OUTPUT" },
+		{ O_NONE, "NONE" },
+		{ O_INC, "INCREMENT" },
+		{ O_DEC, "DECREMENT" },
+		{ O_LEFT, "LEFT" },
+		{ O_RIGHT, "RIGHT" },
+		{ O_I, "INPUT" },
+		{ O_O, "OUTPUT" },
 };
 const hmap<OpType, char> Operation::ToSymbol = {
-		{ OpType::INC, '+'},
-		{ OpType::DEC, '-'},
-		{ OpType::LEFT, '<'},
-		{ OpType::RIGHT, '>'},
-		{ OpType::I, ','},
-		{ OpType::O, '.'},
+		{ O_INC, '+'},
+		{ O_DEC, '-'},
+		{ O_LEFT, '<'},
+		{ O_RIGHT, '>'},
+		{ O_I, ','},
+		{ O_O, '.'},
 };
+
+
+
+
+void PrintStatement(const Stmt& s, std::ostream& out, const TranslationUnit& tu, int indent)
+{
+	out << std::string(indent, ' ');
+	if (std::holds_alternative<Goto>(s.value))
+	{
+		const Goto& g = std::get<Goto>(s.value);
+		out << "GOTO id " << g.ID << " cnt " << g.count << ' ' << tu.symbolsI.at(g.ID);
+	}
+	else if (std::holds_alternative<Return>(s.value))
+	{
+		const Return& r = std::get<Return>(s.value);
+		out << "RETURN";
+	}
+	else if (std::holds_alternative<Operation>(s.value))
+	{
+		const Operation& o = std::get<Operation>(s.value);
+		out << Operation::ToString.at((OpType)o.type) << " cnt " << o.count;
+	}
+	else
+	{
+		const Loop& lo = std::get<Loop>(s.value);
+		out << "LOOP_START\n";
+		for (const Stmt& i : lo.body)
+		{
+			PrintStatement(i, out, tu, indent + 1);
+			out << '\n';
+		}
+		out << std::string(indent, ' ') << "LOOP_END";
+	}
+}
 
 std::ostream& operator<<(std::ostream& out, const Loop& lo)
 {
@@ -42,7 +76,7 @@ std::ostream& operator<<(std::ostream& out, const Loop& lo)
 }
 std::ostream& operator<<(std::ostream& out, const Operation& o)
 {
-	return out << Operation::ToString.at(o.type);
+	return out << Operation::ToString.at((OpType)o.type) << " cnt " << o.count;
 }
 std::ostream& operator<<(std::ostream& out, const Return& r)
 {
@@ -50,7 +84,7 @@ std::ostream& operator<<(std::ostream& out, const Return& r)
 }
 std::ostream& operator<<(std::ostream& out, const Goto& g)
 {
-	return out << g.name;
+	return out << "GOTO ID " << g.ID << " cnt " << g.count;
 }
 std::ostream& operator<<(std::ostream& out, const Stmt& s)
 {
@@ -64,7 +98,7 @@ std::ostream& operator<<(std::ostream& out, const Stmt& s)
 }
 std::ostream& operator<<(std::ostream& out, const Label& la)
 {
-	out << la.name << '\n';
+	out << la.ID << '\n';
 	for (const auto& i : la.body)
 		out << i << '\n';
 	return out;
@@ -87,7 +121,25 @@ std::ostream& operator<<(std::ostream& out, const Block& b)
 }
 std::ostream& operator<<(std::ostream& out, const TranslationUnit& tu)
 {
-	return out << tu.body;
+	for (const BlockItem& bi : tu.body.items)
+	{
+		if (std::holds_alternative<Stmt>(bi.value))
+		{
+			const Stmt& s = std::get<Stmt>(bi.value);
+			PrintStatement(s, out, tu, 0);
+			out << '\n';
+		}
+		else
+		{
+			const Decl& d = std::get<Decl>(bi.value);
+			const Label& la = d.label;
+			out << "LABEL id " << la.ID << ' ' << tu.symbolsI.at(la.ID) << '\n';
+			for (const Stmt& s : la.body)
+			{
+				PrintStatement(s, out, tu, 1);
+				out << '\n';
+			}
+		}
+	}
+	return out;
 }
-
-//MERGE IDENTICAL CONSECUTIVE NODE AND REDUCE SPACE CPLXTY

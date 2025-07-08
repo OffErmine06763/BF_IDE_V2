@@ -151,6 +151,7 @@
     <ClCompile Include="Src\Events\Event.cpp" />
     <ClCompile Include="Src\Events\EventBus.cpp" />
     <ClCompile Include="Src\Events\Observable.cpp" />
+    <ClCompile Include="Src\History.cpp" />
     <ClCompile Include="Src\Models\EditorModel.cpp" />
     <ClCompile Include="Src\Models\EditModel.cpp" />
     <ClCompile Include="Src\Models\Model.cpp" />
@@ -179,6 +180,7 @@
     <ClInclude Include="Src\Events\EventBus.h" />
     <ClInclude Include="Src\Events\Observable.h" />
     <ClInclude Include="Src\App.h" />
+    <ClInclude Include="Src\History.h" />
     <ClInclude Include="Src\Models\EditModel.h" />
     <ClInclude Include="Src\Models\EditorModel.h" />
     <ClInclude Include="Src\Models\Model.h" />

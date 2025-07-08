@@ -25,9 +25,9 @@ public:
 
 public:
 	static std::string GetUnreconTokenError(const char c, const u32 row, const u32 col) {
-		return std::format("Unrecognized Token '{}' at position {}:{}", c, row, col);
+		return std::format("Unrecognized Token '{}' at position [{}:{}]", c, row, col);
 	}
 	static std::string GetInvalidCommentError(const u32 row, const u32 col) {
-		return std::format("Invalid Comment at position {}:{}", row, col);
+		return std::format("Invalid Comment at position [{}:{}]", row, col);
 	}
 };

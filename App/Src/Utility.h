@@ -8,7 +8,10 @@
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
+#include <set>
+#include <map>
 #include <stack>
+#include <queue>
 
 #include <optional>
 #include <variant>
@@ -80,8 +83,11 @@ template <typename T>
 using provider = std::function<T(void)>;
 
 
+// CASTING
 template <typename T, typename X>
 inline constexpr T to(const X& x) { return static_cast<T>(x); }
+template <typename T, typename X, typename _X>
+inline constexpr T to(const stdc::duration<_X, X>& x) { return stdc::duration_cast<T>(x); }
 
 
 // CONCEPTS
@@ -122,18 +128,10 @@ struct expected
 {
 	std::variant<E, U> content;
 	
-	expected(E e) {
-		content = e;
-	}
-	expected(U u) {
-		content = u;
-	}
-	expected(const expected<E, U>& other) {
-		content = other.content;
-	}
-	void operator=(const expected<E, U>& other) {
-		content = other.content;
-	}
+	expected(E e) { content = e; }
+	expected(U u) { content = u; }
+	expected(const expected<E, U>& other) { content = other.content; }
+	void operator=(const expected<E, U>& other) { content = other.content; }
 	~expected() {};
 
 	std::optional<E> getE() {
@@ -170,61 +168,6 @@ struct WorkingDirectory
 std::ostream& operator<<(std::ostream& out, const WorkingDirectory& d);
 // ################################################################## PATH ##################################################################
 
-
-// ################################################################## HISTORY ##################################################################
-// TODO: add callbacks for changes?
-// TODO: move out of Utility.h
-struct History
-{
-public:
-	struct Entry
-	{
-		fs::path Path;
-		bool Fav;
-	};
-	using storage = std::vector<Entry>;
-	using it   = storage::iterator;
-	using rit  = storage::reverse_iterator;
-	using cit  = storage::const_iterator;
-	using crit = storage::const_reverse_iterator;
-
-	History(const fs::path& path);
-	~History();
-
-
-	void InitFromFile();
-	void InitFromFile(const fs::path& path);
-	
-	void SaveToFile();
-	void SaveToFile(const fs::path& path);
-	
-	void Add(const fs::path& path, const bool fav = false);
-	
-	void UpdatePath(const fs::path& oldpath, const fs::path& newpath);
-
-	void SetAsMostRecent(const fs::path& path);
-	void SetAsMostRecent(const size_t index);
-	
-	void SetFavourite(const size_t index, const bool fav = true);
-	void SetFavourite(const fs::path& path, const bool fav = true);
-	
-	void Remove(const fs::path& path);
-	void Remove(const size_t index);
-
-	inline bool IsDirty() const { return Dirty; }
-	inline size_t Size() const { return Entries.size(); }
-
-	inline const History::Entry& operator[](const size_t i) const { return Entries[i]; }
-	inline crit begin() const { return Entries.crbegin(); }
-	inline crit end() const { return Entries.crend(); }
-
-private:
-	storage Entries;
-
-	fs::path SaveFile;
-	bool Dirty = false;
-};
-// ################################################################## HISTORY ##################################################################
 
 // ################################################################## LOGGING ##################################################################
 #ifdef _DEBUG

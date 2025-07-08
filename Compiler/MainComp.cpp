@@ -21,11 +21,11 @@ int main(int argc, char** argv)
 	auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
 	
 	stdc::time_point end = stdc::high_resolution_clock::now();
-	std::cout << "Tokenization done in: " << stdc::duration_cast<stdc::milliseconds>(end - start) << '\n';
+	std::cout << "Tokenization done in: " << to<stdc::milliseconds>(end - start) << '\n';
 
 	if (!expTokens.success())
 	{
-		out << expTokens.getU().value() << '\n';
+		out << "TOKENS\n" << expTokens.getU().value() << '\n';
 		return 0;
 	}
 
@@ -40,12 +40,11 @@ int main(int argc, char** argv)
 	auto expParse = Compiler::Parse(tokens);
 	
 	end = stdc::high_resolution_clock::now();
-	std::cout << "Parsing done in: " << stdc::duration_cast<stdc::milliseconds>(end - start) << '\n';
-
+	std::cout << "Parsing done in: " << to<stdc::milliseconds>(end - start) << '\n';
 
 	if (!expParse.success())
 	{
-		out << expParse.getU().value() << '\n';
+		out << "AST\n" << expParse.getU().value() << '\n';
 		return 0;
 	}
 

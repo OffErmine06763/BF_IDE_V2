@@ -57,14 +57,14 @@ namespace CompilerTests
 			{
 				switch (token.type)
 				{
-				case INC: case DEC: case I: case O: case LEFT: case RIGHT: case LOOPS: case LOOPE:
+				case T_INC: case T_DEC: case T_I: case T_O: case T_LEFT: case T_RIGHT: case T_LOOPS: case T_LOOPE:
 					code.push_back(Token::ToSymbol.at((TType)token.type));
 					break;
-				case LABEL:
+				case T_LABEL:
 					code.append(tr.symbolsI.at(token.ID));
 					code.push_back(':');
 					break;
-				case GOTO:
+				case T_GOTO:
 					code.append(tr.symbolsI.at(token.ID));
 					break;
 				default:
@@ -79,7 +79,7 @@ namespace CompilerTests
 			std::string code;
 
 			for (const auto& bi : tu.body.items)
-				code.append(_Reconstruct(bi));
+				code.append(_Reconstruct(bi, tu));
 
 			return code;
 		}
@@ -119,52 +119,52 @@ namespace CompilerTests
 
 
 	private:
-		std::string _Reconstruct(const Loop& l)
+		std::string _Reconstruct(const Loop& l, const TranslationUnit& tu)
 		{
 			std::string res = "[";
 			for (const auto& s : l.body)
-				res += _Reconstruct(s);
+				res += _Reconstruct(s, tu);
 			res += "]";
 			return res;
 		}
-		std::string _Reconstruct(const Goto& g)
+		std::string _Reconstruct(const Goto& g, const TranslationUnit& tu)
 		{
-			return g.name;
+			return tu.symbolsI.at(g.ID);
 		}
-		std::string _Reconstruct(const Return& g)
+		std::string _Reconstruct(const Return& g, const TranslationUnit& tu)
 		{
 			return "ret";
 		}
-		std::string _Reconstruct(const Operation& g)
+		std::string _Reconstruct(const Operation& g, const TranslationUnit& tu)
 		{
-			return ""s + Operation::ToSymbol.at(g.type);
+			return std::string(g.count + 1, Operation::ToSymbol.at((OpType)g.type));
 		}
-		std::string _Reconstruct(const Stmt& s)
+		std::string _Reconstruct(const Stmt& s, const TranslationUnit& tu)
 		{
 			if (std::holds_alternative<Goto>(s.value))
-				return _Reconstruct(std::get<Goto>(s.value));
+				return _Reconstruct(std::get<Goto>(s.value), tu);
 			if (std::holds_alternative<Return>(s.value))
-				return _Reconstruct(std::get<Return>(s.value));
+				return _Reconstruct(std::get<Return>(s.value), tu);
 			if (std::holds_alternative<Operation>(s.value))
-				return _Reconstruct(std::get<Operation>(s.value));
-			return _Reconstruct(std::get<Loop>(s.value));
+				return _Reconstruct(std::get<Operation>(s.value), tu);
+			return _Reconstruct(std::get<Loop>(s.value), tu);
 		}
-		std::string _Reconstruct(const Label& l)
+		std::string _Reconstruct(const Label& l, const TranslationUnit& tu)
 		{
-			std::string res = l.name + ':';
+			std::string res = tu.symbolsI.at(l.ID) + ':';
 			for (const auto& s : l.body)
-				res += _Reconstruct(s);
+				res += _Reconstruct(s, tu);
 			return res;
 		}
-		std::string _Reconstruct(const Decl& d)
+		std::string _Reconstruct(const Decl& d, const TranslationUnit& tu)
 		{
-			return _Reconstruct(d.label);
+			return _Reconstruct(d.label, tu);
 		}
-		std::string _Reconstruct(const BlockItem& bi)
+		std::string _Reconstruct(const BlockItem& bi, const TranslationUnit& tu)
 		{
 			if (std::holds_alternative<Stmt>(bi.value))
-				return _Reconstruct(std::get<Stmt>(bi.value));
-			return _Reconstruct(std::get<Decl>(bi.value));
+				return _Reconstruct(std::get<Stmt>(bi.value), tu);
+			return _Reconstruct(std::get<Decl>(bi.value), tu);
 		}
 	};
 }

@@ -5,6 +5,7 @@
 
 # Custom
 *.ini
+Generated/
 
 # User-specific files
 *.rsuser

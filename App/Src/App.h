@@ -1,5 +1,6 @@
 #pragma once
 #include "Utility.h"
+#include "History.h"
 
 
 class State;

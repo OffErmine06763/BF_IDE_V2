@@ -3,38 +3,38 @@
 
 // TTYPE
 const hmap<TType, std::string> Token::ToString = {
-		{ NONE, "NONE" },
-		{ INC, "INCREMENT" },
-		{ DEC, "DECREMENT" },
-		{ LEFT, "LEFT" },
-		{ RIGHT, "RIGHT" },
-		{ LOOPS, "LOOP_START" },
-		{ LOOPE, "LOOP_END" },
-		{ I, "INPUT" },
-		{ O, "OUTPUT" },
-		{ LABEL, "LABEL" },
-		{ GOTO, "GOTO" },
-		{ INCLUDE, "INCLUDE" },
+		{ T_NONE, "NONE" },
+		{ T_INC, "INCREMENT" },
+		{ T_DEC, "DECREMENT" },
+		{ T_LEFT, "LEFT" },
+		{ T_RIGHT, "RIGHT" },
+		{ T_LOOPS, "LOOP_START" },
+		{ T_LOOPE, "LOOP_END" },
+		{ T_I, "INPUT" },
+		{ T_O, "OUTPUT" },
+		{ T_LABEL, "LABEL" },
+		{ T_GOTO, "GOTO" },
+		{ T_INCLUDE, "INCLUDE" },
 };
 const hmap<TType, char> Token::ToSymbol = {
-		{ INC, '+'},
-		{ DEC, '-'},
-		{ LEFT, '<'},
-		{ RIGHT, '>'},
-		{ LOOPS, '['},
-		{ LOOPE, ']'},
-		{ O, '.'},
-		{ I, ','},
+		{ T_INC, '+'},
+		{ T_DEC, '-'},
+		{ T_LEFT, '<'},
+		{ T_RIGHT, '>'},
+		{ T_LOOPS, '['},
+		{ T_LOOPE, ']'},
+		{ T_O, '.'},
+		{ T_I, ','},
 };
 const hmap<char, TType> Token::ToType = {
-		{ '+', INC},
-		{ '-', DEC},
-		{ '<', LEFT},
-		{ '>', RIGHT},
-		{ '[', LOOPS},
-		{ ']', LOOPE},
-		{ '.', O},
-		{ ',', I},
+		{ '+', T_INC},
+		{ '-', T_DEC},
+		{ '<', T_LEFT},
+		{ '>', T_RIGHT},
+		{ '[', T_LOOPS},
+		{ ']', T_LOOPE},
+		{ '.', T_O},
+		{ ',', T_I},
 };
 std::ostream& operator<<(std::ostream& out, const TType& token)
 {
@@ -80,7 +80,7 @@ void TokenizeResult::AddToken(const TType type, const u32 row, const u32 col)
 	if (last != tokens.rend() && last->type == type && last->count < Token::MAX_COUNT)
 	{
 		// must create a new node for loops that start or end on a different line
-		if ((type != LOOPE && type != LOOPS) || row == loop.at(last->ID).first)
+		if ((type != T_LOOPE && type != T_LOOPS) || row == loop.at(last->ID).first)
 		{
 			last->count++;
 			return;
@@ -123,20 +123,20 @@ std::ostream& operator<<(std::ostream& out, const TokenizeResult& tokens)
 		if (count != 0) // TODO: make fast iterator
 			continue;
 
-		if (token.type == LOOPE)
+		if (token.type == T_LOOPE)
 			indent = std::max(indent - 1, 0);
-		if (token.type != LABEL)
+		if (token.type != T_LABEL)
 			out << std::string(indent, ' ');
 
 		out << token;
 
 		if (Token::IsMapped((TType)token.type))
 			out << ' ' << tokens.symbolsI.at(token.ID);
-		else if (token.type == LOOPS) {
+		else if (token.type == T_LOOPS) {
 			indent++;
 			out << ' ' << (tokens.loop.at(token.ID) + coord<u32>{ 0, count });
 		}
-		else if (token.type == LOOPE)
+		else if (token.type == T_LOOPE)
 			out << ' ' << tokens.loop.at(token.ID);
 		out << '\n';
 	}

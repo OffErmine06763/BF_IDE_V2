@@ -44,10 +44,10 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 			} while (i < content.length() && std::isalnum(content[i]));
 
 			if (content[i] == ':')
-				res.AddToken({ TType::LABEL }, content.substr(start, i - start));
+				res.AddToken({ T_LABEL }, content.substr(start, i - start));
 			else
 			{
-				res.AddToken({ TType::GOTO }, content.substr(start, i - start));
+				res.AddToken({ T_GOTO }, content.substr(start, i - start));
 				i--;
 				col--;
 			}
@@ -89,6 +89,15 @@ public:
 		if (it != tr.cbegin())
 			--it;
 	}
+	void MoveToNextToken()
+	{
+		while ((*it).second != 0)
+		{
+			Consume();
+			if (Done())
+				break;
+		}
+	}
 
 	std::string Symbol(const u32 id) { return tr.symbolsI.at(id); }
 	coord<u32> Position(const u32 id) { return tr.loop.at(id); }
@@ -110,24 +119,25 @@ expected<Loop, std::string> ParseLoop(Parser& parser)
 
 		switch (token.type)
 		{
-		case INC: case DEC: case LEFT: case RIGHT: case I: case O:
-			loop.body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type) } });
+		case T_INC: case T_DEC: case T_LEFT: case T_RIGHT: case T_I: case T_O:
+			loop.body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type), token.count } });
+			parser.MoveToNextToken();
 			break;
-		case LOOPS:
+		case T_LOOPS:
 			parser.Back();
 			subLoop = ParseLoop(parser);
 			if (!subLoop.success())
 				return subLoop.getU().value();
 			loop.body.push_back(Stmt{ subLoop.getE().value() });
 			break;
-		case LOOPE:
+		case T_LOOPE:
 			return loop;
-		case GOTO:
-			loop.body.push_back(Stmt{ Goto{ std::to_string(token.ID) } });
+		case T_GOTO:
+			loop.body.push_back(Stmt{ Goto{ 0, token.ID } });
 			break;
-		case LABEL:
+		case T_LABEL:
 			return { "Cannot decleare a label inside a loop\n" };
-		case RETURN:
+		case T_RETURN:
 			loop.body.push_back(Stmt{ Return{} });
 			break;
 		}
@@ -136,7 +146,7 @@ expected<Loop, std::string> ParseLoop(Parser& parser)
 }
 expected<Label, std::string> ParseLabel(Parser& parser)
 {
-	Label label = { parser.Symbol((parser.Consume()).first.ID) };
+	Label label = { parser.Consume().first.ID };
 	while (!parser.Done())
 	{
 		const auto& [token, count] = parser.Consume();
@@ -144,22 +154,23 @@ expected<Label, std::string> ParseLabel(Parser& parser)
 
 		switch (token.type)
 		{
-		case INC: case DEC: case LEFT: case RIGHT: case I: case O:
-			label.body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type) } });
+		case T_INC: case T_DEC: case T_LEFT: case T_RIGHT: case T_I: case T_O:
+			label.body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type), token.count } });
+			parser.MoveToNextToken();
 			break;
-		case LOOPS:
+		case T_LOOPS:
 			parser.Back();
 			subLoop = ParseLoop(parser);
 			if (!subLoop.success())
 				return subLoop.getU().value();
 			label.body.push_back(Stmt{ subLoop.getE().value() });
 			break;
-		case LOOPE:
+		case T_LOOPE:
 			return { "Unmatched ] at position "s + parser.Position(token.ID) + '\n' };
-		case GOTO:
-			label.body.push_back(Stmt{ Goto{ parser.Symbol(token.ID) } });
+		case T_GOTO:
+			label.body.push_back(Stmt{ Goto{ 0, token.ID } });
 			break;
-		case LABEL:
+		case T_LABEL:
 			parser.Back();
 			return label;
 		}
@@ -178,22 +189,23 @@ expected<Block, std::string> ParseBlock(Parser& parser)
 
 		switch (token.type)
 		{
-		case INC: case DEC: case LEFT: case RIGHT: case I: case O:
-			block.items.push_back(BlockItem{ Stmt{ Operation{ OpFromTType((TType)token.type) } } });
+		case T_INC: case T_DEC: case T_LEFT: case T_RIGHT: case T_I: case T_O:
+			block.items.push_back(BlockItem{ Stmt{ Operation{ OpFromTType((TType)token.type), token.count } } });
+			parser.MoveToNextToken();
 			break;
-		case LOOPS:
+		case T_LOOPS:
 			parser.Back();
 			subLoop = ParseLoop(parser);
 			if (!subLoop.success())
 				return subLoop.getU().value();
 			block.items.push_back(BlockItem{ Stmt{ subLoop.getE().value() } });
 			break;
-		case LOOPE:
+		case T_LOOPE:
 			return { "Unmatched ] at position "s + parser.Position(token.ID) + '\n'};
-		case GOTO:
-			block.items.push_back(BlockItem{ Stmt{ Goto{ parser.Symbol(token.ID) } } });
+		case T_GOTO:
+			block.items.push_back(BlockItem{ Stmt{ Goto{ 0, token.ID } } });
 			break;
-		case LABEL:
+		case T_LABEL:
 			parser.Back();
 			subLabel = ParseLabel(parser);
 			if (!subLabel.success())
@@ -209,6 +221,9 @@ expected<Block, std::string> ParseBlock(Parser& parser)
 expected<TranslationUnit, std::string> Compiler::Parse(const TokenizeResult& tr)
 {
 	TranslationUnit tu;
+	tu.symbolsI = tr.symbolsI;
+	tu.symbolsS = tr.symbolsS;
+
 	Parser parser = { tr };
 	auto res = ParseBlock(parser);
 	if (!res.success())
@@ -216,55 +231,4 @@ expected<TranslationUnit, std::string> Compiler::Parse(const TokenizeResult& tr)
 
 	tu.body = res.getE().value();
 	return tu;
-
-	/*auto program = std::make_shared<ASTNode>();
-	std::stack<std::vector<std::shared_ptr<ASTNode>>*> loopStack;
-	std::vector<std::shared_ptr<ASTNode>>* currentBlock = &program->statements;
-
-	const auto& tokens = tr.tokens;
-	const auto& symbols = tr.symbolsI;
-	const auto& ss = tr.symbolsS;
-
-	for (size_t i = 0; i < tokens.size(); ++i) {
-		const Token token = tokens[i];
-		std::shared_ptr<ASTNode> node = nullptr;
-
-		switch (token.type) {
-		case TType::RIGHT: node = std::make_shared<ASTNode>(token.type); break;
-		case TType::LEFT: node = std::make_shared<ASTNode>(token.type); break;
-		case TType::INC: node = std::make_shared<ASTNode>(token.type); break;
-		case TType::DEC: node = std::make_shared<ASTNode>(token.type); break;
-		case TType::O: node = std::make_shared<ASTNode>(token.type); break;
-		case TType::I: node = std::make_shared<ASTNode>(token.type); break;
-
-		case TType::LOOPS: {
-			auto loop = std::make_shared<Loop>();
-			currentBlock->push_back(loop);
-			loopStack.push(currentBlock);
-			currentBlock = &loop->body;
-			continue;
-		}
-		case TType::LOOPE: {
-			if (loopStack.empty())
-			{
-				std::stringstream ss;
-				ss << "Unmatched ']' at position " << tr.loop.at(token.ID());
-				return ss.str();
-			}
-			currentBlock = loopStack.top();
-			loopStack.pop();
-			continue;
-		}
-
-		default:
-			continue;
-		}
-
-		currentBlock->push_back(node);
-	}
-
-	if (!loopStack.empty())
-		return std::format("Unmatched '[' in source code.");
-
-	return program;*/
 }

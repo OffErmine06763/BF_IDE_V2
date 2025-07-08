@@ -32,21 +32,22 @@
 // could use a vector of the tokens storages (label string, vector of loop body...)
 // and each node in the AST is again a 32bit pack with a type and index in the vector
 
-enum class OpType : u8
+enum OpType : u8
 {
-	INC,
-	DEC,
-	LEFT,
-	RIGHT,
-	I,
-	O,
-	NONE
+	O_INC,
+	O_DEC,
+	O_LEFT,
+	O_RIGHT,
+	O_I,
+	O_O,
+	O_NONE
 };
 OpType OpFromTType(const TType& type);
 
 struct Operation
 {
-	OpType type;
+	u16 type : 4;
+	u16 count : 8;
 
 	static const hmap<OpType, std::string> ToString;
 	static const hmap<OpType, char> ToSymbol;
@@ -54,15 +55,17 @@ struct Operation
 
 struct Goto
 {
-	std::string name;
+	u32 count : 8;
+	u32 ID : 20;
+	//std::string name;
 };
 
 struct Stmt;
 
 struct Label
 {
-	std::string name;
-	std::vector<Stmt> body;
+	u32 ID : 20;
+	std::vector<Stmt> body; // TODO: keep a single vector and a reference to a subrange, since all bodies are consecutive
 };
 
 struct Loop
@@ -121,6 +124,9 @@ struct Block
 struct TranslationUnit
 {
 	Block body;
+
+	hmap<u32, std::string> symbolsI;
+	hmap<std::string_view, u32> symbolsS;
 };
 
 
