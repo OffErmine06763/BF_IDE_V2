@@ -27,4 +27,14 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Res\Code_Invalid_Parse_1.bf" />
+    <None Include="Res\Code_Valid_1.bf" />
+    <None Include="Res\Code_Invalid_Token_2.bf" />
+    <None Include="Res\Code_Invalid_Token_3.bf" />
+    <None Include="Res\Code_Invalid_Parse_2.bf" />
+    <None Include="Res\Code_Invalid_Parse_3.bf" />
+    <None Include="Res\Code_Invalid_Parse_4.bf" />
+    <None Include="Res\Code_Invalid_Parse_5.bf" />
+  </ItemGroup>
 </Project>

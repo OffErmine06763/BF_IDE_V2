@@ -78,7 +78,7 @@ struct TokenizeResult
 
 		CIterator& ForceNext() { count = 0; it++; return *this; }
 
-		const std::pair<const Token&, u8>& operator*() const { return { *it, count }; }
+		std::pair<const Token&, u8> operator*() const { return { *it, count }; }
 		CIterator& operator++();
 		CIterator& operator++(int);
 		CIterator& operator--();

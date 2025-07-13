@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 
 	if (!expTokens.success())
 	{
-		out << expTokens.getU().value() << '\n';
+		std::cout << expTokens.getU().value() << '\n';
 		return 0;
 	}
 
@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 
 	if (!expParse.success())
 	{
-		out << expParse.getU().value() << '\n';
+		std::cout << expParse.getU().value() << '\n';
 		return 0;
 	}
 

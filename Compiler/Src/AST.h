@@ -1,36 +1,6 @@
 #pragma once
 #include "Token.h"
 
-//struct ASTNode
-//{
-//	u32 type : 4;
-//	u32 ind  : 28;
-//};
-//
-//struct NodeStorage
-//{
-//	union {
-//
-//	};
-//};
-//
-//
-//struct ParseResult
-//{
-//	std::shared_ptr<ASTNode> root;
-//	std::vector<NodeStorage> storages;
-//
-//	u32 AddNode(TType type, std::shared_ptr<ASTNode>& parent)
-//	{
-//		NodeStorage storage = storages[parent->ind];
-//
-//	}
-//};
-
-
-// TODO:
-// could use a vector of the tokens storages (label string, vector of loop body...)
-// and each node in the AST is again a 32bit pack with a type and index in the vector
 
 enum OpType : u8
 {
@@ -57,7 +27,6 @@ struct Goto
 {
 	u32 count : 8 = 0;
 	u32 ID : 20;
-	//std::string name;
 };
 
 struct Stmt;
@@ -65,14 +34,13 @@ struct Stmt;
 struct Label
 {
 	u32 ID : 20;
-	//std::vector<Stmt> body; // TODO: keep a single vector and a reference to a subrange, since all bodies are consecutive
+	// TODO: keep a single vector and a reference to a subrange, since all bodies are consecutive
 };
 
 struct Loop
 {
 	u32 count : 8 = 0;
 	u32 ID : 20;
-	//std::vector<Stmt> body;
 };
 
 struct Return
@@ -89,8 +57,9 @@ enum class StmtType : u8
 };
 struct Stmt
 {
-	//StmtType type;
+	// TODO: all variant types use less than 4Bytes, could fit the type in the remaining bits
 	std::variant<Goto, Return, Operation, Loop> value;
+	//StmtType type;
 	/*union
 	{
 		Goto label;
@@ -122,16 +91,24 @@ struct Block
 	std::vector<BlockItem> items;
 };
 
-// TODO: add a preprocessor to identify includes, each of them will recursively call the tokenized and parser
+// TODO: add a preprocessor to identify includes, each of them will recursively call the tokenizer and parser
 struct TranslationUnit
 {
 	Block body;
 
+	/// maps a symbol's ID to its name
 	hmap<u32, std::string> symbolsI;
+	/// maps a symbol's name to its ID
 	hmap<std::string_view, u32> symbolsS;
+	/// maps an AST node ID to the subtree rooted in such node
 	hmap<u32, std::vector<Stmt>> bodies;
 
 	u32 NextID = 0;
+
+	/// used for label redefinition
+	hset<u32> labels; // TODO: better ways to do this?
+	/// used for undefined label
+	hset<u32> gotos;
 };
 
 

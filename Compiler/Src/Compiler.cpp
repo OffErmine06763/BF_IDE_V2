@@ -31,9 +31,9 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 		else if (BF_ALL_S.contains(c))
 		{
 			if (c == '[' || c == ']')
-				res.AddToken({ Token::ToType.at(c) }, row, col);
+				res.AddToken(Token::ToType.at(c), row, col);
 			else
-				res.AddToken({ Token::ToType.at(c) });
+				res.AddToken(Token::ToType.at(c));
 		}
 		else if (std::isalpha(c))
 		{
@@ -44,15 +44,38 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 			} while (i < content.length() && std::isalnum(content[i]));
 
 			if (content[i] == ':')
-				res.AddToken({ T_LABEL }, content.substr(start, i - start));
+				res.AddToken(T_LABEL, content.substr(start, i - start));
 			else
 			{
-				res.AddToken({ T_GOTO }, content.substr(start, i - start));
+				res.AddToken(T_GOTO, content.substr(start, i - start));
 				i--;
 				col--;
 			}
 			col++;
 			continue;
+		}
+		else if (c == ';')
+		{
+			// Position is used to warn about unreachable code and give an error for a return outside a label (beginning of file)
+			res.AddToken(T_RETURN, row, col);
+		}
+		else if (c == '#')
+		{
+			if (i < content.length() - 1 && std::isalpha(content[i + 1]))
+			{
+				i++;
+				col++;
+				size_t start = i;
+				do {
+					i++;
+					col++;
+				} while (i < content.length() && std::isalnum(content[i]));
+
+				res.AddToken(T_INCLUDE, content.substr(start, i - start));
+				i--;
+				continue;
+			}
+			return { "Invalid include at position ["s + std::to_string(row) + ':' + std::to_string(col) + ']' };
 		}
 		else if (c != ' ' && c != '\t' && c != '\n')
 			return { GetUnreconTokenError(c, row, col) };
@@ -128,7 +151,7 @@ expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
 		switch (token.type)
 		{
 		case T_INC: case T_DEC: case T_LEFT: case T_RIGHT: case T_I: case T_O:
-			body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type), token.count } });
+			body.push_back({ Operation{ OpFromTType((TType)token.type), token.count } });
 			parser.MoveToNextToken();
 			break;
 		case T_LOOPS:
@@ -171,19 +194,22 @@ expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
 			sub = Loop{ subcount, id };
 			tu.bodies.insert({ id, std::move(body) });
 			body.clear();
-			body.push_back(Stmt{ sub });
+			body.push_back({ sub });
 			loop.count -= subcount + 1; // 0 indexed, must subtract 1 more
 			break;
 		case T_GOTO:
-			body.push_back(Stmt{ Goto{ token.count, token.ID } });
+			body.push_back({ Goto{ token.count, token.ID } });
+			tu.gotos.insert(token.ID);
 			parser.MoveToNextToken();
 			break;
 		case T_LABEL:
 			tu.bodies.insert({ loop.ID, body });
 			return { "Cannot declare a label inside a loop\n" };
 		case T_RETURN:
-			body.push_back(Stmt{ Return{} });
+			body.push_back({ Return{} });
 			break;
+		case T_INCLUDE:
+			return { "Internal compiler error, include token at the parse phase." };
 		}
 	}
 	tu.bodies.insert({ loop.ID, body });
@@ -192,8 +218,10 @@ expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
 expected<Label, std::string> ParseLabel(Parser& parser, TranslationUnit& tu)
 {
 	Label label = { parser.Consume().first.ID };
+	if (tu.labels.contains(label.ID))
+		return { Compiler::GetLabelRedefinitionError(tu.symbolsI.at(label.ID)) };
+	tu.labels.insert(label.ID);
 	std::vector<Stmt> body;
-	// TODO: if theres another label with the same name -> error "label redefinition" (currently no position information)
 
 	while (!parser.Done())
 	{
@@ -203,7 +231,7 @@ expected<Label, std::string> ParseLabel(Parser& parser, TranslationUnit& tu)
 		switch (token.type)
 		{
 		case T_INC: case T_DEC: case T_LEFT: case T_RIGHT: case T_I: case T_O:
-			body.push_back(Stmt{ Operation{ OpFromTType((TType)token.type), token.count } });
+			body.push_back({ Operation{ OpFromTType((TType)token.type), token.count } });
 			parser.MoveToNextToken();
 			break;
 		case T_LOOPS:
@@ -214,26 +242,31 @@ expected<Label, std::string> ParseLabel(Parser& parser, TranslationUnit& tu)
 				tu.bodies.insert({ label.ID, body });
 				return subLoop.getU().value();
 			}
-			body.push_back(Stmt{ subLoop.getE().value() });
+			body.push_back({ subLoop.getE().value() });
 			break;
 		case T_LOOPE:
 			tu.bodies.insert({ label.ID, body });
 			return { Compiler::GetUnmatchedCloseError(parser.Position(token.ID)) };
 		case T_GOTO:
-			body.push_back(Stmt{ Goto{ token.count, token.ID } });
+			body.push_back({ Goto{ token.count, token.ID } });
+			tu.gotos.insert(token.ID);
 			parser.MoveToNextToken();
 			break;
 		case T_LABEL:
 			parser.Back();
 			tu.bodies.insert({ label.ID, body });
 			return label; // the next label will be parsed by the caller
+		case T_INCLUDE:
+			return { "Internal compiler error, include token at the parse phase." };
+		case T_RETURN:
+			body.push_back({ Return{} });
 		}
 	}
 	
 	tu.bodies.insert({ label.ID, body });
 	return label;
 }
-expected<Block, std::string> ParseBlock(Parser& parser, TranslationUnit& tu)
+expected<Block, std::string> ParseRoot(Parser& parser, TranslationUnit& tu)
 {
 	Block block;
 	while (!parser.Done())
@@ -245,7 +278,7 @@ expected<Block, std::string> ParseBlock(Parser& parser, TranslationUnit& tu)
 		switch (token.type)
 		{
 		case T_INC: case T_DEC: case T_LEFT: case T_RIGHT: case T_I: case T_O:
-			block.items.push_back(BlockItem{ Stmt{ Operation{ OpFromTType((TType)token.type), token.count } } });
+			block.items.push_back({ Stmt{ Operation{ OpFromTType((TType)token.type), token.count } } });
 			parser.MoveToNextToken();
 			break;
 		case T_LOOPS:
@@ -253,12 +286,13 @@ expected<Block, std::string> ParseBlock(Parser& parser, TranslationUnit& tu)
 			subLoop = ParseLoop(parser, tu);
 			if (!subLoop.success())
 				return subLoop.getU().value();
-			block.items.push_back(BlockItem{ Stmt{ subLoop.getE().value() } });
+			block.items.push_back({ Stmt{ subLoop.getE().value() } });
 			break;
 		case T_LOOPE:
 			return { Compiler::GetUnmatchedCloseError(parser.Position(token.ID)) };
 		case T_GOTO:
-			block.items.push_back(BlockItem{ Stmt{ Goto{ token.count, token.ID } } });
+			block.items.push_back({ Stmt{ Goto{ token.count, token.ID } } });
+			tu.gotos.insert(token.ID);
 			parser.MoveToNextToken();
 			break;
 		case T_LABEL:
@@ -266,7 +300,13 @@ expected<Block, std::string> ParseBlock(Parser& parser, TranslationUnit& tu)
 			subLabel = ParseLabel(parser, tu);
 			if (!subLabel.success())
 				return subLabel.getU().value();
-			block.items.push_back(BlockItem{ Decl{ subLabel.getE().value() } });
+			block.items.push_back({ Decl{ subLabel.getE().value() } });
+			break;
+		case T_INCLUDE:
+			return { "Internal compiler error, include token at the parse phase."};
+		case T_RETURN:
+			// intentionally allow returns outside a label, will be a warning
+			block.items.push_back({ Stmt{ Return{} } });
 			break;
 		}
 	}
@@ -282,11 +322,19 @@ expected<TranslationUnit, std::string> Compiler::Parse(const TokenizeResult& tr)
 	tu.NextID = tr.NextID;
 
 	Parser parser = { tr };
-	auto res = ParseBlock(parser, tu);
+	auto res = ParseRoot(parser, tu);
 	if (!res.success())
 		return res.getU().value();
 
-	// TODO: check that all gotos math a label (no includes for now)
 	tu.body = res.getE().value();
+
+	for (const u32 id : tu.gotos)
+	{
+		if (!tu.labels.contains(id))
+			return { "Undefined label '"s + tu.symbolsI.at(id) + '\''};
+	}
+
+	tu.gotos.clear();
+	tu.labels.clear();
 	return tu;
 }

@@ -31,9 +31,12 @@ public:
 		return std::format("Invalid Comment at position [{}:{}]", row, col);
 	}
 	static std::string GetUnmatchedOpenError(const coord<u32>& pos) {
-		return "Unmatched [ at position "s + pos + '\n';
+		return "Unmatched [ at position "s + pos;
 	}
 	static std::string GetUnmatchedCloseError(const coord<u32>& pos) {
-		return "Unmatched ] at position "s + pos + '\n';
+		return "Unmatched ] at position "s + pos;
+	}
+	static std::string GetLabelRedefinitionError(const std::string& name) {
+		return "Label redefinition: "s + name;
 	}
 };

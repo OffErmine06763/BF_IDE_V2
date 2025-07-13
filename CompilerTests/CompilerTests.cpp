@@ -18,9 +18,9 @@ namespace CompilerTests
 			std::string strip = Strip("+++++++++++++++++-[[+[-]]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
 			Assert::AreEqual(strip, recon, L"The generated tokens do not match the given code");
 
-			res = Compiler::Tokenize("+++d;+++"s);
-			Assert::IsFalse(res.success(), wstring("The provided code has an invalid char ';', however tokenization succeeded"s).c_str());
-			Assert::AreEqual(Compiler::GetUnreconTokenError(';', 0, 4), res.getU().value());
+			res = Compiler::Tokenize("+++d=+++"s);
+			Assert::IsFalse(res.success(), wstring("The provided code has an invalid char '=', however tokenization succeeded"s).c_str());
+			Assert::AreEqual(Compiler::GetUnreconTokenError('=', 0, 4), res.getU().value());
 
 			res = Compiler::Tokenize("+++d/;+++"s);
 			Assert::IsFalse(res.success(), wstring("The provided code has an invalid comment, however tokenization succeeded"s).c_str());
@@ -69,11 +69,71 @@ namespace CompilerTests
 			Assert::AreEqual(Compiler::GetUnmatchedCloseError({ 0, 7 }), parse.getU().value());
 		}
 
+		TEST_METHOD(TestValid)
+		{
+			std::vector<std::string> files = {
+				"Code_Valid_1.bf"
+			};
+
+			for (const std::string& name : files)
+			{
+				auto file = path(name);
+
+				std::ifstream in(file);
+				auto strip = Strip(std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()));
+				in.close();
+				Assert::IsFalse(strip.empty());
+
+				auto tokens = Compiler::Tokenize(file);
+				Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getU().value())).c_str());
+
+				auto parse = Compiler::Parse(tokens.getE().value());
+				Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getU().value())).c_str());
+				auto recon = Reconstruct(parse.getE().value());
+
+				Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
+			}
+		}
+		TEST_METHOD(TestInvalidToken)
+		{
+			std::vector<std::string> files = {
+				"Code_Invalid_Token_2.bf", "Code_Invalid_Token_3.bf"
+			};
+
+			for (const std::string& name : files)
+			{
+				auto file = path(name);
+
+				auto tokens = Compiler::Tokenize(file);
+				Assert::IsFalse(tokens.success(), wstring("The provided code is invalid, however tokenization succeeded\n"s).c_str());
+			}
+		}
+		TEST_METHOD(TestInvalidParse)
+		{
+			std::vector<std::string> files = {
+				"Code_Invalid_Parse_1.bf", "Code_Invalid_Parse_2.bf", "Code_Invalid_Parse_3.bf", "Code_Invalid_Parse_4.bf", "Code_Invalid_Parse_5.bf",
+			};
+
+			for (const std::string& name : files)
+			{
+				auto file = path(name);
+
+				auto tokens = Compiler::Tokenize(file);
+				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens.getU().value())).c_str());
+
+				auto parse = Compiler::Parse(tokens.getE().value());
+				Assert::IsFalse(parse.success(), wstring(name + " is invalid, however parsing succeeded\n"s).c_str());
+			}
+		}
+
 
 
 	private:
-		std::wstring wstring(const std::string& s)
-		{
+		fs::path path(const std::string& str) {
+			return "../../CompilerTests/Res/" + str;
+		}
+
+		std::wstring wstring(const std::string& s) { 
 			return std::wstring(s.begin(), s.end());
 		}
 
@@ -161,7 +221,7 @@ namespace CompilerTests
 		}
 		std::string _Reconstruct(const Return& g, const TranslationUnit& tu)
 		{
-			return "ret";
+			return ";";
 		}
 		std::string _Reconstruct(const Operation& g, const TranslationUnit& tu)
 		{
