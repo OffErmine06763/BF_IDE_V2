@@ -14,11 +14,13 @@ int main(int argc, char** argv)
 
 	stdc::nanoseconds total = 0ns;
 
+	
 	// TOKENIZATION
+	
 	stdc::time_point start = stdc::high_resolution_clock::now();
 	
-	auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
-	//auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
+	//auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
+	auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
 	
 	stdc::time_point end = stdc::high_resolution_clock::now();
 	total += end - start;
@@ -70,7 +72,27 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	out << "Analyze SUCCESS\n" << '\n';
+	out << "Analyze SUCCESS\n\n";
+
+
+	// OPTIMIZING
+
+	size_t initialSize = ast.body.items.size();
+	for (const auto& sub : ast.bodies)
+		initialSize += sub.second.size();
+	start = stdc::high_resolution_clock::now();
+
+	Compiler::Optimize(ast);
+
+	end = stdc::high_resolution_clock::now();
+	total += end - start;
+	std::cout << "Optimizing done in: " << to<stdc::milliseconds>(end - start) << '\n';
+	size_t optimizedSize = ast.body.items.size();
+	for (const auto& sub : ast.bodies)
+		optimizedSize += sub.second.size();
+	std::cout << "  size reduction: " << ((f64)optimizedSize / initialSize * 100) << "%\n";
+
+	out << "Optimized\n" << ast << '\n';
 
 
 	std::cout << "Compilation done in: " << to<stdc::milliseconds>(total) << '\n';

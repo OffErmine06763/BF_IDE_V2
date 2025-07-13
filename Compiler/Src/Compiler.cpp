@@ -87,6 +87,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 }
 
 
+
 class Parser
 {
 public:
@@ -331,6 +332,7 @@ expected<TranslationUnit, std::string> Compiler::Parse(TokenizeResult&& tr)
 }
 
 
+
 std::optional<std::string> Compiler::Analyze(const TranslationUnit& tu)
 {
 	for (const u32 id : tu.gotos)
@@ -343,25 +345,167 @@ std::optional<std::string> Compiler::Analyze(const TranslationUnit& tu)
 }
 
 
-void OptimizeLoop(Loop loop, TranslationUnit& tu)
-{
 
+enum class MergeResult : u8 { NOOP, HALF, FULL };
+MergeResult Merge(Stmt& prev, Stmt& stmt)
+{
+	if (holds<Operation>(stmt.value, prev.value))
+	{
+		Operation& prevo = std::get<Operation>(prev.value);
+		Operation& op = std::get<Operation>(stmt.value);
+		if (op.type + prevo.type == 0 && op.type != prevo.type)
+		{
+			if (op.count == prevo.count)
+				return MergeResult::FULL;
+			else if (op.count > prevo.count)
+			{
+				// +++ ---- == -
+				//  2    3  == 0
+				prevo.count = op.count - prevo.count - 1;
+				prevo.type = op.type;
+				return MergeResult::HALF;
+			}
+			else
+			{
+				// ++++ --- = +
+				//    3   2 = 0
+				prevo.count -= op.count + 1;
+				return MergeResult::HALF;
+			}
+		}
+	}
+	return MergeResult::NOOP;
 }
-void OptimizeLabel(Label label, TranslationUnit& tu)
+void OptimizeStatement(Stmt& stmt, TranslationUnit& tu);
+void OptimizeLoop(Loop& loop, TranslationUnit& tu)
 {
+	loop.count = 0; // in the AST a loop is (at least) a pair of square brackets, [[body]] makes no sense
+	std::vector<Stmt>& body = tu.bodies.at(loop.ID);
+	if (body.empty())
+		return;
 
+	size_t offset = 0;
+	OptimizeStatement(body[0], tu);
+	for (size_t i = 1; i < body.size(); i++)
+	{
+		Stmt& prevs = body[i - 1 - offset];
+		Stmt& stmt = body[i];
+		OptimizeStatement(stmt, tu);
+		MergeResult res = Merge(prevs, stmt);
+		if (res == MergeResult::HALF)
+			offset++;
+		else if (res == MergeResult::FULL)
+		{
+			offset += 2;
+			if (i - 1 - offset < 0)
+				i++;
+		}
+		else if (offset != 0)
+			body[i - offset] = body[i];
+	}
+	body.resize(body.size() - offset);
+
+	if (body.size() == 1 && holds<Loop>(body[0].value))
+	{
+		Loop& inner = std::get<Loop>(body[0].value);
+		auto innerID = inner.ID;
+		tu.bodies.erase(loop.ID);
+		loop.ID = innerID;
+		// we are in the situation where optimizing this loop body left only another loop
+		// we can "merge" the two, but since nested loop are equivalent to a single loop
+		// we just replace the current with the nested
+	}
 }
-void OptimizeBlock(Block block, TranslationUnit& tu)
+void OptimizeStatement(Stmt& stmt, TranslationUnit& tu)
 {
+	if (holds<Loop>(stmt.value))
+		OptimizeLoop(std::get<Loop>(stmt.value), tu);
+}
+void OptimizeLabel(Label& label, TranslationUnit& tu)
+{
+	std::vector<Stmt>& body = tu.bodies.at(label.ID);
+	if (body.empty())
+		return;
 
+	OptimizeStatement(body[0], tu);
+	if (holds<Return>(body[0].value))
+	{
+		body.resize(1);
+		return;
+	}
+
+	size_t offset = 0;
+	for (size_t i = 1; i < body.size(); i++)
+	{
+		Stmt& prevs = body[i - 1 - offset];
+		Stmt& stmt = body[i];
+		OptimizeStatement(stmt, tu);
+		MergeResult res = Merge(prevs, stmt);
+		if (res == MergeResult::HALF)
+			offset++;
+		else if (res == MergeResult::FULL)
+		{
+			offset += 2;
+			if (i - 1 - offset < 0)
+				i++;
+		}
+		else if (offset != 0)
+			body[i - offset] = body[i];
+		if (holds<Return>(stmt.value))
+		{
+			body.resize(i + 1);
+			return;
+		}
+	}
+	body.resize(body.size() - offset);
+}
+void OptimizeBlock(Block& block, TranslationUnit& tu)
+{
+	if (block.items.empty())
+		return;
+
+	size_t offset = 0;
+	std::vector<BlockItem>& body = block.items;
+	if (holds<Stmt>(body[0].value))
+		OptimizeStatement(std::get<Stmt>(body[0].value), tu);
+	else if (holds<Decl>(body[0].value))
+		OptimizeLabel(std::get<Decl>(body[0].value).label, tu);
+
+	for (size_t i = 1; i < body.size(); i++)
+	{
+		BlockItem& prev = body[i - 1 - offset];
+		BlockItem& item = body[i];
+		if (holds<Stmt>(item.value, prev.value))
+		{
+			Stmt& prevs = std::get<Stmt>(prev.value);
+			Stmt& stmt = std::get<Stmt>(item.value);
+			OptimizeStatement(stmt, tu);
+			MergeResult res = Merge(prevs, stmt);
+			if (res == MergeResult::HALF)
+				offset++;
+			else if (res == MergeResult::FULL)
+			{
+				offset += 2;
+				if (i - 1 - offset < 0)
+					i++;
+			}
+			else if (offset != 0)
+				body[i - offset] = body[i];
+		}
+		else if (holds<Decl>(item.value))
+			OptimizeLabel(std::get<Decl>(item.value).label, tu);
+	}
+	body.resize(body.size() - offset);
 }
 
 void Compiler::Optimize(TranslationUnit& tu)
 {
 	// TODO: inc dec, left right, nested loops, unreachable code
 	// NOTE: harder to find unreferenced labels as there is fallthrough
+	// NOTE: intentionally leave multiple consecutive input operations (might want to consume a buffer)
 	// [[++<>-]] == [+]
-	// label: +++;-- == label: +++;
+	// TODO: label: +++;-- == label: +++;
+	// [[++]+-] == [[++]] == [++]
 
 	OptimizeBlock(tu.body, tu);
 }

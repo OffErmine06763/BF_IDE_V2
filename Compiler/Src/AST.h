@@ -2,21 +2,21 @@
 #include "Token.h"
 
 
-enum OpType : u8
+enum OpType : i8
 {
-	O_INC,
-	O_DEC,
-	O_LEFT,
-	O_RIGHT,
-	O_I,
-	O_O,
-	O_NONE
+	O_INC   = 1,
+	O_DEC   = -1,
+	O_LEFT  = 2,
+	O_RIGHT = -2,
+	O_I     = 3,
+	O_O     = 4, // O and I do not cancel each other
+	O_NONE  = 5
 };
 OpType OpFromTType(const TType& type);
 
 struct Operation
 {
-	u16 type : 4;
+	i16 type : 4;
 	u16 count : 8 = 0;
 
 	static const hmap<OpType, std::string> ToString;
@@ -100,7 +100,7 @@ struct TranslationUnit
 	hmap<u32, std::string> symbolsI;
 	/// maps a symbol's name to its ID
 	hmap<std::string, u32> symbolsS;
-	/// maps an AST node ID to the subtree rooted in such node
+	/// maps an AST node ID to the subtree rooted in such node, used for loops and labels
 	hmap<u32, std::vector<Stmt>> bodies;
 
 	u32 NextID = 0;

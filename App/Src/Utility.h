@@ -97,6 +97,8 @@ struct variant_contains<T, std::variant<Types...>> : std::disjunction<std::is_sa
 
 template <typename T, typename Variant>
 concept InVariant = variant_contains<T, Variant>::value;
+template <typename T, typename... Variant>
+concept InVariants = (variant_contains<T, Variant>::value && ...);
 
 template <typename T, typename U>
 concept not_same_as = !std::same_as<T, U>;
@@ -141,6 +143,8 @@ struct expected
 	}
 	E& getEUnchecked() { return std::get<E>(content); }
 	U& getUUnchecked() { return std::get<U>(content); }
+	E&& consumeEUnchecked() { return std::move(std::get<E>(content)); }
+	U&& consumeUUnchecked() { return std::move(std::get<U>(content)); }
 	template <typename T> requires InVariant<T, std::variant<E, U>>
 	std::optional<T> get() {
 		return std::holds_alternative<T>(content) ? std::get<T>(content) : std::nullopt;
@@ -148,6 +152,11 @@ struct expected
 
 	bool success() { return std::holds_alternative<E>(content); }
 };
+
+template <typename V, typename... T>
+inline bool holds(const std::variant<T...>& var) { return std::holds_alternative<V>(var); }
+template <typename V, typename... T> requires InVariants<V, T...>
+inline bool holds(const T&... vars) { return (... && std::holds_alternative<V>(vars)); }
 // ################################################################## TYPES ##################################################################
 
 
@@ -205,7 +214,7 @@ static constexpr auto
 	RESET = Terminal::TEXT_RESET;
 
 #else
-#define LOG(x) std::cout << x
+#define LOG(x)
 #define LOG_APP(x)
 #define LOG_COMP(x)
 #define LOG_GRAPHICS(x)
