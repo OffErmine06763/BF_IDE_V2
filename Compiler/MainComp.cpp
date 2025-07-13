@@ -15,11 +15,10 @@ int main(int argc, char** argv)
 	stdc::nanoseconds total = 0ns;
 
 	// TOKENIZATION
-
 	stdc::time_point start = stdc::high_resolution_clock::now();
 	
-	//auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
-	auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
+	auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
+	//auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
 	
 	stdc::time_point end = stdc::high_resolution_clock::now();
 	total += end - start;
@@ -27,11 +26,11 @@ int main(int argc, char** argv)
 
 	if (!expTokens.success())
 	{
-		std::cout << expTokens.getU().value() << '\n';
+		std::cout << expTokens.getUUnchecked() << '\n';
 		return 0;
 	}
 
-	auto tokens = expTokens.getE().value();
+	auto tokens = expTokens.getEUnchecked();
 	out << "TOKENS\n" << tokens << '\n';
 
 
@@ -39,7 +38,7 @@ int main(int argc, char** argv)
 
 	start = stdc::high_resolution_clock::now();
 	
-	auto expParse = Compiler::Parse(tokens);
+	auto expParse = Compiler::Parse(std::move(tokens));
 	
 	end = stdc::high_resolution_clock::now();
 	total += end - start;
@@ -47,12 +46,32 @@ int main(int argc, char** argv)
 
 	if (!expParse.success())
 	{
-		std::cout << expParse.getU().value() << '\n';
+		std::cout << expParse.getUUnchecked() << '\n';
 		return 0;
 	}
 
-	auto ast = expParse.getE().value();
+	auto ast = expParse.getEUnchecked();
 	out << "AST\n" << ast << '\n';
+
+
+	// ANALYZING
+
+	start = stdc::high_resolution_clock::now();
+
+	auto expAnalyze = Compiler::Analyze(ast);
+
+	end = stdc::high_resolution_clock::now();
+	total += end - start;
+	std::cout << "Analyzing done in: " << to<stdc::nanoseconds>(end - start) << '\n';
+
+	if (expAnalyze.has_value())
+	{
+		std::cout << expAnalyze.value() << '\n';
+		return 0;
+	}
+
+	out << "Analyze SUCCESS\n" << '\n';
+
 
 	std::cout << "Compilation done in: " << to<stdc::milliseconds>(total) << '\n';
 }

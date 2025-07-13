@@ -127,8 +127,8 @@ struct expected
 {
 	std::variant<E, U> content;
 	
-	expected(E e) { content = e; }
-	expected(U u) { content = u; }
+	expected(const E& e) { content = e; }
+	expected(const U& u) { content = u; }
 	expected(const expected<E, U>& other) { content = other.content; }
 	void operator=(const expected<E, U>& other) { content = other.content; }
 	~expected() {};
@@ -139,6 +139,8 @@ struct expected
 	std::optional<U> getU() {
 		return std::holds_alternative<U>(content) ? std::optional<U>{ std::get<U>(content) } : std::nullopt;
 	}
+	E& getEUnchecked() { return std::get<E>(content); }
+	U& getUUnchecked() { return std::get<U>(content); }
 	template <typename T> requires InVariant<T, std::variant<E, U>>
 	std::optional<T> get() {
 		return std::holds_alternative<T>(content) ? std::get<T>(content) : std::nullopt;
@@ -203,7 +205,7 @@ static constexpr auto
 	RESET = Terminal::TEXT_RESET;
 
 #else
-#define LOG(x)
+#define LOG(x) std::cout << x
 #define LOG_APP(x)
 #define LOG_COMP(x)
 #define LOG_GRAPHICS(x)

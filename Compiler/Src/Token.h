@@ -55,8 +55,9 @@ struct TokenizeResult
 
 	// TODO: since ids are progressive 1-indexed, use array? (use another ID for loop)
 	hmap<u32, std::string> symbolsI;
-	hmap<std::string_view, u32> symbolsS;
+	hmap<std::string, u32> symbolsS;
 	hmap<u32, coord<u32>> loop;
+
 
 	void AddToken(const TType type);
 	void AddToken(const TType type, const u32 row, const u32 col);

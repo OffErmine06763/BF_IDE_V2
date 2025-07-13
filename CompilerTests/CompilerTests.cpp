@@ -125,6 +125,26 @@ namespace CompilerTests
 				Assert::IsFalse(parse.success(), wstring(name + " is invalid, however parsing succeeded\n"s).c_str());
 			}
 		}
+		TEST_METHOD(TestInvalidAnalyze)
+		{
+			std::vector<std::string> files = {
+				"Code_Invalid_Analyze_1.bf"
+			};
+
+			for (const std::string& name : files)
+			{
+				auto file = path(name);
+
+				auto tokens = Compiler::Tokenize(file);
+				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens.getU().value())).c_str());
+
+				auto parse = Compiler::Parse(tokens.getE().value());
+				Assert::IsTrue(parse.success(), wstring(name + " is valid, however\n"s + (parse.success() ? "" : parse.getU().value())).c_str());
+
+				auto analyze = Compiler::Analyze(parse.getE().value());
+				Assert::IsFalse(analyze.success(), wstring(name + " is valid, however analyzation succeeded\n"s).c_str());
+			}
+		}
 
 
 

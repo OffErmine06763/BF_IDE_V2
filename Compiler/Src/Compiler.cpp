@@ -78,7 +78,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 			return { "Invalid include at position ["s + std::to_string(row) + ':' + std::to_string(col) + ']' };
 		}
 		else if (c != ' ' && c != '\t' && c != '\n')
-			return { GetUnreconTokenError(c, row, col) };
+			return GetUnreconTokenError(c, row, col);
 
 		col++;
 	}
@@ -262,7 +262,7 @@ expected<Label, std::string> ParseLabel(Parser& parser, TranslationUnit& tu)
 			body.push_back({ Return{} });
 		}
 	}
-	
+
 	tu.bodies.insert({ label.ID, body });
 	return label;
 }
@@ -314,27 +314,54 @@ expected<Block, std::string> ParseRoot(Parser& parser, TranslationUnit& tu)
 	return block;
 }
 
-expected<TranslationUnit, std::string> Compiler::Parse(const TokenizeResult& tr)
+expected<TranslationUnit, std::string> Compiler::Parse(TokenizeResult&& tr)
 {
 	TranslationUnit tu;
-	tu.symbolsI = tr.symbolsI;
-	tu.symbolsS = tr.symbolsS;
+	tu.symbolsI = std::move(tr.symbolsI);
+	tu.symbolsS = std::move(tr.symbolsS);
 	tu.NextID = tr.NextID;
 
 	Parser parser = { tr };
 	auto res = ParseRoot(parser, tu);
 	if (!res.success())
-		return res.getU().value();
+		return res.getUUnchecked();
 
-	tu.body = res.getE().value();
+	tu.body = res.getEUnchecked();
+	return tu;
+}
 
+
+std::optional<std::string> Compiler::Analyze(const TranslationUnit& tu)
+{
 	for (const u32 id : tu.gotos)
 	{
 		if (!tu.labels.contains(id))
-			return { "Undefined label '"s + tu.symbolsI.at(id) + '\''};
+			return { "Undefined label '"s + tu.symbolsI.at(id) + '\'' };
 	}
 
-	tu.gotos.clear();
-	tu.labels.clear();
-	return tu;
+	return std::nullopt;
+}
+
+
+void OptimizeLoop(Loop loop, TranslationUnit& tu)
+{
+
+}
+void OptimizeLabel(Label label, TranslationUnit& tu)
+{
+
+}
+void OptimizeBlock(Block block, TranslationUnit& tu)
+{
+
+}
+
+void Compiler::Optimize(TranslationUnit& tu)
+{
+	// TODO: inc dec, left right, nested loops, unreachable code
+	// NOTE: harder to find unreferenced labels as there is fallthrough
+	// [[++<>-]] == [+]
+	// label: +++;-- == label: +++;
+
+	OptimizeBlock(tu.body, tu);
 }

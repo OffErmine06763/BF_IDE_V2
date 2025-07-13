@@ -19,7 +19,19 @@ public:
 	}
 	static expected<TokenizeResult, std::string> Tokenize(const std::string& content);
 
-	static expected<TranslationUnit, std::string> Parse(const TokenizeResult& tr);
+	static expected<TranslationUnit, std::string> Parse(TokenizeResult&& tr);
+
+	static std::optional<std::string> Analyze(const TranslationUnit& tu);
+
+	static void Optimize(TranslationUnit& tu);
+	
+	/// basically go from LOOP { body } to LABEL loop1 body JNZ loop1
+	// https://chatgpt.com/c/6868f511-6f14-8002-a7ba-51572cb83a2f#:~:text=explain%20Intermediate%20Code%20Generator
+	static expected<bool /*Intermediate*/, std::string> Intermediate(const TranslationUnit& tu) {}
+
+	// https://chatgpt.com/c/6868f511-6f14-8002-a7ba-51572cb83a2f#:~:text=Hai%20detto%3A-,target%20LLVM,-ChatGPT%20ha%20detto
+	// https://chatgpt.com/c/6868f511-6f14-8002-a7ba-51572cb83a2f#:~:text=Hai%20detto%3A-,Add%20JIT%20execution,-ChatGPT%20ha%20detto
+	static void ToLLVM() {}
 
 
 

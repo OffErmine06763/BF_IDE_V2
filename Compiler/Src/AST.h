@@ -99,7 +99,7 @@ struct TranslationUnit
 	/// maps a symbol's ID to its name
 	hmap<u32, std::string> symbolsI;
 	/// maps a symbol's name to its ID
-	hmap<std::string_view, u32> symbolsS;
+	hmap<std::string, u32> symbolsS;
 	/// maps an AST node ID to the subtree rooted in such node
 	hmap<u32, std::vector<Stmt>> bodies;
 
