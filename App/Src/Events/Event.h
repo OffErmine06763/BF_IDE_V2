@@ -1,6 +1,8 @@
 #pragma once
 #include "Utility.h"
 
+using prop_id = u8;
+using listener_id = u32;
 
 template <typename T>
 class Event {

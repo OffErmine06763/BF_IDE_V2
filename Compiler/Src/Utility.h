@@ -5,6 +5,8 @@
 #include <fstream>
 #include <filesystem>
 
+#include <string>
+#include <sstream>
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
@@ -50,6 +52,13 @@ using hmap = std::unordered_map<K, V>;
 template <typename V>
 using hset = std::unordered_set<V>;
 
+namespace std::chrono {
+	using clock = stdc::high_resolution_clock;
+}
+// ################################################################## TYPES ##################################################################
+
+
+// PAIR
 template <typename T>
 using coord = std::pair<T, T>;
 template <typename T>
@@ -65,10 +74,6 @@ std::string operator+(const std::string& left, const coord<T>& right) {
 	return left + std::to_string(right.first) + ':' + std::to_string(right.second);
 }
 
-
-// PROPERTIES
-using prop_id = u8;
-using listener_id = u32;
 
 // FUNCTIONS
 template <typename T>
@@ -123,12 +128,33 @@ constexpr std::function<R(void)> bind(C* _this, R(C::* fn)()) {
 }
 
 
-// EXPECTED
+// VISITOR
+template <class... Ts>
+struct visitor : Ts... { using Ts::operator()...; };
+
+
+// VARIANT
+template <typename V, typename... T>
+inline bool holds(const std::variant<T...>& var) { return std::holds_alternative<V>(var); }
+template <typename V, typename... T> requires InVariants<V, T...>
+inline bool holds(const T&... vars) { return (... && std::holds_alternative<V>(vars)); }
+
+
+// CHRONO
+std::ostream& print_time(std::ostream& out, const stdc::nanoseconds& time);
+
+
+// FILE
+std::string ReadFile(const fs::path& file);
+
+
+
+// ################################################################## EXPECTED ##################################################################
 template <typename E, typename U>
 struct expected
 {
 	std::variant<E, U> content;
-	
+
 	expected(const E& e) { content = e; }
 	expected(const U& u) { content = u; }
 	expected(const expected<E, U>& other) { content = other.content; }
@@ -152,16 +178,11 @@ struct expected
 
 	bool success() { return std::holds_alternative<E>(content); }
 };
-
-template <typename V, typename... T>
-inline bool holds(const std::variant<T...>& var) { return std::holds_alternative<V>(var); }
-template <typename V, typename... T> requires InVariants<V, T...>
-inline bool holds(const T&... vars) { return (... && std::holds_alternative<V>(vars)); }
-// ################################################################## TYPES ##################################################################
+// ################################################################## EXPECTED ##################################################################
 
 
 // ################################################################## PATH ##################################################################
-enum class PathType : uint16_t
+enum class PathType : u8
 {
 	UNKNOWN = 0, FILE, FOLDER, PROJECT
 };
@@ -240,9 +261,9 @@ constexpr char
 	BF_MVR = '>', BF_MVL = '<', 
 	BF_OUT = '.', BF_INP = ',';
 constexpr char BF_ALL_L[] = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
-const std::unordered_set<char> BF_ALL_S = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
-constexpr uint32_t BF_MEMSIZE = 256;
-using bf_mem_t = uint8_t;
+const hset<char> BF_ALL_S = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
+constexpr u32 BF_MEMSIZE = 256;
+using bf_mem_t = u8;
 bool IsValidBF(const char c);
 
 constexpr auto EmulationSleep = 1ns;

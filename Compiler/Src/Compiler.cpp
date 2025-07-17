@@ -180,7 +180,7 @@ expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
 			{
 				// i have to consume loop.count times (i have already consumed the first ], and count is 0-indexed)
 				// if #] > #[ we close the current loop, and return to the superloop
-				for (int i = iteration; i < loop.count; i++)
+				for (u32 i = iteration; i < loop.count; i++)
 					parser.Consume();
 				tu.bodies.insert({ loop.ID, body });
 				return loop;
@@ -199,7 +199,7 @@ expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
 			loop.count -= subcount + 1; // 0 indexed, must subtract 1 more
 			break;
 		case T_GOTO:
-			body.push_back({ Goto{ token.count, token.ID } });
+			body.push_back({ Goto{ token.ID } });
 			tu.gotos.insert(token.ID);
 			parser.MoveToNextToken();
 			break;
@@ -249,7 +249,7 @@ expected<Label, std::string> ParseLabel(Parser& parser, TranslationUnit& tu)
 			tu.bodies.insert({ label.ID, body });
 			return { Compiler::GetUnmatchedCloseError(parser.Position(token.ID)) };
 		case T_GOTO:
-			body.push_back({ Goto{ token.count, token.ID } });
+			body.push_back({ Goto{ token.ID } });
 			tu.gotos.insert(token.ID);
 			parser.MoveToNextToken();
 			break;
@@ -292,7 +292,7 @@ expected<Block, std::string> ParseRoot(Parser& parser, TranslationUnit& tu)
 		case T_LOOPE:
 			return { Compiler::GetUnmatchedCloseError(parser.Position(token.ID)) };
 		case T_GOTO:
-			block.items.push_back({ Stmt{ Goto{ token.count, token.ID } } });
+			block.items.push_back({ Stmt{ Goto{ token.ID } } });
 			tu.gotos.insert(token.ID);
 			parser.MoveToNextToken();
 			break;
@@ -500,12 +500,70 @@ void OptimizeBlock(Block& block, TranslationUnit& tu)
 
 void Compiler::Optimize(TranslationUnit& tu)
 {
-	// TODO: inc dec, left right, nested loops, unreachable code
 	// NOTE: harder to find unreferenced labels as there is fallthrough
 	// NOTE: intentionally leave multiple consecutive input operations (might want to consume a buffer)
 	// [[++<>-]] == [+]
-	// TODO: label: +++;-- == label: +++;
 	// [[++]+-] == [[++]] == [++]
 
 	OptimizeBlock(tu.body, tu);
+}
+
+
+
+
+void IntermediateStatement(const Stmt& s, IR& ir, const TranslationUnit& tu);
+void IntermediateLoop(const Loop& lo, IR& ir, const TranslationUnit& tu)
+{
+	auto id = lo.ID;
+	ir.code.push_back({ .type = IR_LABEL, .ID = id });
+	ir.names.insert({ id, std::format("_LOOP{}", id) }); // TODO: forbid '_LOOP' starting label names
+	for (const Stmt& s : tu.bodies.at(id))
+		IntermediateStatement(s, ir, tu);
+	ir.code.push_back({ .type = IR_JNZ, .ID = id });
+}
+void IntermediateOperation(const Operation& o, IR& ir, const TranslationUnit& tu)
+{
+	ir.code.push_back({ .type = IRFromOpType((OpType)o.type), .count = o.count });
+}
+void IntermediateReturn(const Return& r, IR& ir, const TranslationUnit& tu)
+{
+	ir.code.push_back({ .type = IR_RET });
+}
+void IntermediateGoto(const Goto& g, IR& ir, const TranslationUnit& tu)
+{
+	ir.code.push_back({ .type = IR_GOTO, .ID = g.ID });
+}
+void IntermediateStatement(const Stmt& s, IR& ir, const TranslationUnit& tu)
+{
+	std::visit(visitor{
+		[&](const Goto& el)      { IntermediateGoto(el, ir, tu); },
+		[&](const Return& el)    { IntermediateReturn(el, ir, tu); },
+		[&](const Operation& el) { IntermediateOperation(el, ir, tu); },
+		[&](const Loop& el)      { IntermediateLoop(el, ir, tu); },
+		[](const auto& el)		 { static_assert(false, "non-exhaustive Stmt ICG visitor"); }
+	}, s.value);
+}
+void IntermediateDeclaration(const Decl& d, IR& ir, const TranslationUnit& tu)
+{
+	auto id = d.label.ID;
+	ir.code.push_back({ .type = IR_LABEL, .ID = id });
+	for (const Stmt& s : tu.bodies.at(id))
+		IntermediateStatement(s, ir, tu);
+}
+
+IR Compiler::Intermediate(TranslationUnit&& tu)
+{
+	IR ir;
+	ir.names = std::move(tu.symbolsI);
+
+	for (const BlockItem& bi : tu.body.items)
+	{
+		std::visit(visitor{
+			[&](const Stmt& el) { IntermediateStatement(el, ir, tu); },
+			[&](const Decl& el) { IntermediateDeclaration(el, ir, tu); },
+			[](const auto& el)  { static_assert(false, "non-exhaustive BlockItem ICG visitor"); }
+		}, bi.value);
+	}
+
+	return ir;
 }

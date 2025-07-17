@@ -1,4 +1,6 @@
 #include "AST.h"
+#include <cassert>
+
 
 OpType OpFromTType(const TType& type)
 {
@@ -10,7 +12,9 @@ OpType OpFromTType(const TType& type)
 	case T_RIGHT: return O_RIGHT;
 	case T_I: return O_I;
 	case T_O: return O_O;
-	default: return O_NONE;
+	default:
+		assert(false);
+		return O_NONE;
 	}
 }
 
@@ -41,7 +45,7 @@ void PrintStatement(const Stmt& s, std::ostream& out, const TranslationUnit& tu,
 	if (std::holds_alternative<Goto>(s.value))
 	{
 		const Goto& g = std::get<Goto>(s.value);
-		out << "GOTO id " << g.ID << " cnt " << g.count << ' ' << tu.symbolsI.at(g.ID);
+		out << "GOTO id " << g.ID << ' ' << tu.symbolsI.at(g.ID);
 	}
 	else if (std::holds_alternative<Return>(s.value))
 	{
@@ -81,7 +85,7 @@ std::ostream& operator<<(std::ostream& out, const Return& r)
 }
 std::ostream& operator<<(std::ostream& out, const Goto& g)
 {
-	return out << "GOTO ID " << g.ID << " cnt " << g.count;
+	return out << "GOTO ID " << g.ID;
 }
 std::ostream& operator<<(std::ostream& out, const Stmt& s)
 {

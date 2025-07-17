@@ -1,5 +1,6 @@
 #pragma once
 #include <Utility.h>
+#include <CompilerUtility.h>
 
 
 // NOTE: consecutive labels and gotos are not compressed, as it's currently not possible to know where each is located
@@ -31,14 +32,14 @@ struct Token
 	static const hmap<TType, std::string> ToString;
 	static const hmap<TType, char> ToSymbol;
 	static const hmap<char, TType> ToType;
-	static const u8 MAX_COUNT = (1 << 8) - 1;
 
 	// TODO: different Types can use different divisions of the pack,
 	// eg. + doesn't need an ID, the extra bits can be used for count
 	// however the max count = 255, so idk
-	u32 type : 4;
-	u32 count : 8;
-	u32 ID : 20;
+	u32 type : FIELD_TYPE;
+	u32 count : FIELD_COUNT;
+	// NOTE: ] has it's own ID (used for position map)
+	u32 ID : FIELD_ID;
 
 	Token(const TType type = T_NONE, const u8 count = 0, const u32 id = 0);
 	Token(const Token& other);
@@ -99,6 +100,6 @@ struct TokenizeResult
 		Iterator& operator--() { CIterator::operator--(); return *this; };
 	};
 
-	u32 NextID = 1;
+	u32 NextID = INVALID_ID + 1;
 };
 std::ostream& operator<<(std::ostream& out, const TokenizeResult& tokens);

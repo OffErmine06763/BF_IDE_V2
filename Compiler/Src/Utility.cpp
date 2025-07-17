@@ -2,6 +2,27 @@
 
 
 
+std::ostream& print_time(std::ostream& out, const stdc::nanoseconds& time)
+{
+	if (time < 1000ns)
+		out << time;
+	else if (time < 1000us)
+		out << to<stdc::microseconds>(time);
+	else if (time < 1000ms)
+		out << to<stdc::milliseconds>(time);
+	else
+		out << to<stdc::seconds>(time);
+	return out;
+}
+
+std::string ReadFile(const fs::path& file)
+{
+	std::ifstream in(file);
+	std::string content = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+	in.close();
+	return content;
+}
+
 // ################################################################## PATH ##################################################################
 constexpr PathType GetPathType(const fs::path& path)
 {

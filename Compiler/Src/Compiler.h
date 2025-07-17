@@ -2,6 +2,7 @@
 #include <Utility.h>
 #include "Token.h"
 #include "AST.h"
+#include "IR.h"
 
 
 
@@ -26,13 +27,40 @@ public:
 	static void Optimize(TranslationUnit& tu);
 	
 	/// basically go from LOOP { body } to LABEL loop1 body JNZ loop1
+	static IR Intermediate(TranslationUnit&& tu);
 	// https://chatgpt.com/c/6868f511-6f14-8002-a7ba-51572cb83a2f#:~:text=explain%20Intermediate%20Code%20Generator
-	static expected<bool /*Intermediate*/, std::string> Intermediate(const TranslationUnit& tu) {}
 
+	static void ToLLVM() {}
 	// https://chatgpt.com/c/6868f511-6f14-8002-a7ba-51572cb83a2f#:~:text=Hai%20detto%3A-,target%20LLVM,-ChatGPT%20ha%20detto
 	// https://chatgpt.com/c/6868f511-6f14-8002-a7ba-51572cb83a2f#:~:text=Hai%20detto%3A-,Add%20JIT%20execution,-ChatGPT%20ha%20detto
-	static void ToLLVM() {}
 
+	static void ToASM() {}
+
+
+	/*
+	,[[->+<]>-]+
+
+	IN
+	LABEL L0
+	LABEL L1
+	DEC
+	RIGHT
+	INC
+	LEFT
+	JNZ L1
+	RIGHT
+	DEC
+	JNZ L0
+	INC
+
+	
+	MAIN:+;
+
+	LABEL MAIN
+	INC
+	RET
+
+	*/
 
 
 public:

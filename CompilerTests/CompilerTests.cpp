@@ -2,6 +2,8 @@
 #include "CppUnitTest.h"
 #include <Compiler.h>
 
+#include <cassert>
+
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace CompilerTests
@@ -68,7 +70,7 @@ namespace CompilerTests
 			Assert::AreEqual(Compiler::GetUnmatchedCloseError({ 0, 7 }), parse.getUUnchecked());
 		}
 
-		TEST_METHOD(TestOptimze)
+		TEST_METHOD(TestOptimize)
 		{
 			auto tokens = Compiler::Tokenize("[[++<>-]]"s);
 			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
@@ -82,7 +84,7 @@ namespace CompilerTests
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 			auto anal = Compiler::Analyze(ast);
-			Assert::IsFalse(anal.has_value(), wstring("The give code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
 
 			Compiler::Optimize(ast);
 			recon = Reconstruct(ast);
@@ -103,7 +105,7 @@ namespace CompilerTests
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 			anal = Compiler::Analyze(ast);
-			Assert::IsFalse(anal.has_value(), wstring("The give code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
 
 			Compiler::Optimize(ast);
 			recon = Reconstruct(ast);
@@ -124,12 +126,61 @@ namespace CompilerTests
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 			anal = Compiler::Analyze(ast);
-			Assert::IsFalse(anal.has_value(), wstring("The give code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
 
 			Compiler::Optimize(ast);
 			recon = Reconstruct(ast);
 			strip = Strip("[+]label:[+];"s);
 			Assert::AreEqual(strip, recon, L"The optimized AST doesn't match the given code");
+		}
+
+		TEST_METHOD(TestIntermediate)
+		{
+			auto tokens = Compiler::Tokenize("[[++<>-]+-]label:[[++<>-]+-];label label"s);
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+
+			auto parse = Compiler::Parse(tokens.consumeEUnchecked());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
+
+			auto ast = parse.getEUnchecked();
+			std::string recon = Reconstruct(ast);
+			std::string strip = Strip("[[++<>-]+-]label:[[++<>-]+-];label label"s);
+			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
+
+			auto anal = Compiler::Analyze(ast);
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
+
+			// NO OPTIMIZE
+
+			auto ir = Compiler::Intermediate(std::move(ast));
+			recon = Reconstruct(ir);
+			std::string exp =
+				"LABEL _LOOP1\n"
+				"LABEL _LOOP9\n"
+				"INC 2\n"
+				"LEFT 1\n"
+				"RIGHT 1\n"
+				"DEC 1\n"
+				"JNZ _LOOP9\n"
+				"INC 1\n"
+				"DEC 1\n"
+				"JNZ _LOOP1\n"
+				"LABEL label\n"
+				"LABEL _LOOP5\n"
+				"LABEL _LOOP10\n"
+				"INC 2\n"
+				"LEFT 1\n"
+				"RIGHT 1\n"
+				"DEC 1\n"
+				"JNZ _LOOP10\n"
+				"INC 1\n"
+				"DEC 1\n"
+				"JNZ _LOOP5\n"
+				"RET\n"
+				"JMP label 1\n"
+				"JMP label 1\n"
+				;
+			Assert::AreEqual(exp, recon);
 		}
 
 
@@ -255,12 +306,18 @@ namespace CompilerTests
 		}
 		std::string Reconstruct(const TranslationUnit& tu)
 		{
-			std::string code;
+			std::string code; // TODO: use sstream and operator<<?
 
 			for (const auto& bi : tu.body.items)
 				code.append(_Reconstruct(bi, tu));
 
 			return code;
+		}
+		std::string Reconstruct(const IR& ir)
+		{
+			std::stringstream ss;
+			ss << ir;
+			return ss.str();
 		}
 
 		std::string Strip(const fs::path& path)
@@ -320,13 +377,7 @@ namespace CompilerTests
 		}
 		std::string _Reconstruct(const Stmt& s, const TranslationUnit& tu)
 		{
-			if (std::holds_alternative<Goto>(s.value))
-				return _Reconstruct(std::get<Goto>(s.value), tu);
-			if (std::holds_alternative<Return>(s.value))
-				return _Reconstruct(std::get<Return>(s.value), tu);
-			if (std::holds_alternative<Operation>(s.value))
-				return _Reconstruct(std::get<Operation>(s.value), tu);
-			return _Reconstruct(std::get<Loop>(s.value), tu);
+			return std::visit([&](const auto& el) { return _Reconstruct(el, tu); }, s.value);
 		}
 		std::string _Reconstruct(const Label& l, const TranslationUnit& tu)
 		{
@@ -341,9 +392,7 @@ namespace CompilerTests
 		}
 		std::string _Reconstruct(const BlockItem& bi, const TranslationUnit& tu)
 		{
-			if (std::holds_alternative<Stmt>(bi.value))
-				return _Reconstruct(std::get<Stmt>(bi.value), tu);
-			return _Reconstruct(std::get<Decl>(bi.value), tu);
+			return std::visit([&](const auto& el) { return _Reconstruct(el, tu); }, bi.value);
 		}
 	};
 }

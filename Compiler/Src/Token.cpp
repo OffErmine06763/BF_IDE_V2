@@ -65,7 +65,7 @@ std::ostream& operator<<(std::ostream& out, const Token& token)
 void TokenizeResult::AddToken(const TType type)
 {
 	auto last = tokens.rbegin();
-	if (last != tokens.rend() && last->type == type && last->count < Token::MAX_COUNT)
+	if (last != tokens.rend() && last->type == type && last->count < MAX_COUNT)
 		last->count++;
 	else
 	{
@@ -77,7 +77,7 @@ void TokenizeResult::AddToken(const TType type)
 void TokenizeResult::AddToken(const TType type, const u32 row, const u32 col)
 {
 	auto last = tokens.rbegin();
-	if (last != tokens.rend() && last->type == type && last->count < Token::MAX_COUNT)
+	if (last != tokens.rend() && last->type == type && last->count < MAX_COUNT)
 	{
 		// must create a new node for loops that start or end on a different line
 		if ((type != T_LOOPE && type != T_LOOPS) || row == loop.at(last->ID).first)

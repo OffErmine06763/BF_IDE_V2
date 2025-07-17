@@ -5,6 +5,7 @@
 
 
 // TODO: allow args to use the compiler/emulator
+// TODO: preprocessor directive to set the memory tape size
 // TODO: functional optional
 // expT.if_present(std::cout << val).map(Compiler::Parse)...
 int main(int argc, char** argv)
@@ -17,14 +18,14 @@ int main(int argc, char** argv)
 	
 	// TOKENIZATION
 	
-	stdc::time_point start = stdc::high_resolution_clock::now();
+	stdc::time_point start = stdc::clock::now();
 	
 	//auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
 	auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
 	
-	stdc::time_point end = stdc::high_resolution_clock::now();
+	stdc::time_point end = stdc::clock::now();
 	total += end - start;
-	std::cout << "Tokenization done in: " << to<stdc::milliseconds>(end - start) << '\n';
+	std::cout << "Tokenization done in: "; print_time(std::cout, end - start) << '\n';
 
 	if (!expTokens.success())
 	{
@@ -33,18 +34,18 @@ int main(int argc, char** argv)
 	}
 
 	auto tokens = expTokens.getEUnchecked();
-	out << "TOKENS\n" << tokens << '\n';
+	//out << "TOKENS\n" << tokens << '\n';
 
 
 	// PARSING
 
-	start = stdc::high_resolution_clock::now();
+	start = stdc::clock::now();
 	
 	auto expParse = Compiler::Parse(std::move(tokens));
 	
-	end = stdc::high_resolution_clock::now();
+	end = stdc::clock::now();
 	total += end - start;
-	std::cout << "Parsing done in: " << to<stdc::milliseconds>(end - start) << '\n';
+	std::cout << "Parsing done in: "; print_time(std::cout, end - start) << '\n';
 
 	if (!expParse.success())
 	{
@@ -53,18 +54,18 @@ int main(int argc, char** argv)
 	}
 
 	auto ast = expParse.getEUnchecked();
-	out << "AST\n" << ast << '\n';
+	//out << "AST\n" << ast << '\n';
 
 
 	// ANALYZING
 
-	start = stdc::high_resolution_clock::now();
+	start = stdc::clock::now();
 
 	auto expAnalyze = Compiler::Analyze(ast);
 
-	end = stdc::high_resolution_clock::now();
+	end = stdc::clock::now();
 	total += end - start;
-	std::cout << "Analyzing done in: " << to<stdc::nanoseconds>(end - start) << '\n';
+	std::cout << "Analyzing done in: "; print_time(std::cout, end - start) << '\n';
 
 	if (expAnalyze.has_value())
 	{
@@ -72,7 +73,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	out << "Analyze SUCCESS\n\n";
+	//out << "Analyze SUCCESS\n\n";
 
 
 	// OPTIMIZING
@@ -80,20 +81,33 @@ int main(int argc, char** argv)
 	size_t initialSize = ast.body.items.size();
 	for (const auto& sub : ast.bodies)
 		initialSize += sub.second.size();
-	start = stdc::high_resolution_clock::now();
+	start = stdc::clock::now();
 
 	Compiler::Optimize(ast);
 
-	end = stdc::high_resolution_clock::now();
+	end = stdc::clock::now();
 	total += end - start;
-	std::cout << "Optimizing done in: " << to<stdc::milliseconds>(end - start) << '\n';
+	std::cout << "Optimizing done in: "; print_time(std::cout, end - start) << '\n';
 	size_t optimizedSize = ast.body.items.size();
 	for (const auto& sub : ast.bodies)
 		optimizedSize += sub.second.size();
 	std::cout << "  size reduction: " << ((f64)optimizedSize / initialSize * 100) << "%\n";
 
-	out << "Optimized\n" << ast << '\n';
+	//out << "Optimized\n" << ast << '\n';
 
 
-	std::cout << "Compilation done in: " << to<stdc::milliseconds>(total) << '\n';
+	// IR
+
+	start = stdc::clock::now();
+
+	auto ir = Compiler::Intermediate(std::move(ast));
+
+	end = stdc::clock::now();
+	total += end - start;
+	std::cout << "IRC done in: "; print_time(std::cout, end - start) << '\n';
+
+	out << "Intermediate Representation\n" << ir << '\n';
+
+
+	std::cout << "Compilation done in: "; print_time(std::cout, total) << '\n';
 }

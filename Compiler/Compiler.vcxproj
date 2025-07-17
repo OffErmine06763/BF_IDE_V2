@@ -273,13 +273,18 @@
     <ClCompile Include="Src\AST.cpp" />
     <ClCompile Include="Src\Compiler.cpp" />
     <ClCompile Include="Src\Emulator.cpp" />
+    <ClCompile Include="Src\IR.cpp" />
     <ClCompile Include="Src\Token.cpp" />
+    <ClCompile Include="Src\Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\AST.h" />
     <ClInclude Include="Src\Compiler.h" />
+    <ClInclude Include="Src\CompilerUtility.h" />
     <ClInclude Include="Src\Emulator.h" />
+    <ClInclude Include="Src\IR.h" />
     <ClInclude Include="Src\Token.h" />
+    <ClInclude Include="Src\Utility.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Res\badapple.bf" />
@@ -287,6 +292,11 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="Generated\generated.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\VirtualTerminal\VirtualTerminal.vcxproj">
+      <Project>{3f571f42-abbf-41fc-a3b3-9497a53392d8}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

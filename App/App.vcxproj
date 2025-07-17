@@ -162,7 +162,6 @@
     <ClCompile Include="Src\States\OpenProjectState.cpp" />
     <ClCompile Include="Src\States\SelectProjectState.cpp" />
     <ClCompile Include="Src\States\State.cpp" />
-    <ClCompile Include="Src\Utility.cpp" />
     <ClCompile Include="Src\ViewModels\EditorViewModel.cpp" />
     <ClCompile Include="Src\ViewModels\EditViewModel.cpp" />
     <ClCompile Include="Src\Views\EditorView.cpp" />
@@ -189,7 +188,6 @@
     <ClInclude Include="Src\States\OpenProjectState.h" />
     <ClInclude Include="Src\States\SelectProjectState.h" />
     <ClInclude Include="Src\States\State.h" />
-    <ClInclude Include="Src\Utility.h" />
     <ClInclude Include="Src\ViewModels\EditorViewModel.h" />
     <ClInclude Include="Src\ViewModels\EditViewModel.h" />
     <ClInclude Include="Src\Views\EditorView.h" />

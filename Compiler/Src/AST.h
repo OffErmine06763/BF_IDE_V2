@@ -4,20 +4,20 @@
 
 enum OpType : i8
 {
-	O_INC   = 1,
+	O_INC   =  1,
 	O_DEC   = -1,
-	O_LEFT  = 2,
+	O_LEFT  =  2,
 	O_RIGHT = -2,
-	O_I     = 3,
-	O_O     = 4, // O and I do not cancel each other
-	O_NONE  = 5
+	O_I     =  3,
+	O_O     =  4, // O and I do not cancel each other
+	O_NONE  =  5
 };
 OpType OpFromTType(const TType& type);
 
 struct Operation
 {
-	i16 type : 4;
-	u16 count : 8 = 0;
+	i16 type : FIELD_TYPE;
+	u16 count : FIELD_COUNT = 0;
 
 	static const hmap<OpType, std::string> ToString;
 	static const hmap<OpType, char> ToSymbol;
@@ -25,22 +25,21 @@ struct Operation
 
 struct Goto
 {
-	u32 count : 8 = 0;
-	u32 ID : 20;
+	u32 ID : 20 = INVALID_ID;
 };
 
 struct Stmt;
 
 struct Label
 {
-	u32 ID : 20;
+	u32 ID : FIELD_ID = INVALID_ID;
 	// TODO: keep a single vector and a reference to a subrange, since all bodies are consecutive
 };
 
 struct Loop
 {
-	u32 count : 8 = 0;
-	u32 ID : 20;
+	u32 count : FIELD_COUNT = 0;
+	u32 ID : FIELD_ID = INVALID_ID;
 };
 
 struct Return

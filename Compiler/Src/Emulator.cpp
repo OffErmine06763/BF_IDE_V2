@@ -19,6 +19,7 @@ void Emulator::EmulateFile(const fs::path& file)
 	in.close();
 
 	m_Running = true;
+	m_Memory = { 0 };
 	std::stack<uint64_t> open;
 	for (uint64_t i = 0; i < content.length(); i++) {
 		std::this_thread::sleep_for(EmulationSleep); // TODO: allow different emulation modes, like as fast as possible / slow that highlights the current instruction
