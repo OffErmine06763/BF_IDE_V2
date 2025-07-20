@@ -36,12 +36,6 @@
     <ClCompile Include="Src\IR.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="vendor\tinycc\tcc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="vendor\tinycc\libtcc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Emulator.h">
@@ -65,18 +59,20 @@
     <ClInclude Include="Src\CompilerUtility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="vendor\tinycc\tcc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="vendor\tinycc\libtcc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Res\Code.bf" />
-    <None Include="Res\badapple.bf" />
+    <None Include="CheckRequirements.bat">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Assemble.bat">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="LinkObj.bat">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Res\Code\Code.bf" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="Generated\generated.txt" />
+    <Text Include="Res\help.txt" />
   </ItemGroup>
 </Project>

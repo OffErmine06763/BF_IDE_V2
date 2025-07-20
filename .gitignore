@@ -7,6 +7,10 @@
 *.ini
 Generated/
 
+/App/history.bfidedata
+badapple.*
+
+
 # User-specific files
 *.rsuser
 *.suo
@@ -365,6 +369,3 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/App/history.bfidedata
-/Compiler/Res/badapple.bf
-/Compiler/Generated/generated.txt

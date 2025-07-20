@@ -320,8 +320,6 @@
     <ClCompile Include="Src\IR.cpp" />
     <ClCompile Include="Src\Token.cpp" />
     <ClCompile Include="Src\Utility.cpp" />
-    <ClCompile Include="vendor\tinycc\libtcc.c" />
-    <ClCompile Include="vendor\tinycc\tcc.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\AST.h" />
@@ -331,20 +329,20 @@
     <ClInclude Include="Src\IR.h" />
     <ClInclude Include="Src\Token.h" />
     <ClInclude Include="Src\Utility.h" />
-    <ClInclude Include="vendor\tinycc\libtcc.h" />
-    <ClInclude Include="vendor\tinycc\tcc.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Res\badapple.bf" />
-    <None Include="Res\Code.bf" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="Generated\generated.txt" />
+    <None Include="Assemble.bat" />
+    <None Include="CheckRequirements.bat" />
+    <None Include="LinkObj.bat" />
+    <None Include="Res\Code\Code.bf" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\VirtualTerminal\VirtualTerminal.vcxproj">
       <Project>{3f571f42-abbf-41fc-a3b3-9497a53392d8}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Res\help.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

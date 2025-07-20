@@ -5,11 +5,28 @@
 #include "IR.h"
 
 
+struct Options
+{
+	enum InterOp
+	{ NONE, OBJ, ALL };
+	enum Target
+	{ TOKEN, PARSE, ANAL, OPT, INTER, FULL };
+
+	bool optimize = true;
+	InterOp inter = NONE;
+	fs::path interPath;
+	Target tgtPhase = FULL;
+	fs::path outputPath;
+	std::vector<fs::path> tgts;
+};
 
 
 class Compiler
 {
 public:
+	static bool ParseArgs(const std::vector<std::string>& args);
+	static int Compile(const std::vector<std::string>& args);
+
 
 	// Lexical Analyzer / Scanner / Lexer
 	static expected<TokenizeResult, std::string> Tokenize(const fs::path& file) {
@@ -30,7 +47,7 @@ public:
 	static IR Intermediate(TU&& tu);
 
 
-	static void ToASM_AMDWin64(const IR& ir);
+	static void ToASM_AMDWin64(const IR& ir, std::ostream& out);
 
 	// TODO: add a preprocessor for the includes, run (compile and run the code in that block before compiling) 
 	//       and insert (insert the output of the code in that block before compiling)
@@ -52,6 +69,10 @@ public:
 	static std::string GetLabelRedefinitionError(const std::string& name) {
 		return "Label redefinition: "s + name;
 	}
+
+
+public:
+	static Options options;
 
 
 public:

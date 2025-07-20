@@ -1,5 +1,8 @@
 #include "Compiler.h"
 
+#define NOMINMAX
+#include <Windows.h>
+
 
 expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& content)
 {
@@ -578,115 +581,493 @@ IR Compiler::Intermediate(TU&& tu)
 
 
 
-void Compiler::ToASM_AMDWin64(const IR& ir)
+void Compiler::ToASM_AMDWin64(const IR& ir, std::ostream& out)
 {
-	std::cout << "section .data\n"
-			  << "    hStdOut dq 0\n"
-			  << "    hStdIn  dq 0\n";
+	out << "section .data\n"
+		<< "    hStdOut dq 0\n"
+		<< "    hStdIn  dq 0\n";
 
-	std::cout << '\n';
+	out << '\n';
 
-	std::cout << "section .bss\n"
-			  << "    tape resb " << BF_MEMSIZE << '\n'
-			  << "    bytes_read resd 1\n"; // Reserve 4 bytes (one d) for the bytes read by StdIn
+	out << "section .bss\n"
+		<< "    tape resb " << BF_MEMSIZE << '\n'
+		<< "    bytes_read resd 1\n"; // Reserve 4 bytes (one d) for the bytes read by StdIn
 
-	std::cout << '\n';
+	out << '\n';
 
-	std::cout << "section .text\n";
-	std::cout << "    global _start\n\n";
-	std::cout << "extern ExitProcess, GetStdHandle, WriteFile, ReadFile\n";
+	out << "section .text\n";
+	out << "    global _start\n\n";
+	out << "extern ExitProcess, GetStdHandle, WriteFile, ReadFile\n";
 
-	std::cout << '\n';
+	out << '\n';
 
-	std::cout << "_start:\n";
-	std::cout << "    lea rsi, [rel tape]\n";
-	std::cout << "    mov rcx, -11\n" // STD_OUTPUT_HANDLE = -11
-			  << "    sub rsp, 32\n"
-			  << "    call GetStdHandle\n"
-			  << "    add rsp, 32\n" 
-			  << "    mov [rel hStdOut], rax\n";
-	std::cout << "    mov rcx, -10\n" // STD_INPUT_HANDLE = -10
-			  << "    sub rsp, 32\n"
-			  << "    call GetStdHandle\n"
-			  << "    add rsp, 32\n"
-			  << "    mov [rel hStdIn], rax\n";
+	out << "_out:\n";
+	out << "    mov rcx, [rel hStdOut]\n"
+		<< "    mov rdx, rsi\n"				// lpBuffer
+		<< "    mov r8, 1\n"				// nNumberOfBytesToWrite
+		<< "    xor r9, r9\n"				// lpNumberOfBytesWritten (NULL)
+		<< "    sub rsp, 40\n"				// Shadow space
+		<< "    mov qword [rsp + 32], 0\n"	// lpOverlapped (NULL)
+		<< "    call WriteFile\n"
+		<< "    add rsp, 40\n"				// Clean up stack
+		<< "    ret\n";
+	
+	out << '\n';
 
-	std::cout << '\n';
+	out << "_in:\n"
+		<< "    mov rcx, [rel hStdIn]\n"
+		<< "    mov rdx, rsi\n"					// lpBuffer
+		<< "    mov r8, 1\n"					// nNumberOfBytesToRead
+		<< "    lea r9, [rel bytes_read]\n"		// lpNumberOfBytesRead
+		<< "    sub rsp, 40\n"					// Shadow space
+		<< "    mov qword [rsp + 32], 0\n"		// lpOverlapped(NULL)
+		<< "    call ReadFile\n"
+		<< "    add rsp, 40\n"					// Clean up stack
+		<< "    ret\n";
+
+	out << '\n';
+
+	out << "_start:\n";
+	out << "    lea rsi, [rel tape]\n";
+	out << "    mov rcx, -11\n" // STD_OUTPUT_HANDLE = -11
+		<< "    sub rsp, 32\n"
+		<< "    call GetStdHandle\n"
+		<< "    add rsp, 32\n" 
+		<< "    mov [rel hStdOut], rax\n";
+	out << "    mov rcx, -10\n" // STD_INPUT_HANDLE = -10
+		<< "    sub rsp, 32\n"
+		<< "    call GetStdHandle\n"
+		<< "    add rsp, 32\n"
+		<< "    mov [rel hStdIn], rax\n";
+
+	out << '\n';
 
 	for (const auto& line : ir.code)
 	{
 		switch (line.type)
 		{
 		case IR_LABEL:
-			std::cout << '\n' << ir.names.at(line.ID) << ":\n";
+			out << '\n' << ir.names.at(line.ID) << ":\n";
 			break;
 		case IR_INC:
-			if (line.count == 0)
-				std::cout << "    inc [rsi]\n";
-			else
-				std::cout << "    add byte [rsi], " << line.count + 1 << '\n';
+			if (line.count == 0) out << "    inc byte [rsi]\n";
+			else				 out << "    add byte [rsi], " << line.count + 1 << '\n';
 			break;
 		case IR_DEC:
-			if (line.count == 0)
-				std::cout << "    dec [rsi]\n";
-			else
-				std::cout << "    sub byte [rsi], " << line.count + 1 << '\n';
+			if (line.count == 0) out << "    dec byte [rsi]\n";
+			else				 out << "    sub byte [rsi], " << line.count + 1 << '\n';
 			break;
 		case IR_LEFT:
-			std::cout << "    dec rsi\n";
+			if (line.count == 0) out << "    dec rsi\n";
+			else				 out << "    sub rsi, " << line.count + 1 << '\n';
 			break;
 		case IR_RIGHT:
-			std::cout << "    inc rsi\n";
+			if (line.count == 0) out << "    inc rsi\n";
+			else				 out << "    add rsi, " << line.count + 1 << '\n';
 			break;
 		case IR_O:
-			std::cout << "    mov rcx, [rel hStdOut]\n"
-					  << "    mov rdx, rsi\n"				// lpBuffer
-					  << "    mov r8, 1\n"					// nNumberOfBytesToWrite
-					  << "    xor r9, r9\n"					// lpNumberOfBytesWritten (NULL)
-					  << "    sub rsp, 40\n"				// Shadow space
-					  << "    mov qword [rsp + 32], 0\n"	// lpOverlapped (NULL)
-					  << "    call WriteFile\n"
-					  << "    add rsp, 40\n";				// Clean up stack
+			out << "    sub rsp, 32\n"
+				<< "    call _out\n"
+				<< "    add rsp, 32\n";
 
-			//std::cout << "    movzx rcx, byte [rsi]\n" << "    call putchar\n";
+			//out << "    mov rcx, [rel hStdOut]\n"
+			//	<< "    mov rdx, rsi\n"				// lpBuffer
+			//	<< "    mov r8, 1\n"				// nNumberOfBytesToWrite
+			//	<< "    xor r9, r9\n"				// lpNumberOfBytesWritten (NULL)
+			//	<< "    sub rsp, 40\n"				// Shadow space
+			//	<< "    mov qword [rsp + 32], 0\n"	// lpOverlapped (NULL)
+			//	<< "    call WriteFile\n"
+			//	<< "    add rsp, 40\n";				// Clean up stack
+
+			//out << "    movzx rcx, byte [rsi]\n" << "    call putchar\n";
 			break;
 		case IR_I:
-			std::cout << "    mov rcx, [rel hStdIn]\n"
-					  << "    mov rdx, rsi\n"					// lpBuffer
-					  << "    mov r8, 1\n"						// nNumberOfBytesToRead
-					  << "    lea r9, [rel bytes_read]\n"			// lpNumberOfBytesRead
-					  << "    sub rsp, 40\n"					// Shadow space
-					  << "    mov qword [rsp + 32], 0\n"		// lpOverlapped(NULL)
-					  << "    call ReadFile\n"
-					  << "    add rsp, 40\n";					// Clean up stack
-			//std::cout << "    call getchar\n" << "    mov [rsi], al\n";
+			out << "    sub rsp, 32\n"
+				<< "    call _in\n"
+				<< "    add rsp, 32\n";
+
+			//out << "    mov rcx, [rel hStdIn]\n"
+			//	<< "    mov rdx, rsi\n"					// lpBuffer
+			//	<< "    mov r8, 1\n"					// nNumberOfBytesToRead
+			//	<< "    lea r9, [rel bytes_read]\n"		// lpNumberOfBytesRead
+			//	<< "    sub rsp, 40\n"					// Shadow space
+			//	<< "    mov qword [rsp + 32], 0\n"		// lpOverlapped(NULL)
+			//	<< "    call ReadFile\n"
+			//	<< "    add rsp, 40\n";					// Clean up stack
+			//out << "    call getchar\n" << "    mov [rsi], al\n";
 			break;
 		case IR_GOTO:
-			std::cout << "    sub rsp, 32\n" << "    call " << ir.names.at(line.ID) << '\n' << "    add rsp, 32\n";
+			out << "    sub rsp, 32\n" << "    call " << ir.names.at(line.ID) << '\n' << "    add rsp, 32\n";
 			break;
 		case IR_RET:
-			std::cout << "    ret\n";
+			out << "    ret\n";
 			break;
 		case IR_JZ:
-			std::cout << "    cmp byte [rsi], 0\n" << "    je " << ir.names.at(line.ID) << '\n';
+			out << "    cmp byte [rsi], 0\n" << "    je " << ir.names.at(line.ID) << '\n';
 			break;
 		case IR_JMP:
-			std::cout << "    jmp " << ir.names.at(line.ID) << '\n';
+			out << "    jmp " << ir.names.at(line.ID) << '\n';
 			break;
 		case IR_LOOP:
-			std::cout << ir.names.at(line.ID) << ":\n";
+			out << ir.names.at(line.ID) << ":\n";
 			break;
 		}
 	}
 
-	//std::cout << "\n    mov eax, 0\n" << "    ret\n";
-	std::cout << "    xor rcx, rcx\n" << "    call ExitProcess\n";
+	//out << "\n    mov eax, 0\n" << "    ret\n";
+	out << "    xor rcx, rcx\n" << "    call ExitProcess\n";
 
 	// nasm -f win64 code.asm -o code.obj
-	// link /ENTRY:_start /SUBSYSTEM:CONSOLE / NODEFAULTLIB code.obj kernel32.lib
-	// C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64
+	// link /ENTRY:_start /SUBSYSTEM:CONSOLE /NODEFAULTLIB code.obj kernel32.lib
+	// C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link
 }
 
+
+
+
+
+
+bool Compiler::ParseArgs(const std::vector<std::string>& args)
+{
+	for (size_t i = 1; i < args.size(); i++)
+	{
+		const std::string& arg = args[i];
+		if (!arg.starts_with('-'))
+			options.tgts.push_back(arg);
+		else if (arg == "-h" || arg == "-help") {
+			std::cout << ReadFile("Res/help.txt");
+			return false;
+		}
+		else if (arg == "-o" || arg == "-out" || arg == "--out")
+		{
+			if (i == args.size() - 1) {
+				std::cout << "Specify output filename after flag " << arg << '\n';
+				return false;
+			}
+			options.outputPath = args[++i];
+			if (fs::is_directory(options.outputPath)) {
+				std::cout << "The output file must be a file\n";
+				return false;
+			}
+		}
+		else if (arg == "-keep" || arg == "--keep")
+			options.inter = Options::OBJ;
+		else if (arg == "-all" || arg == "--all")
+			options.inter = Options::ALL;
+		else if (arg == "-i" || arg == "-inter" || arg == "--inter")
+		{
+			if (i == args.size() - 1) {
+				std::cout << "Specify intermediate output folder after flag " << arg << '\n';
+				return false;
+			}
+			options.interPath = args[++i];
+			if (fs::exists(options.interPath)) {
+				if (!fs::is_directory(options.interPath)) {
+					std::cout << "The intermediate output folder must be a folder\n";
+					return false;
+				}
+			}
+			else
+				fs::create_directories(options.interPath);
+		}
+		else if (arg == "-nopt" || arg == "--nopt")
+			options.optimize = false;
+		else if (arg == "-phase" || arg == "--phase")
+		{
+			if (i == args.size() - 1) {
+				std::cout << "Specify target phase after flag " << arg << " (tokenize, parse, analyze, optimize, intermediate)\n";
+				return false;
+			}
+			else if (args[++i] == "tokenize")
+				options.tgtPhase = Options::TOKEN;
+			else if (args[i] == "parse")
+				options.tgtPhase = Options::PARSE;
+			else if (args[i] == "analyze")
+				options.tgtPhase = Options::ANAL;
+			else if (args[i] == "optimize")
+				options.tgtPhase = Options::OPT;
+			else if (args[i] == "intermediate")
+				options.tgtPhase = Options::INTER;
+			else {
+				std::cout << "Unrecognized compilation phase specified " << args[++i] << '\n';
+				return false;
+			}
+		}
+	}
+
+	if (options.outputPath.empty())
+	{
+		if (options.tgts.size() == 1)
+		{
+			if (fs::is_directory(options.tgts[0]))
+				options.outputPath = options.tgts[0].string() + ".exe";
+			else
+				options.outputPath = options.tgts[0].filename().string() + ".exe";
+		}
+		else
+			options.outputPath = "out.exe";
+	}
+
+	
+	for (size_t i = 0; i < options.tgts.size(); i++)
+	{
+		const fs::path& tgt = options.tgts[i];
+		if (!fs::is_directory(tgt))
+			continue;
+		for (const fs::path& sub : fs::directory_iterator(tgt))
+		{
+			if (sub.extension() == ".bf" || fs::is_directory(sub))
+				options.tgts.push_back(sub);
+		}
+		options.tgts.erase(options.tgts.begin() + i);
+		i--;
+	}
+
+	return true;
+}
+
+u32 RunCommandInDevPrompt(const std::wstring& command) {
+	STARTUPINFO si = { sizeof(STARTUPINFO) };
+	PROCESS_INFORMATION pi;
+
+	auto flag = NORMAL_PRIORITY_CLASS;
+
+	if (!CreateProcessW(NULL, const_cast<wchar_t*>(command.c_str()),
+		NULL, NULL, FALSE, flag, NULL, NULL, &si, &pi))
+	{
+		std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
+		return -1;
+	}
+
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	DWORD exitCode = 0;
+	GetExitCodeProcess(pi.hProcess, &exitCode);
+
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+
+	return exitCode;
+}
+
+int Compiler::Compile(const std::vector<std::string>& args)
+{
+	if (!ParseArgs(args))
+		return 1;
+
+	{
+		int reqEC = RunCommandInDevPrompt(L"cmd /c CheckRequirements.bat");
+		if (reqEC != 0)
+			return reqEC;
+	}
+
+
+	stdc::nanoseconds total = 0ns;
+	std::vector<fs::path> asmPaths;
+	for (const fs::path& path : options.tgts)
+	{
+		std::cout << "Compiling file " << path << '\n';
+		const fs::path ipath = (options.interPath.empty() ? path.parent_path() : options.interPath);
+		const std::string iname = path.stem().string();
+
+		// TOKENIZATION
+
+		stdc::time_point start = stdc::clock::now();
+
+		//auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
+		auto expTokens = Compiler::Tokenize(path);
+
+		stdc::time_point end = stdc::clock::now();
+		total += end - start;
+		std::cout << "Tokenization done in: "; print_time(std::cout, end - start) << '\n';
+
+		if (!expTokens.success())
+		{
+			std::cout << expTokens._getU() << '\n';
+			return 1;
+		}
+
+		auto& tokens = expTokens._getE();
+		if (options.inter == Options::ALL)
+		{
+			std::ofstream out{ ipath / (iname + "_tokens.txt") };
+			out << tokens;
+		}
+
+
+		// PARSING
+
+		start = stdc::clock::now();
+
+		auto expParse = Compiler::Parse(std::move(tokens));
+
+		end = stdc::clock::now();
+		total += end - start;
+		std::cout << "Parsing done in: "; print_time(std::cout, end - start) << '\n';
+
+		if (!expParse.success())
+		{
+			std::cout << expParse._getU() << '\n';
+			return 1;
+		}
+
+		auto& ast = expParse._getE();
+		if (options.inter == Options::ALL)
+		{
+			std::ofstream out{ ipath / (iname + "_AST.txt") };
+			out << ast;
+		}
+
+
+		// ANALYZING
+
+		start = stdc::clock::now();
+
+		auto expAnalyze = Compiler::Analyze(ast);
+
+		end = stdc::clock::now();
+		total += end - start;
+		std::cout << "Analyzing done in: "; print_time(std::cout, end - start) << '\n';
+
+		if (expAnalyze.has_value())
+		{
+			std::cout << expAnalyze.value() << '\n';
+			return 1;
+		}
+
+
+		// OPTIMIZING
+
+		if (options.optimize)
+		{
+			size_t initialSize = ast.body.items.size();
+			for (const auto& sub : ast.bodies)
+				initialSize += sub.second.size();
+			start = stdc::clock::now();
+
+			Compiler::Optimize(ast);
+
+			end = stdc::clock::now();
+			total += end - start;
+			std::cout << "Optimizing done in: "; print_time(std::cout, end - start) << '\n';
+			size_t optimizedSize = ast.body.items.size();
+			for (const auto& sub : ast.bodies)
+				optimizedSize += sub.second.size();
+			std::cout << "  reduced size: " << ((f64)optimizedSize / initialSize * 100) << "%\n";
+
+			if (options.inter == Options::ALL)
+			{
+				std::ofstream out{ ipath / (iname + "_ASToptimized.txt") };
+				out << ast;
+			}
+		}
+
+
+		// IR
+
+		start = stdc::clock::now();
+
+		auto ir = Compiler::Intermediate(std::move(ast));
+
+		end = stdc::clock::now();
+		total += end - start;
+		std::cout << "IRC done in: "; print_time(std::cout, end - start) << '\n';
+
+		if (options.inter == Options::ALL)
+		{
+			std::ofstream out{ ipath / (iname + "_IR.txt") };
+			out << ir;
+		}
+
+
+		// ASM
+
+		start = stdc::clock::now();
+
+		fs::path pasm = ipath / (iname + ".asm");
+		asmPaths.push_back(pasm);
+		std::ofstream out{ pasm };
+		Compiler::ToASM_AMDWin64(ir, out);
+		out.close();
+
+		end = stdc::clock::now();
+		total += end - start;
+		std::cout << "ASM emitted in: "; print_time(std::cout, end - start) << '\n';
+
+		std::cout << '\n';
+	}
+
+
+	// EXE
+
+	stdc::time_point start = stdc::clock::now();
+
+	std::stringstream ss;
+	ss << "cmd /c Assemble.bat ";
+	for (const auto& tgt : asmPaths) {
+		fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
+		ss << tgt << " " << pobj << " ";
+	}
+	ss << "&& LinkObj.bat " << options.outputPath << " \"";
+	for (const auto& tgt : asmPaths) {
+		fs::path path = (tgt.parent_path() / tgt.stem()).string() + ".obj";
+		ss << path << " ";
+	}
+	ss << '\"';
+	std::string command = ss.str();
+
+
+	u32 asslinkEC = RunCommandInDevPrompt(std::wstring(command.begin(), command.end()));
+	if (asslinkEC != 0)
+		return asslinkEC;
+
+
+	stdc::time_point end = stdc::clock::now();
+	auto external = end - start;
+	std::cout << "Executable created in: "; print_time(std::cout, end - start) << '\n';
+
+	/*int result = system(command.c_str());
+	if (result != 0) {
+		std::cerr << "Build failed with error code: " << result << '\n';
+		return 1;
+	}*/
+
+	std::cout << "Compilation done in: "; print_time(std::cout, total + external) << " ("; print_time(std::cout, total) << ")\n";
+
+
+
+	
+	if (options.inter != Options::ALL)
+	{
+		std::error_code ec;
+		for (const auto& pasm : asmPaths) {
+			bool res = fs::remove(pasm, ec);
+			if (!res) {
+				std::cout << "Failed to remove " << pasm << ", cause:\n" << ec.message() << '\n';
+				return ec.value();
+			}
+		}
+	}
+	if (options.inter == Options::NONE)
+	{
+		std::error_code ec;
+
+		for (const auto& tgt : asmPaths) {
+			fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
+			bool res = fs::remove(pobj, ec);
+			if (!res) {
+				std::cout << "Failed to remove " << pobj << ", cause:\n" << ec.message() << '\n';
+				return ec.value();
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+
+Options Compiler::options;
 
 
 
