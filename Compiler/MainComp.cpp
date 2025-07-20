@@ -20,8 +20,8 @@ int main(int argc, char** argv)
 	
 	stdc::time_point start = stdc::clock::now();
 	
-	//auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
-	auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
+	auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
+	//auto expTokens = Compiler::Tokenize(fs::path("Res/badapple.bf"));
 	
 	stdc::time_point end = stdc::clock::now();
 	total += end - start;
@@ -29,11 +29,11 @@ int main(int argc, char** argv)
 
 	if (!expTokens.success())
 	{
-		std::cout << expTokens.getUUnchecked() << '\n';
+		std::cout << expTokens._getU() << '\n';
 		return 0;
 	}
 
-	auto tokens = expTokens.getEUnchecked();
+	auto& tokens = expTokens._getE();
 	//out << "TOKENS\n" << tokens << '\n';
 
 
@@ -49,11 +49,11 @@ int main(int argc, char** argv)
 
 	if (!expParse.success())
 	{
-		std::cout << expParse.getUUnchecked() << '\n';
+		std::cout << expParse._getU() << '\n';
 		return 0;
 	}
 
-	auto ast = expParse.getEUnchecked();
+	auto& ast = expParse._getE();
 	//out << "AST\n" << ast << '\n';
 
 
@@ -106,7 +106,12 @@ int main(int argc, char** argv)
 	total += end - start;
 	std::cout << "IRC done in: "; print_time(std::cout, end - start) << '\n';
 
-	out << "Intermediate Representation\n" << ir << '\n';
+	//out << "Intermediate Representation\n" << ir << '\n';
+
+
+
+	Compiler::ToASM_AMDWin64(ir);
+
 
 
 	std::cout << "Compilation done in: "; print_time(std::cout, total) << '\n';

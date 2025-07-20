@@ -14,71 +14,71 @@ namespace CompilerTests
 		TEST_METHOD(TestTokenize)
 		{
 			auto res = Compiler::Tokenize("+++++++++++++++++-[[+[-]]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
-			Assert::IsTrue(res.success(), wstring("The provided code is valid, however:\n"s + (res.success() ? "" : res.getUUnchecked())).c_str());
+			Assert::IsTrue(res.success(), wstring("The provided code is valid, however:\n"s + (res.success() ? "" : res._getU())).c_str());
 
-			std::string recon = Reconstruct(res.getEUnchecked());
+			std::string recon = Reconstruct(res._getE());
 			std::string strip = Strip("+++++++++++++++++-[[+[-]]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
 			Assert::AreEqual(strip, recon, L"The generated tokens do not match the given code");
 
 			res = Compiler::Tokenize("+++d=+++"s);
 			Assert::IsFalse(res.success(), wstring("The provided code has an invalid char '=', however tokenization succeeded"s).c_str());
-			Assert::AreEqual(Compiler::GetUnreconTokenError('=', 0, 4), res.getUUnchecked());
+			Assert::AreEqual(Compiler::GetUnreconTokenError('=', 0, 4), res._getU());
 
 			res = Compiler::Tokenize("+++d/;+++"s);
 			Assert::IsFalse(res.success(), wstring("The provided code has an invalid comment, however tokenization succeeded"s).c_str());
-			Assert::AreEqual(Compiler::GetInvalidCommentError(0, 4), res.getUUnchecked());
+			Assert::AreEqual(Compiler::GetInvalidCommentError(0, 4), res._getU());
 		}
 
 		TEST_METHOD(TestParse)
 		{
 			auto tokens = Compiler::Tokenize("+++++++++++++++++-[[+[-]]+]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-			auto parse = Compiler::Parse(tokens.consumeEUnchecked());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
+			auto parse = Compiler::Parse(tokens._consumeE());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
 
-			std::string recon = Reconstruct(parse.getEUnchecked());
+			std::string recon = Reconstruct(parse._getE());
 			std::string strip = Strip("+++++++++++++++++-[[+[-]]+]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 
 
 			tokens = Compiler::Tokenize("+[[[+]]-]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-			parse = Compiler::Parse(tokens.consumeEUnchecked());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
+			parse = Compiler::Parse(tokens._consumeE());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
 
-			recon = Reconstruct(parse.getEUnchecked());
+			recon = Reconstruct(parse._getE());
 			strip = Strip("+[[[+]]-]"s);
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 
 
 			tokens = Compiler::Tokenize("+[[[+]]-"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-			parse = Compiler::Parse(tokens.consumeEUnchecked());
+			parse = Compiler::Parse(tokens._consumeE());
 			Assert::IsFalse(parse.success(), wstring("The provided code is invalid, however parsing succeeded:\n"s).c_str());
-			Assert::AreEqual(Compiler::GetUnmatchedOpenError({ 0, 1 }), parse.getUUnchecked());
+			Assert::AreEqual(Compiler::GetUnmatchedOpenError({ 0, 1 }), parse._getU());
 
 			tokens = Compiler::Tokenize("+[[+]]-]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-			parse = Compiler::Parse(tokens.consumeEUnchecked());
+			parse = Compiler::Parse(tokens._consumeE());
 			Assert::IsFalse(parse.success(), wstring("The provided code is invalid, however parsing succeeded:\n"s).c_str());
-			Assert::AreEqual(Compiler::GetUnmatchedCloseError({ 0, 7 }), parse.getUUnchecked());
+			Assert::AreEqual(Compiler::GetUnmatchedCloseError({ 0, 7 }), parse._getU());
 		}
 
 		TEST_METHOD(TestOptimize)
 		{
 			auto tokens = Compiler::Tokenize("[[++<>-]]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-			auto parse = Compiler::Parse(tokens.consumeEUnchecked());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
+			auto parse = Compiler::Parse(tokens._consumeE());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
 
-			auto ast = parse.getEUnchecked();
+			auto ast = parse._getE();
 			std::string recon = Reconstruct(ast);
 			std::string strip = Strip("[[++<>-]]"s);
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
@@ -94,12 +94,12 @@ namespace CompilerTests
 
 
 			tokens = Compiler::Tokenize("[[++]+-]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-			parse = Compiler::Parse(tokens.consumeEUnchecked());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
+			parse = Compiler::Parse(tokens._consumeE());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
 
-			ast = parse.getEUnchecked();
+			ast = parse._getE();
 			recon = Reconstruct(ast);
 			strip = Strip("[[++]+-]"s);
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
@@ -115,12 +115,12 @@ namespace CompilerTests
 
 
 			tokens = Compiler::Tokenize("[[++<>-]+-]label:[[++<>-]+-];[[++<>-]+-]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-			parse = Compiler::Parse(tokens.consumeEUnchecked());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
+			parse = Compiler::Parse(tokens._consumeE());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
 
-			ast = parse.getEUnchecked();
+			ast = parse._getE();
 			recon = Reconstruct(ast);
 			strip = Strip("[[++<>-]+-]label:[[++<>-]+-];[[++<>-]+-]"s);
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
@@ -137,12 +137,12 @@ namespace CompilerTests
 		TEST_METHOD(TestIntermediate)
 		{
 			auto tokens = Compiler::Tokenize("[[++<>-]+-]label:[[++<>-]+-];label label"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-			auto parse = Compiler::Parse(tokens.consumeEUnchecked());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
+			auto parse = Compiler::Parse(tokens._consumeE());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
 
-			auto ast = parse.getEUnchecked();
+			auto ast = parse._getE();
 			std::string recon = Reconstruct(ast);
 			std::string strip = Strip("[[++<>-]+-]label:[[++<>-]+-];label label"s);
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
@@ -200,11 +200,11 @@ namespace CompilerTests
 				Assert::IsFalse(strip.empty());
 
 				auto tokens = Compiler::Tokenize(file);
-				Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+				Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-				auto parse = Compiler::Parse(tokens.consumeEUnchecked());
-				Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
-				auto ast = parse.getEUnchecked();
+				auto parse = Compiler::Parse(tokens._consumeE());
+				Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
+				auto ast = parse._getE();
 				auto recon = Reconstruct(ast);
 
 				Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
@@ -240,9 +240,9 @@ namespace CompilerTests
 				auto file = path(name);
 
 				auto tokens = Compiler::Tokenize(file);
-				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-				auto parse = Compiler::Parse(tokens.consumeEUnchecked());
+				auto parse = Compiler::Parse(tokens._consumeE());
 				Assert::IsFalse(parse.success(), wstring(name + " is invalid, however parsing succeeded\n"s).c_str());
 			}
 		}
@@ -258,12 +258,12 @@ namespace CompilerTests
 				auto file = path(name);
 
 				auto tokens = Compiler::Tokenize(file);
-				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens.getUUnchecked())).c_str());
+				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
 
-				auto parse = Compiler::Parse(tokens.consumeEUnchecked());
-				Assert::IsTrue(parse.success(), wstring(name + " is valid, however\n"s + (parse.success() ? "" : parse.getUUnchecked())).c_str());
+				auto parse = Compiler::Parse(tokens._consumeE());
+				Assert::IsTrue(parse.success(), wstring(name + " is valid, however\n"s + (parse.success() ? "" : parse._getU())).c_str());
 
-				auto analyze = Compiler::Analyze(parse.getEUnchecked());
+				auto analyze = Compiler::Analyze(parse._getE());
 				Assert::IsTrue(analyze.has_value(), wstring(name + " is invalid, however analyzation succeeded\n"s).c_str());
 			}
 		}
@@ -304,7 +304,7 @@ namespace CompilerTests
 
 			return code;
 		}
-		std::string Reconstruct(const TranslationUnit& tu)
+		std::string Reconstruct(const TU& tu)
 		{
 			std::string code; // TODO: use sstream and operator<<?
 
@@ -355,7 +355,7 @@ namespace CompilerTests
 
 
 	private:
-		std::string _Reconstruct(const Loop& l, const TranslationUnit& tu)
+		std::string _Reconstruct(const Loop& l, const TU& tu)
 		{
 			std::string res = std::string(l.count + 1, '[');
 			for (const auto& s : tu.bodies.at(l.ID))
@@ -363,34 +363,34 @@ namespace CompilerTests
 			res += std::string(l.count + 1, ']');
 			return res;
 		}
-		std::string _Reconstruct(const Goto& g, const TranslationUnit& tu)
+		std::string _Reconstruct(const Goto& g, const TU& tu)
 		{
 			return tu.symbolsI.at(g.ID);
 		}
-		std::string _Reconstruct(const Return& g, const TranslationUnit& tu)
+		std::string _Reconstruct(const Return& g, const TU& tu)
 		{
 			return ";";
 		}
-		std::string _Reconstruct(const Operation& g, const TranslationUnit& tu)
+		std::string _Reconstruct(const Operation& g, const TU& tu)
 		{
 			return std::string(g.count + 1, Operation::ToSymbol.at((OpType)g.type));
 		}
-		std::string _Reconstruct(const Stmt& s, const TranslationUnit& tu)
+		std::string _Reconstruct(const Stmt& s, const TU& tu)
 		{
 			return std::visit([&](const auto& el) { return _Reconstruct(el, tu); }, s.value);
 		}
-		std::string _Reconstruct(const Label& l, const TranslationUnit& tu)
+		std::string _Reconstruct(const Label& l, const TU& tu)
 		{
 			std::string res = tu.symbolsI.at(l.ID) + ':';
 			for (const auto& s : tu.bodies.at(l.ID))
 				res += _Reconstruct(s, tu);
 			return res;
 		}
-		std::string _Reconstruct(const Decl& d, const TranslationUnit& tu)
+		std::string _Reconstruct(const Decl& d, const TU& tu)
 		{
 			return _Reconstruct(d.label, tu);
 		}
-		std::string _Reconstruct(const BlockItem& bi, const TranslationUnit& tu)
+		std::string _Reconstruct(const BlockItem& bi, const TU& tu)
 		{
 			return std::visit([&](const auto& el) { return _Reconstruct(el, tu); }, bi.value);
 		}

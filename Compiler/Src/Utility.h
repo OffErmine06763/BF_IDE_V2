@@ -167,10 +167,10 @@ struct expected
 	std::optional<U> getU() {
 		return std::holds_alternative<U>(content) ? std::optional<U>{ std::get<U>(content) } : std::nullopt;
 	}
-	E& getEUnchecked() { return std::get<E>(content); }
-	U& getUUnchecked() { return std::get<U>(content); }
-	E&& consumeEUnchecked() { return std::move(std::get<E>(content)); }
-	U&& consumeUUnchecked() { return std::move(std::get<U>(content)); }
+	E& _getE() { return std::get<E>(content); }
+	U& _getU() { return std::get<U>(content); }
+	E&& _consumeE() { return std::move(std::get<E>(content)); }
+	U&& _consumeU() { return std::move(std::get<U>(content)); }
 	template <typename T> requires InVariant<T, std::variant<E, U>>
 	std::optional<T> get() {
 		return std::holds_alternative<T>(content) ? std::get<T>(content) : std::nullopt;
@@ -262,9 +262,10 @@ constexpr char
 	BF_OUT = '.', BF_INP = ',';
 constexpr char BF_ALL_L[] = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
 const hset<char> BF_ALL_S = { BF_INC, BF_DEC, BF_OPN, BF_CLS, BF_MVR, BF_MVL, BF_OUT, BF_INP };
-constexpr u32 BF_MEMSIZE = 256;
+constexpr u32 BF_MEMSIZE = 1 << 15;
 using bf_mem_t = u8;
 bool IsValidBF(const char c);
+// TODO: move this to CompilerUtility.h?
 
 constexpr auto EmulationSleep = 1ns;
 // ################################################################## BF ##################################################################

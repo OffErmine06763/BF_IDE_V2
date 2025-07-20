@@ -56,7 +56,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 		}
 		else if (c == ';')
 		{
-			// Position is used to warn about unreachable code and give an error for a return outside a label (beginning of file)
+			// Position is used to warn about unreachable code and for a return outside a label (beginning of file)
 			res.AddToken(T_RETURN, row, col);
 		}
 		else if (c == '#')
@@ -135,7 +135,7 @@ private:
 	const TokenizeResult& tr;
 };
 
-expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
+static expected<Loop, std::string> ParseLoop(Parser& parser, TU& tu)
 {
 	const auto& [start, iteration] = parser.Consume();
 	Loop loop = { start.count, start.ID };
@@ -163,7 +163,7 @@ expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
 				tu.bodies.insert({ loop.ID, body });
 				return subLoop.getU().value();
 			}
-			body.push_back(Stmt{ subLoop.getE().value() });
+			body.push_back({ subLoop.getE().value() });
 			break;
 		case T_LOOPE:
 			// decrementing by iteration to account for subloops like [+[-]]
@@ -216,7 +216,7 @@ expected<Loop, std::string> ParseLoop(Parser& parser, TranslationUnit& tu)
 	tu.bodies.insert({ loop.ID, body });
 	return { Compiler::GetUnmatchedOpenError(parser.Position(start.ID)) };
 }
-expected<Label, std::string> ParseLabel(Parser& parser, TranslationUnit& tu)
+static expected<Label, std::string> ParseLabel(Parser& parser, TU& tu)
 {
 	Label label = { parser.Consume().first.ID };
 	if (tu.labels.contains(label.ID))
@@ -267,7 +267,7 @@ expected<Label, std::string> ParseLabel(Parser& parser, TranslationUnit& tu)
 	tu.bodies.insert({ label.ID, body });
 	return label;
 }
-expected<Block, std::string> ParseRoot(Parser& parser, TranslationUnit& tu)
+static expected<Block, std::string> ParseRoot(Parser& parser, TU& tu)
 {
 	Block block;
 	while (!parser.Done())
@@ -315,9 +315,9 @@ expected<Block, std::string> ParseRoot(Parser& parser, TranslationUnit& tu)
 	return block;
 }
 
-expected<TranslationUnit, std::string> Compiler::Parse(TokenizeResult&& tr)
+expected<TU, std::string> Compiler::Parse(TokenizeResult&& tr)
 {
-	TranslationUnit tu;
+	TU tu;
 	tu.symbolsI = std::move(tr.symbolsI);
 	tu.symbolsS = std::move(tr.symbolsS);
 	tu.NextID = tr.NextID;
@@ -325,15 +325,15 @@ expected<TranslationUnit, std::string> Compiler::Parse(TokenizeResult&& tr)
 	Parser parser = { tr };
 	auto res = ParseRoot(parser, tu);
 	if (!res.success())
-		return res.getUUnchecked();
+		return res._getU();
 
-	tu.body = res.getEUnchecked();
+	tu.body = res._getE();
 	return tu;
 }
 
 
 
-std::optional<std::string> Compiler::Analyze(const TranslationUnit& tu)
+std::optional<std::string> Compiler::Analyze(const TU& tu)
 {
 	for (const u32 id : tu.gotos)
 	{
@@ -347,7 +347,7 @@ std::optional<std::string> Compiler::Analyze(const TranslationUnit& tu)
 
 
 enum class MergeResult : u8 { NOOP, HALF, FULL };
-MergeResult Merge(Stmt& prev, Stmt& stmt)
+static MergeResult Merge(Stmt& prev, Stmt& stmt)
 {
 	if (holds<Operation>(stmt.value, prev.value))
 	{
@@ -376,8 +376,8 @@ MergeResult Merge(Stmt& prev, Stmt& stmt)
 	}
 	return MergeResult::NOOP;
 }
-void OptimizeStatement(Stmt& stmt, TranslationUnit& tu);
-void OptimizeLoop(Loop& loop, TranslationUnit& tu)
+static void OptimizeStatement(Stmt& stmt, TU& tu);
+static void OptimizeLoop(Loop& loop, TU& tu)
 {
 	loop.count = 0; // in the AST a loop is (at least) a pair of square brackets, [[body]] makes no sense
 	std::vector<Stmt>& body = tu.bodies.at(loop.ID);
@@ -416,12 +416,12 @@ void OptimizeLoop(Loop& loop, TranslationUnit& tu)
 		// we just replace the current with the nested
 	}
 }
-void OptimizeStatement(Stmt& stmt, TranslationUnit& tu)
+static void OptimizeStatement(Stmt& stmt, TU& tu)
 {
 	if (holds<Loop>(stmt.value))
 		OptimizeLoop(std::get<Loop>(stmt.value), tu);
 }
-void OptimizeLabel(Label& label, TranslationUnit& tu)
+static void OptimizeLabel(Label& label, TU& tu)
 {
 	std::vector<Stmt>& body = tu.bodies.at(label.ID);
 	if (body.empty())
@@ -459,7 +459,7 @@ void OptimizeLabel(Label& label, TranslationUnit& tu)
 	}
 	body.resize(body.size() - offset);
 }
-void OptimizeBlock(Block& block, TranslationUnit& tu)
+static void OptimizeBlock(Block& block, TU& tu)
 {
 	if (block.items.empty())
 		return;
@@ -498,7 +498,7 @@ void OptimizeBlock(Block& block, TranslationUnit& tu)
 	body.resize(body.size() - offset);
 }
 
-void Compiler::Optimize(TranslationUnit& tu)
+void Compiler::Optimize(TU& tu)
 {
 	// NOTE: harder to find unreferenced labels as there is fallthrough
 	// NOTE: intentionally leave multiple consecutive input operations (might want to consume a buffer)
@@ -511,29 +511,36 @@ void Compiler::Optimize(TranslationUnit& tu)
 
 
 
-void IntermediateStatement(const Stmt& s, IR& ir, const TranslationUnit& tu);
-void IntermediateLoop(const Loop& lo, IR& ir, const TranslationUnit& tu)
+static void IntermediateStatement(const Stmt& s, IR& ir, const TU& tu);
+static void IntermediateLoop(const Loop& lo, IR& ir, const TU& tu)
 {
-	auto id = lo.ID;
-	ir.code.push_back({ .type = IR_LABEL, .ID = id });
-	ir.names.insert({ id, std::format("_LOOP{}", id) }); // TODO: forbid '_LOOP' starting label names
+	u32 id = lo.ID;
+	u32 endid = ir.NextID++;
+	
+	ir.code.push_back({ .type = IR_LOOP, .ID = id });
+	ir.names.insert({ id, std::format("_LOOP_START_{}", id) }); // TODO: forbid '_LOOP' starting label names
+	ir.code.push_back({ .type = IR_JZ, .ID = endid });
+	
 	for (const Stmt& s : tu.bodies.at(id))
 		IntermediateStatement(s, ir, tu);
-	ir.code.push_back({ .type = IR_JNZ, .ID = id });
+	
+	ir.code.push_back({ .type = IR_JMP, .ID = id });
+	ir.code.push_back({ .type = IR_LOOP, .ID = endid });
+	ir.names.insert({ endid, std::format("_LOOP_END_{}", endid) }); // TODO: forbid '_LOOP' starting label names
 }
-void IntermediateOperation(const Operation& o, IR& ir, const TranslationUnit& tu)
+static void IntermediateOperation(const Operation& o, IR& ir, const TU& tu)
 {
 	ir.code.push_back({ .type = IRFromOpType((OpType)o.type), .count = o.count });
 }
-void IntermediateReturn(const Return& r, IR& ir, const TranslationUnit& tu)
+static void IntermediateReturn(const Return& r, IR& ir, const TU& tu)
 {
 	ir.code.push_back({ .type = IR_RET });
 }
-void IntermediateGoto(const Goto& g, IR& ir, const TranslationUnit& tu)
+static void IntermediateGoto(const Goto& g, IR& ir, const TU& tu)
 {
 	ir.code.push_back({ .type = IR_GOTO, .ID = g.ID });
 }
-void IntermediateStatement(const Stmt& s, IR& ir, const TranslationUnit& tu)
+static void IntermediateStatement(const Stmt& s, IR& ir, const TU& tu)
 {
 	std::visit(visitor{
 		[&](const Goto& el)      { IntermediateGoto(el, ir, tu); },
@@ -543,7 +550,7 @@ void IntermediateStatement(const Stmt& s, IR& ir, const TranslationUnit& tu)
 		[](const auto& el)		 { static_assert(false, "non-exhaustive Stmt ICG visitor"); }
 	}, s.value);
 }
-void IntermediateDeclaration(const Decl& d, IR& ir, const TranslationUnit& tu)
+static void IntermediateDeclaration(const Decl& d, IR& ir, const TU& tu)
 {
 	auto id = d.label.ID;
 	ir.code.push_back({ .type = IR_LABEL, .ID = id });
@@ -551,9 +558,10 @@ void IntermediateDeclaration(const Decl& d, IR& ir, const TranslationUnit& tu)
 		IntermediateStatement(s, ir, tu);
 }
 
-IR Compiler::Intermediate(TranslationUnit&& tu)
+IR Compiler::Intermediate(TU&& tu)
 {
 	IR ir;
+	ir.NextID = tu.NextID;
 	ir.names = std::move(tu.symbolsI);
 
 	for (const BlockItem& bi : tu.body.items)
@@ -567,3 +575,197 @@ IR Compiler::Intermediate(TranslationUnit&& tu)
 
 	return ir;
 }
+
+
+
+void Compiler::ToASM_AMDWin64(const IR& ir)
+{
+	std::cout << "section .data\n"
+			  << "    hStdOut dq 0\n"
+			  << "    hStdIn  dq 0\n";
+
+	std::cout << '\n';
+
+	std::cout << "section .bss\n"
+			  << "    tape resb " << BF_MEMSIZE << '\n'
+			  << "    bytes_read resd 1\n"; // Reserve 4 bytes (one d) for the bytes read by StdIn
+
+	std::cout << '\n';
+
+	std::cout << "section .text\n";
+	std::cout << "    global _start\n\n";
+	std::cout << "extern ExitProcess, GetStdHandle, WriteFile, ReadFile\n";
+
+	std::cout << '\n';
+
+	std::cout << "_start:\n";
+	std::cout << "    lea rsi, [rel tape]\n";
+	std::cout << "    mov rcx, -11\n" // STD_OUTPUT_HANDLE = -11
+			  << "    sub rsp, 32\n"
+			  << "    call GetStdHandle\n"
+			  << "    add rsp, 32\n" 
+			  << "    mov [rel hStdOut], rax\n";
+	std::cout << "    mov rcx, -10\n" // STD_INPUT_HANDLE = -10
+			  << "    sub rsp, 32\n"
+			  << "    call GetStdHandle\n"
+			  << "    add rsp, 32\n"
+			  << "    mov [rel hStdIn], rax\n";
+
+	std::cout << '\n';
+
+	for (const auto& line : ir.code)
+	{
+		switch (line.type)
+		{
+		case IR_LABEL:
+			std::cout << '\n' << ir.names.at(line.ID) << ":\n";
+			break;
+		case IR_INC:
+			if (line.count == 0)
+				std::cout << "    inc [rsi]\n";
+			else
+				std::cout << "    add byte [rsi], " << line.count + 1 << '\n';
+			break;
+		case IR_DEC:
+			if (line.count == 0)
+				std::cout << "    dec [rsi]\n";
+			else
+				std::cout << "    sub byte [rsi], " << line.count + 1 << '\n';
+			break;
+		case IR_LEFT:
+			std::cout << "    dec rsi\n";
+			break;
+		case IR_RIGHT:
+			std::cout << "    inc rsi\n";
+			break;
+		case IR_O:
+			std::cout << "    mov rcx, [rel hStdOut]\n"
+					  << "    mov rdx, rsi\n"				// lpBuffer
+					  << "    mov r8, 1\n"					// nNumberOfBytesToWrite
+					  << "    xor r9, r9\n"					// lpNumberOfBytesWritten (NULL)
+					  << "    sub rsp, 40\n"				// Shadow space
+					  << "    mov qword [rsp + 32], 0\n"	// lpOverlapped (NULL)
+					  << "    call WriteFile\n"
+					  << "    add rsp, 40\n";				// Clean up stack
+
+			//std::cout << "    movzx rcx, byte [rsi]\n" << "    call putchar\n";
+			break;
+		case IR_I:
+			std::cout << "    mov rcx, [rel hStdIn]\n"
+					  << "    mov rdx, rsi\n"					// lpBuffer
+					  << "    mov r8, 1\n"						// nNumberOfBytesToRead
+					  << "    lea r9, [rel bytes_read]\n"			// lpNumberOfBytesRead
+					  << "    sub rsp, 40\n"					// Shadow space
+					  << "    mov qword [rsp + 32], 0\n"		// lpOverlapped(NULL)
+					  << "    call ReadFile\n"
+					  << "    add rsp, 40\n";					// Clean up stack
+			//std::cout << "    call getchar\n" << "    mov [rsi], al\n";
+			break;
+		case IR_GOTO:
+			std::cout << "    sub rsp, 32\n" << "    call " << ir.names.at(line.ID) << '\n' << "    add rsp, 32\n";
+			break;
+		case IR_RET:
+			std::cout << "    ret\n";
+			break;
+		case IR_JZ:
+			std::cout << "    cmp byte [rsi], 0\n" << "    je " << ir.names.at(line.ID) << '\n';
+			break;
+		case IR_JMP:
+			std::cout << "    jmp " << ir.names.at(line.ID) << '\n';
+			break;
+		case IR_LOOP:
+			std::cout << ir.names.at(line.ID) << ":\n";
+			break;
+		}
+	}
+
+	//std::cout << "\n    mov eax, 0\n" << "    ret\n";
+	std::cout << "    xor rcx, rcx\n" << "    call ExitProcess\n";
+
+	// nasm -f win64 code.asm -o code.obj
+	// link /ENTRY:_start /SUBSYSTEM:CONSOLE / NODEFAULTLIB code.obj kernel32.lib
+	// C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64
+}
+
+
+
+
+
+
+
+//#pragma warning(push)
+//#pragma warning(disable : 4146 4996 4244 4267 4624)
+//#include <llvm/IR/IRBuilder.h>
+//#include <llvm/IR/LLVMContext.h>
+//#include <llvm/IR/Module.h>
+//#include <llvm/IR/Verifier.h>
+//#include <llvm/Support/TargetSelect.h>
+//#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+//#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
+//#include <llvm/Support/Error.h>
+//#include <llvm/Support/raw_ostream.h>
+//#include <llvm/IRReader/IRReader.h>
+//#include <llvm/Support/SourceMgr.h>
+//#pragma warning(pop)
+//
+//void Compiler::ToLLVM(const IR& ir)
+//{
+//	llvm::LLVMContext ctx;
+//	llvm::SMDiagnostic err;
+//	llvm::Module mod{ "Module", ctx };
+//	//llvm::IRBuilder builder{ };
+//
+//	auto i8Ty = llvm::Type::getInt8Ty(ctx);
+//	auto i32Ty = llvm::Type::getInt32Ty(ctx);
+//	auto tapeTy = llvm::ArrayType::get(i8Ty, BF_MEMSIZE);
+//
+//	auto globalTape = new llvm::GlobalVariable(
+//		mod,
+//		tapeTy,
+//		false,
+//		llvm::GlobalValue::ExternalLinkage,
+//		llvm::Constant::getNullValue(tapeTy),
+//		"tape"
+//	);
+//
+//	// int ptr = 0;
+//	/*auto ptr = builder.CreateAlloca(i32Ty, nullptr, "ptr");
+//	builder.CreateStore(llvm::ConstantInt::get(i32Ty, 0), ptr);*/
+//
+//
+//	mod.print(llvm::outs(), nullptr);  // Prints LLVM IR to stdout
+//}
+
+//extern "C" {
+//#pragma warning(push)
+//#pragma warning(disable: 4996)
+//#include "tinycc/libtcc.h"
+//#pragma warning(pop)
+//}
+//
+//void Compiler::ToTCC(const IR& ir)
+//{
+//	TCCState* s = tcc_new();
+//	if (!s) {
+//		std::cerr << "Could not create TCC state\n";
+//		return;
+//	}
+//
+//	tcc_set_output_type(s, TCC_OUTPUT_MEMORY);
+//
+//	const char* code =
+//		"int foo() { return 42; }";
+//
+//	if (tcc_compile_string(s, code) == -1) {
+//		std::cerr << "Compilation failed\n";
+//		tcc_delete(s);
+//		return;
+//	}
+//
+//	tcc_relocate(s, TCC_RELOCATE_AUTO);
+//	int (*foo)() = (int (*)())tcc_get_symbol(s, "foo");
+//	std::cout << "Result: " << foo() << "\n";
+//
+//	tcc_delete(s);
+//	return;
+//}

@@ -91,7 +91,7 @@ struct Block
 };
 
 // TODO: add a preprocessor to identify includes, each of them will recursively call the tokenizer and parser
-struct TranslationUnit
+struct TU
 {
 	Block body;
 
@@ -102,7 +102,7 @@ struct TranslationUnit
 	/// maps an AST node ID to the subtree rooted in such node, used for loops and labels
 	hmap<u32, std::vector<Stmt>> bodies;
 
-	u32 NextID = 0;
+	u32 NextID = INVALID_ID + 1;
 
 	/// used for label redefinition
 	hset<u32> labels; // TODO: better ways to do this?
@@ -120,4 +120,4 @@ std::ostream& operator<<(std::ostream& out, const Label& la);
 std::ostream& operator<<(std::ostream& out, const Decl& d);
 std::ostream& operator<<(std::ostream& out, const BlockItem& bi);
 std::ostream& operator<<(std::ostream& out, const Block& b);
-std::ostream& operator<<(std::ostream& out, const TranslationUnit& tu);
+std::ostream& operator<<(std::ostream& out, const TU& tu);

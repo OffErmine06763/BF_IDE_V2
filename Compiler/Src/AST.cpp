@@ -39,7 +39,7 @@ const hmap<OpType, char> Operation::ToSymbol = {
 
 
 
-void PrintStatement(const Stmt& s, std::ostream& out, const TranslationUnit& tu, int indent)
+void PrintStatement(const Stmt& s, std::ostream& out, const TU& tu, int indent)
 {
 	out << std::string(indent, ' ');
 	if (std::holds_alternative<Goto>(s.value))
@@ -118,7 +118,7 @@ std::ostream& operator<<(std::ostream& out, const Block& b)
 		out << i << '\n';
 	return out;
 }
-std::ostream& operator<<(std::ostream& out, const TranslationUnit& tu)
+std::ostream& operator<<(std::ostream& out, const TU& tu)
 {
 	for (const BlockItem& bi : tu.body.items)
 	{

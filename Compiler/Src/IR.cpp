@@ -30,9 +30,11 @@ std::ostream& operator<<(std::ostream& out, const IR& ir)
 		case IR_RIGHT: out << "RIGHT " << line.count + 1; break;
 		case IR_I: out << "IN"; break;
 		case IR_O: out << "OUT"; break;
-		case IR_GOTO: out << "JMP " << ir.names.at(line.ID) << ' ' << line.count + 1; break;
+		case IR_GOTO: out << "CALL " << ir.names.at(line.ID) << ' ' << line.count + 1; break;
 		case IR_LABEL: out << "LABEL " << ir.names.at(line.ID); break;
-		case IR_JNZ: out << "JNZ " << ir.names.at(line.ID); break;
+		case IR_LOOP: out << "LOOP " << ir.names.at(line.ID); break;
+		case IR_JZ: out << "JZ " << ir.names.at(line.ID); break;
+		case IR_JMP: out << "JMP " << ir.names.at(line.ID); break;
 		case IR_RET: out << "RET"; break;
 		default:
 			assert(false);

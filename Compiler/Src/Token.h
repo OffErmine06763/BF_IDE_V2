@@ -37,9 +37,9 @@ struct Token
 	// eg. + doesn't need an ID, the extra bits can be used for count
 	// however the max count = 255, so idk
 	u32 type : FIELD_TYPE;
-	u32 count : FIELD_COUNT;
+	u32 count : FIELD_COUNT = 0;
 	// NOTE: ] has it's own ID (used for position map)
-	u32 ID : FIELD_ID;
+	u32 ID : FIELD_ID = INVALID_ID;
 
 	Token(const TType type = T_NONE, const u8 count = 0, const u32 id = 0);
 	Token(const Token& other);
