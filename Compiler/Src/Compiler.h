@@ -5,12 +5,16 @@
 #include "IR.h"
 
 
-struct Options
+struct Program
 {
 	enum InterOp
-	{ NONE, OBJ, ALL };
+	{
+		NONE, OBJ, ALL
+	};
 	enum Target
-	{ TOKEN, PARSE, ANAL, OPT, INTER, FULL };
+	{
+		TOKEN, PARSE, ANAL, OPT, INTER, FULL
+	};
 
 	bool optimize = true;
 	InterOp inter = NONE;
@@ -18,14 +22,26 @@ struct Options
 	Target tgtPhase = FULL;
 	fs::path outputPath;
 	std::vector<fs::path> tgts;
+	fs::path main;
+
+	inline fs::path GetIntermediatePath(const fs::path& file) const {
+		return (interPath.empty() ? file.parent_path() : interPath);
+	}
+	inline bool IsMainFile(const fs::path& file, const TU& tu) const {
+		if (main.empty())
+			return tgts.size() == 1 || file == tgts[0];
+		else
+			return main == file;
+	}
 };
 
 
 class Compiler
 {
 public:
-	static bool ParseArgs(const std::vector<std::string>& args);
+	static bool ParseArgs(Program& p, const std::vector<std::string>& args);
 	static int Compile(const std::vector<std::string>& args);
+	static int Compile(Program& p);
 
 
 	// Lexical Analyzer / Scanner / Lexer
@@ -33,6 +49,8 @@ public:
 		std::ifstream in(file);
 		std::string content = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
 		in.close();
+		//auto res = Tokenize(content);
+		//prog.files.insert({ file, tr });
 		return Tokenize(content);
 	}
 	static expected<TokenizeResult, std::string> Tokenize(const std::string& content);
@@ -47,11 +65,9 @@ public:
 	static IR Intermediate(TU&& tu);
 
 
-	static void ToASM_AMDWin64(const IR& ir, std::ostream& out);
+	static void ToASM_AMDWin64(const IR& ir, std::ostream& out, bool main);
 
-	// TODO: add a preprocessor for the includes, run (compile and run the code in that block before compiling) 
-	//       and insert (insert the output of the code in that block before compiling)
-
+	// TODO: run (compile and run the code in that block before compiling, used to initialize memory) 
 
 public:
 	static std::string GetUnreconTokenError(const char c, const u32 row, const u32 col) {
@@ -69,11 +85,6 @@ public:
 	static std::string GetLabelRedefinitionError(const std::string& name) {
 		return "Label redefinition: "s + name;
 	}
-
-
-public:
-	static Options options;
-
 
 public:
 	//static void ToLLVM(const IR& ir);

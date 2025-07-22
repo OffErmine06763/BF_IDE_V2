@@ -26,6 +26,8 @@ struct IR
 	/// ID to name, for labels (loops are labels)
 	hmap<u32, std::string> names;
 
+	hset<std::string> exports, externs;
+
 	u32 NextID = INVALID_ID;
 };
 std::ostream& operator<<(std::ostream& out, const IR& ir);

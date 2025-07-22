@@ -71,6 +71,7 @@
       <Filter>Source Files</Filter>
     </None>
     <None Include="Res\Code\Code.bf" />
+    <None Include="Res\Code\Code2.bf" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Res\help.txt" />

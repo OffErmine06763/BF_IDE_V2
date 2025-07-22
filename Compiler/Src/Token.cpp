@@ -14,27 +14,26 @@ const hmap<TType, std::string> Token::ToString = {
 		{ T_O, "OUTPUT" },
 		{ T_LABEL, "LABEL" },
 		{ T_GOTO, "GOTO" },
-		{ T_INCLUDE, "INCLUDE" },
 };
 const hmap<TType, char> Token::ToSymbol = {
-		{ T_INC, '+'},
-		{ T_DEC, '-'},
-		{ T_LEFT, '<'},
-		{ T_RIGHT, '>'},
-		{ T_LOOPS, '['},
-		{ T_LOOPE, ']'},
-		{ T_O, '.'},
-		{ T_I, ','},
+		{ T_INC, '+' },
+		{ T_DEC, '-' },
+		{ T_LEFT, '<' },
+		{ T_RIGHT, '>' },
+		{ T_LOOPS, '[' },
+		{ T_LOOPE, ']' },
+		{ T_O, '.' },
+		{ T_I, ',' },
 };
 const hmap<char, TType> Token::ToType = {
-		{ '+', T_INC},
-		{ '-', T_DEC},
-		{ '<', T_LEFT},
-		{ '>', T_RIGHT},
-		{ '[', T_LOOPS},
-		{ ']', T_LOOPE},
-		{ '.', T_O},
-		{ ',', T_I},
+		{ '+', T_INC },
+		{ '-', T_DEC },
+		{ '<', T_LEFT },
+		{ '>', T_RIGHT },
+		{ '[', T_LOOPS },
+		{ ']', T_LOOPE },
+		{ '.', T_O },
+		{ ',', T_I },
 };
 std::ostream& operator<<(std::ostream& out, const TType& token)
 {
@@ -114,6 +113,15 @@ void TokenizeResult::AddToken(const TType type/*, const u32 row, const u32 col*/
 
 	Token token = { type, 0, id };
 	tokens.push_back(token);
+}
+
+void TokenizeResult::AddExtern(const std::string& symbol)
+{
+	externs.insert(symbol);
+}
+void TokenizeResult::AddExport(const std::string& symbol)
+{
+	exports.insert(symbol);
 }
 
 std::ostream& operator<<(std::ostream& out, const TokenizeResult& tokens)

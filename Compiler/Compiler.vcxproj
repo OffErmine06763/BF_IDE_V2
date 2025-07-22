@@ -335,6 +335,7 @@
     <None Include="CheckRequirements.bat" />
     <None Include="LinkObj.bat" />
     <None Include="Res\Code\Code.bf" />
+    <None Include="Res\Code\Code2.bf" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\VirtualTerminal\VirtualTerminal.vcxproj">

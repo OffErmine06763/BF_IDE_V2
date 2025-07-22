@@ -1,11 +1,14 @@
 
-compiler <code.bf/code_folder>
+compiler <code.bf/code_folder> [...]
 	[-h, -help, --help]           | print this list
 	[-o, -out, --out <name.exe>]  | specify the name of the executable produced
 	[-keep, --keep]               | if present, keep the produced object files
 	[-i, -inter, --inter <path>]  | specify the path of the intermediates produced
 	[-all, --all]                 | if present, output intermediates for every phase
 	[-nopt, --nopt]               | if present, do not perform optimizations
+	[-m, -main, --main <path>]    | specify the file to use as main
+	                              | when compiling a single file it is automatically treated as main
+	                              | if not specified, when compiling multiple files the main is the first passed in the args
 	[-phase, --phase <phase>]     | compilation phase where to stop 
 	                              | (tokenize, parse, analyze, optimize, intermediate)
 								  | the intermediate will be saved to file

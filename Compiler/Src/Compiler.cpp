@@ -3,6 +3,8 @@
 #define NOMINMAX
 #include <Windows.h>
 
+#include <Terminal.h>
+
 
 expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& content)
 {
@@ -64,21 +66,77 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 		}
 		else if (c == '#')
 		{
-			if (i < content.length() - 1 && std::isalpha(content[i + 1]))
+			std::string externstr = "extern", exportstr = "export";
+			if (content.substr(i + 1, externstr.length()) == externstr)
 			{
-				i++;
-				col++;
-				size_t start = i;
-				do {
-					i++;
-					col++;
-				} while (i < content.length() && std::isalnum(content[i]));
+				i += externstr.length() + 1;
+				col += externstr.length() + 1;
 
-				res.AddToken(T_INCLUDE, content.substr(start, i - start));
-				i--;
-				continue;
+				do
+				{
+					while (i < content.length() && (content[i] == ' ' || content[i] == '\t' || content[i] == ','))
+					{
+						i++;
+						col++;
+					}
+					if (i == content.length())
+						break;
+					else if (!std::isalpha(content[i]))
+						return { "Labels must start with a letter: [" + std::to_string(row) + ':' + std::to_string(col) + ']' };
+
+					size_t start = i;
+					do {
+						i++;
+						col++;
+					} while (i < content.length() && std::isalnum(content[i]));
+
+					res.AddExtern(content.substr(start, i - start));
+				} while (content[i] == ',' || content[i] == ' ' || content[i] == '\t');
 			}
-			return { "Invalid include at position ["s + std::to_string(row) + ':' + std::to_string(col) + ']' };
+			else if (content.substr(i + 1, exportstr.length()) == exportstr)
+			{
+				i += exportstr.length() + 1;
+				col += exportstr.length() + 1;
+
+				do
+				{
+					while (i < content.length() && (content[i] == ' ' || content[i] == '\t' || content[i] == ','))
+					{
+						i++;
+						col++;
+					}
+					if (i == content.length())
+						break;
+					else if (!std::isalpha(content[i]))
+						return { "Labels must start with a letter: [" + std::to_string(row) + ':' + std::to_string(col) + ']' };
+
+					size_t start = i;
+					do {
+						i++;
+						col++;
+					} while (i < content.length() && std::isalnum(content[i]));
+
+					res.AddExport(content.substr(start, i - start));
+				} while (content[i] == ',' || content[i] == ' ' || content[i] == '\t');
+			}
+			else
+				return { "Invalid preprocessor directive at position [" + std::to_string(row) + ':' + std::to_string(col) + ']' };
+
+			//if (i < content.length() - 1 && std::isalpha(content[i + 1]))
+			//{
+			//	i++;
+			//	col++;
+			//	size_t start = i;
+			//	do {
+			//		i++;
+			//		col++;
+			//	} while (i < content.length() && std::isalnum(content[i]));
+
+			//	res.AddToken(T_INCLUDE, content.substr(start, i - start));
+			//	i--;
+			//	continue;
+			//}
+			//return { "Invalid include at position ["s + std::to_string(row) + ':' + std::to_string(col) + ']' };
 		}
 		else if (c != ' ' && c != '\t' && c != '\n')
 			return GetUnreconTokenError(c, row, col);
@@ -212,8 +270,6 @@ static expected<Loop, std::string> ParseLoop(Parser& parser, TU& tu)
 		case T_RETURN:
 			body.push_back({ Return{} });
 			break;
-		case T_INCLUDE:
-			return { "Internal compiler error, include token at the parse phase." };
 		}
 	}
 	tu.bodies.insert({ loop.ID, body });
@@ -224,6 +280,8 @@ static expected<Label, std::string> ParseLabel(Parser& parser, TU& tu)
 	Label label = { parser.Consume().first.ID };
 	if (tu.labels.contains(label.ID))
 		return { Compiler::GetLabelRedefinitionError(tu.symbolsI.at(label.ID)) };
+	if (tu.externs.contains(tu.symbolsI.at(label.ID)))
+		return { "Label " + tu.symbolsI.at(label.ID) + " declared as extern but defined in the current file" };
 	tu.labels.insert(label.ID);
 	std::vector<Stmt> body;
 
@@ -260,8 +318,6 @@ static expected<Label, std::string> ParseLabel(Parser& parser, TU& tu)
 			parser.Back();
 			tu.bodies.insert({ label.ID, body });
 			return label; // the next label will be parsed by the caller
-		case T_INCLUDE:
-			return { "Internal compiler error, include token at the parse phase." };
 		case T_RETURN:
 			body.push_back({ Return{} });
 		}
@@ -306,8 +362,6 @@ static expected<Block, std::string> ParseRoot(Parser& parser, TU& tu)
 				return subLabel.getU().value();
 			block.items.push_back({ Decl{ subLabel.getE().value() } });
 			break;
-		case T_INCLUDE:
-			return { "Internal compiler error, include token at the parse phase."};
 		case T_RETURN:
 			// intentionally allow returns outside a label, will be a warning
 			block.items.push_back({ Stmt{ Return{} } });
@@ -323,7 +377,9 @@ expected<TU, std::string> Compiler::Parse(TokenizeResult&& tr)
 	TU tu;
 	tu.symbolsI = std::move(tr.symbolsI);
 	tu.symbolsS = std::move(tr.symbolsS);
-	tu.NextID = tr.NextID;
+	tu.exports  = std::move(tr.exports);
+	tu.externs  = std::move(tr.externs);
+	tu.NextID   = tr.NextID;
 
 	Parser parser = { tr };
 	auto res = ParseRoot(parser, tu);
@@ -340,8 +396,13 @@ std::optional<std::string> Compiler::Analyze(const TU& tu)
 {
 	for (const u32 id : tu.gotos)
 	{
-		if (!tu.labels.contains(id))
-			return { "Undefined label '"s + tu.symbolsI.at(id) + '\'' };
+		if (!tu.labels.contains(id) && !tu.externs.contains(tu.symbolsI.at(id)))
+			return { "Undefined label \""s + tu.symbolsI.at(id) + '\"' };
+	}
+	for (const std::string& exp : tu.exports)
+	{
+		if (!tu.symbolsS.contains(exp))
+			return { "Exported symbol \"" + exp + "\" not defined" };
 	}
 
 	return std::nullopt;
@@ -564,8 +625,10 @@ static void IntermediateDeclaration(const Decl& d, IR& ir, const TU& tu)
 IR Compiler::Intermediate(TU&& tu)
 {
 	IR ir;
-	ir.NextID = tu.NextID;
-	ir.names = std::move(tu.symbolsI);
+	ir.exports = std::move(tu.exports);
+	ir.externs = std::move(tu.externs);
+	ir.NextID  = tu.NextID;
+	ir.names   = std::move(tu.symbolsI);
 
 	for (const BlockItem& bi : tu.body.items)
 	{
@@ -581,66 +644,90 @@ IR Compiler::Intermediate(TU&& tu)
 
 
 
-void Compiler::ToASM_AMDWin64(const IR& ir, std::ostream& out)
+void Compiler::ToASM_AMDWin64(const IR& ir, std::ostream& out, bool main)
 {
-	out << "section .data\n"
-		<< "    hStdOut dq 0\n"
-		<< "    hStdIn  dq 0\n";
+	if (main)
+	{
+		out << "section .data\n"
+			<< "    hStdOut dq 0\n"
+			<< "    hStdIn  dq 0\n";
 
-	out << '\n';
+		out << '\n';
 
-	out << "section .bss\n"
-		<< "    tape resb " << BF_MEMSIZE << '\n'
-		<< "    bytes_read resd 1\n"; // Reserve 4 bytes (one d) for the bytes read by StdIn
+		out << "section .bss\n"
+			<< "    tape resb " << BF_MEMSIZE << '\n'
+			<< "    bytes_read resd 1\n"; // Reserve 4 bytes for the bytes read by StdIn
 
-	out << '\n';
+		out << '\n';
+	}
 
 	out << "section .text\n";
-	out << "    global _start\n\n";
-	out << "extern ExitProcess, GetStdHandle, WriteFile, ReadFile\n";
+	if (main)
+		out << "    global _main, _in, _out\n";
+	if (!ir.exports.empty())
+	{
+		out << "    global ";
+		for (const auto& exp : ir.exports)
+			out << exp << ", ";
+		out << '\n';
+	}
+
+	out << "    extern ExitProcess, GetStdHandle, WriteFile, ReadFile\n";
+	if (!ir.externs.empty())
+	{
+		out << "    extern ";
+		for (const auto& ext : ir.externs)
+			out << ext << ", ";
+		out << '\n';
+	}
+	if (!main)
+		out << "    extern _in, _out";
 
 	out << '\n';
 
-	out << "_out:\n";
-	out << "    mov rcx, [rel hStdOut]\n"
-		<< "    mov rdx, rsi\n"				// lpBuffer
-		<< "    mov r8, 1\n"				// nNumberOfBytesToWrite
-		<< "    xor r9, r9\n"				// lpNumberOfBytesWritten (NULL)
-		<< "    sub rsp, 40\n"				// Shadow space
-		<< "    mov qword [rsp + 32], 0\n"	// lpOverlapped (NULL)
-		<< "    call WriteFile\n"
-		<< "    add rsp, 40\n"				// Clean up stack
-		<< "    ret\n";
-	
-	out << '\n';
+	if (main)
+	{
+		out << "_out:\n";
+		out << "    mov rcx, [rel hStdOut]\n"
+			<< "    mov rdx, rsi\n"				// lpBuffer
+			<< "    mov r8, 1\n"				// nNumberOfBytesToWrite
+			<< "    xor r9, r9\n"				// lpNumberOfBytesWritten (NULL)
+			<< "    sub rsp, 40\n"				// Shadow space
+			<< "    mov qword [rsp + 32], 0\n"	// lpOverlapped (NULL)
+			<< "    call WriteFile\n"
+			<< "    add rsp, 40\n"				// Clean up stack
+			<< "    ret\n";
 
-	out << "_in:\n"
-		<< "    mov rcx, [rel hStdIn]\n"
-		<< "    mov rdx, rsi\n"					// lpBuffer
-		<< "    mov r8, 1\n"					// nNumberOfBytesToRead
-		<< "    lea r9, [rel bytes_read]\n"		// lpNumberOfBytesRead
-		<< "    sub rsp, 40\n"					// Shadow space
-		<< "    mov qword [rsp + 32], 0\n"		// lpOverlapped(NULL)
-		<< "    call ReadFile\n"
-		<< "    add rsp, 40\n"					// Clean up stack
-		<< "    ret\n";
+		out << '\n';
 
-	out << '\n';
+		out << "_in:\n"
+			<< "    mov rcx, [rel hStdIn]\n"
+			<< "    mov rdx, rsi\n"					// lpBuffer
+			<< "    mov r8, 1\n"					// nNumberOfBytesToRead
+			<< "    lea r9, [rel bytes_read]\n"		// lpNumberOfBytesRead
+			<< "    sub rsp, 40\n"					// Shadow space
+			<< "    mov qword [rsp + 32], 0\n"		// lpOverlapped(NULL)
+			<< "    call ReadFile\n"
+			<< "    add rsp, 40\n"					// Clean up stack
+			<< "    ret\n";
 
-	out << "_start:\n";
-	out << "    lea rsi, [rel tape]\n";
-	out << "    mov rcx, -11\n" // STD_OUTPUT_HANDLE = -11
-		<< "    sub rsp, 32\n"
-		<< "    call GetStdHandle\n"
-		<< "    add rsp, 32\n" 
-		<< "    mov [rel hStdOut], rax\n";
-	out << "    mov rcx, -10\n" // STD_INPUT_HANDLE = -10
-		<< "    sub rsp, 32\n"
-		<< "    call GetStdHandle\n"
-		<< "    add rsp, 32\n"
-		<< "    mov [rel hStdIn], rax\n";
+		out << '\n';
 
-	out << '\n';
+		out << "_main:\n";
+		out << "    lea rsi, [rel tape]\n";
+		out << "    mov rcx, -11\n" // STD_OUTPUT_HANDLE = -11
+			<< "    sub rsp, 32\n"
+			<< "    call GetStdHandle\n"
+			<< "    add rsp, 32\n"
+			<< "    mov [rel hStdOut], rax\n";
+		out << "    mov rcx, -10\n" // STD_INPUT_HANDLE = -10
+			<< "    sub rsp, 32\n"
+			<< "    call GetStdHandle\n"
+			<< "    add rsp, 32\n"
+			<< "    mov [rel hStdIn], rax\n";
+
+		out << '\n';
+	}
 
 	for (const auto& line : ir.code)
 	{
@@ -727,13 +814,13 @@ void Compiler::ToASM_AMDWin64(const IR& ir, std::ostream& out)
 
 
 
-bool Compiler::ParseArgs(const std::vector<std::string>& args)
+bool Compiler::ParseArgs(Program& p, const std::vector<std::string>& args)
 {
 	for (size_t i = 1; i < args.size(); i++)
 	{
 		const std::string& arg = args[i];
 		if (!arg.starts_with('-'))
-			options.tgts.push_back(arg);
+			p.tgts.push_back(arg);
 		else if (arg == "-h" || arg == "-help") {
 			std::cout << ReadFile("Res/help.txt");
 			return false;
@@ -744,34 +831,34 @@ bool Compiler::ParseArgs(const std::vector<std::string>& args)
 				std::cout << "Specify output filename after flag " << arg << '\n';
 				return false;
 			}
-			options.outputPath = args[++i];
-			if (fs::is_directory(options.outputPath)) {
+			p.outputPath = args[++i];
+			if (fs::is_directory(p.outputPath)) {
 				std::cout << "The output file must be a file\n";
 				return false;
 			}
 		}
 		else if (arg == "-keep" || arg == "--keep")
-			options.inter = Options::OBJ;
+			p.inter = Program::OBJ;
 		else if (arg == "-all" || arg == "--all")
-			options.inter = Options::ALL;
+			p.inter = Program::ALL;
 		else if (arg == "-i" || arg == "-inter" || arg == "--inter")
 		{
 			if (i == args.size() - 1) {
 				std::cout << "Specify intermediate output folder after flag " << arg << '\n';
 				return false;
 			}
-			options.interPath = args[++i];
-			if (fs::exists(options.interPath)) {
-				if (!fs::is_directory(options.interPath)) {
+			p.interPath = args[++i];
+			if (fs::exists(p.interPath)) {
+				if (!fs::is_directory(p.interPath)) {
 					std::cout << "The intermediate output folder must be a folder\n";
 					return false;
 				}
 			}
 			else
-				fs::create_directories(options.interPath);
+				fs::create_directories(p.interPath);
 		}
 		else if (arg == "-nopt" || arg == "--nopt")
-			options.optimize = false;
+			p.optimize = false;
 		else if (arg == "-phase" || arg == "--phase")
 		{
 			if (i == args.size() - 1) {
@@ -779,48 +866,68 @@ bool Compiler::ParseArgs(const std::vector<std::string>& args)
 				return false;
 			}
 			else if (args[++i] == "tokenize")
-				options.tgtPhase = Options::TOKEN;
+				p.tgtPhase = Program::TOKEN;
 			else if (args[i] == "parse")
-				options.tgtPhase = Options::PARSE;
+				p.tgtPhase = Program::PARSE;
 			else if (args[i] == "analyze")
-				options.tgtPhase = Options::ANAL;
+				p.tgtPhase = Program::ANAL;
 			else if (args[i] == "optimize")
-				options.tgtPhase = Options::OPT;
+				p.tgtPhase = Program::OPT;
 			else if (args[i] == "intermediate")
-				options.tgtPhase = Options::INTER;
+				p.tgtPhase = Program::INTER;
 			else {
 				std::cout << "Unrecognized compilation phase specified " << args[++i] << '\n';
 				return false;
 			}
 		}
+		else if (arg == "-m" || arg == "-main" || arg == "--main")
+		{
+			if (i == args.size() - 1) {
+				std::cout << "Specify main file after flag " << arg << '\n';
+				return false;
+			}
+			i++;
+			p.main = args[i];
+		}
 	}
 
-	if (options.outputPath.empty())
+	if (p.outputPath.empty())
 	{
-		if (options.tgts.size() == 1)
+		if (p.tgts.size() == 1)
 		{
-			if (fs::is_directory(options.tgts[0]))
-				options.outputPath = options.tgts[0].string() + ".exe";
+			if (fs::is_directory(p.tgts[0]))
+				p.outputPath = p.tgts[0].string() + ".exe";
 			else
-				options.outputPath = options.tgts[0].filename().string() + ".exe";
+				p.outputPath = p.tgts[0].filename().string() + ".exe";
 		}
 		else
-			options.outputPath = "out.exe";
+			p.outputPath = "out.exe";
 	}
 
 	
-	for (size_t i = 0; i < options.tgts.size(); i++)
+	for (size_t i = 0; i < p.tgts.size(); i++)
 	{
-		const fs::path& tgt = options.tgts[i];
+		const fs::path& tgt = p.tgts[i];
 		if (!fs::is_directory(tgt))
 			continue;
 		for (const fs::path& sub : fs::directory_iterator(tgt))
 		{
 			if (sub.extension() == ".bf" || fs::is_directory(sub))
-				options.tgts.push_back(sub);
+				p.tgts.push_back(sub);
 		}
-		options.tgts.erase(options.tgts.begin() + i);
+		p.tgts.erase(p.tgts.begin() + i);
 		i--;
+	}
+
+	if (p.tgts.size() == 0)
+	{
+		std::cout << "Please provide the list of files to compile\n";
+		return false;
+	}
+	if (!p.main.empty() && stdr::find(p.tgts, p.main) == p.tgts.end())
+	{
+		std::cout << "The main file specified is not in the list of files to compile\n";
+		return false;
 	}
 
 	return true;
@@ -852,22 +959,29 @@ u32 RunCommandInDevPrompt(const std::wstring& command) {
 
 int Compiler::Compile(const std::vector<std::string>& args)
 {
-	if (!ParseArgs(args))
+	Program p;
+	if (!ParseArgs(p, args))
 		return 1;
 
+	return Compile(p);
+}
+
+int Compiler::Compile(Program& p)
+{
 	{
 		int reqEC = RunCommandInDevPrompt(L"cmd /c CheckRequirements.bat");
 		if (reqEC != 0)
 			return reqEC;
 	}
 
+	//Program prog;
 
 	stdc::nanoseconds total = 0ns;
 	std::vector<fs::path> asmPaths;
-	for (const fs::path& path : options.tgts)
+	for (const fs::path& path : p.tgts)
 	{
 		std::cout << "Compiling file " << path << '\n';
-		const fs::path ipath = (options.interPath.empty() ? path.parent_path() : options.interPath);
+		const fs::path ipath = p.GetIntermediatePath(path);
 		const std::string iname = path.stem().string();
 
 		// TOKENIZATION
@@ -883,12 +997,12 @@ int Compiler::Compile(const std::vector<std::string>& args)
 
 		if (!expTokens.success())
 		{
-			std::cout << expTokens._getU() << '\n';
+			std::cout << Terminal::TEXT_F_BRED << expTokens._getU() << Terminal::TEXT_RESET << '\n';
 			return 1;
 		}
 
 		auto& tokens = expTokens._getE();
-		if (options.inter == Options::ALL)
+		if (p.inter == Program::ALL)
 		{
 			std::ofstream out{ ipath / (iname + "_tokens.txt") };
 			out << tokens;
@@ -907,12 +1021,12 @@ int Compiler::Compile(const std::vector<std::string>& args)
 
 		if (!expParse.success())
 		{
-			std::cout << expParse._getU() << '\n';
+			std::cout << Terminal::TEXT_F_BRED << expParse._getU() << Terminal::TEXT_RESET << '\n';
 			return 1;
 		}
 
 		auto& ast = expParse._getE();
-		if (options.inter == Options::ALL)
+		if (p.inter == Program::ALL)
 		{
 			std::ofstream out{ ipath / (iname + "_AST.txt") };
 			out << ast;
@@ -931,14 +1045,15 @@ int Compiler::Compile(const std::vector<std::string>& args)
 
 		if (expAnalyze.has_value())
 		{
-			std::cout << expAnalyze.value() << '\n';
+			std::cout << Terminal::TEXT_F_BRED << expAnalyze.value() << Terminal::TEXT_RESET << '\n';
 			return 1;
 		}
 
+		bool main = p.IsMainFile(path, ast);
 
 		// OPTIMIZING
 
-		if (options.optimize)
+		if (p.optimize)
 		{
 			size_t initialSize = ast.body.items.size();
 			for (const auto& sub : ast.bodies)
@@ -955,7 +1070,7 @@ int Compiler::Compile(const std::vector<std::string>& args)
 				optimizedSize += sub.second.size();
 			std::cout << "  reduced size: " << ((f64)optimizedSize / initialSize * 100) << "%\n";
 
-			if (options.inter == Options::ALL)
+			if (p.inter == Program::ALL)
 			{
 				std::ofstream out{ ipath / (iname + "_ASToptimized.txt") };
 				out << ast;
@@ -973,7 +1088,7 @@ int Compiler::Compile(const std::vector<std::string>& args)
 		total += end - start;
 		std::cout << "IRC done in: "; print_time(std::cout, end - start) << '\n';
 
-		if (options.inter == Options::ALL)
+		if (p.inter == Program::ALL)
 		{
 			std::ofstream out{ ipath / (iname + "_IR.txt") };
 			out << ir;
@@ -987,7 +1102,7 @@ int Compiler::Compile(const std::vector<std::string>& args)
 		fs::path pasm = ipath / (iname + ".asm");
 		asmPaths.push_back(pasm);
 		std::ofstream out{ pasm };
-		Compiler::ToASM_AMDWin64(ir, out);
+		Compiler::ToASM_AMDWin64(ir, out, main);
 		out.close();
 
 		end = stdc::clock::now();
@@ -1004,18 +1119,17 @@ int Compiler::Compile(const std::vector<std::string>& args)
 
 	std::stringstream ss;
 	ss << "cmd /c Assemble.bat ";
-	for (const auto& tgt : asmPaths) {
+	for (const fs::path& tgt : asmPaths) {
 		fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
 		ss << tgt << " " << pobj << " ";
 	}
-	ss << "&& LinkObj.bat " << options.outputPath << " \"";
-	for (const auto& tgt : asmPaths) {
+	ss << "&& LinkObj.bat " << p.outputPath << " \"";
+	for (const fs::path& tgt : asmPaths) {
 		fs::path path = (tgt.parent_path() / tgt.stem()).string() + ".obj";
 		ss << path << " ";
 	}
 	ss << '\"';
 	std::string command = ss.str();
-
 
 	u32 asslinkEC = RunCommandInDevPrompt(std::wstring(command.begin(), command.end()));
 	if (asslinkEC != 0)
@@ -1036,19 +1150,20 @@ int Compiler::Compile(const std::vector<std::string>& args)
 
 
 
-	
-	if (options.inter != Options::ALL)
+
+	if (p.inter != Program::ALL)
 	{
 		std::error_code ec;
 		for (const auto& pasm : asmPaths) {
 			bool res = fs::remove(pasm, ec);
 			if (!res) {
-				std::cout << "Failed to remove " << pasm << ", cause:\n" << ec.message() << '\n';
+				std::cout << Terminal::TEXT_F_BRED << "Failed to remove " << pasm
+					      << ", cause:\n" << Terminal::TEXT_RESET << ec.message() << '\n';
 				return ec.value();
 			}
 		}
 	}
-	if (options.inter == Options::NONE)
+	if (p.inter == Program::NONE)
 	{
 		std::error_code ec;
 
@@ -1056,7 +1171,8 @@ int Compiler::Compile(const std::vector<std::string>& args)
 			fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
 			bool res = fs::remove(pobj, ec);
 			if (!res) {
-				std::cout << "Failed to remove " << pobj << ", cause:\n" << ec.message() << '\n';
+				std::cout << Terminal::TEXT_F_BRED << "Failed to remove " << pobj
+						  << ", cause:\n" << Terminal::TEXT_RESET << ec.message() << '\n';
 				return ec.value();
 			}
 		}
@@ -1064,10 +1180,6 @@ int Compiler::Compile(const std::vector<std::string>& args)
 
 	return 0;
 }
-
-
-
-Options Compiler::options;
 
 
 

@@ -105,7 +105,9 @@ struct TU
 	u32 NextID = INVALID_ID + 1;
 
 	/// used for label redefinition
-	hset<u32> labels; // TODO: better ways to do this?
+	hset<u32> labels;
+	hset<std::string> externs;
+	hset<std::string> exports;
 	/// used for undefined label
 	hset<u32> gotos;
 };

@@ -17,7 +17,6 @@ enum TType : u8
 
 	T_LABEL   = 0b00001000,
 	T_GOTO    = 0b00001001,
-	T_INCLUDE = 0b00001010,
 	T_RETURN  = 0b00001011,
 
 	T_EXT  = 0b00001000,
@@ -59,10 +58,15 @@ struct TokenizeResult
 	hmap<std::string, u32> symbolsS;
 	hmap<u32, coord<u32>> loop;
 
+	hset<std::string> externs, exports;
+
 
 	void AddToken(const TType type);
 	void AddToken(const TType type, const u32 row, const u32 col);
 	void AddToken(const TType type/*, const u32 row, const u32 col*/, const std::string& symbol);
+	
+	void AddExtern(const std::string& symbol);
+	void AddExport(const std::string& symbol);
 
 	struct Iterator;
 	struct CIterator;
