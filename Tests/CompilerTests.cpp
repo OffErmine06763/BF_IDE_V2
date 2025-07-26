@@ -1,5 +1,9 @@
 #include "pch.h"
+#define TEST
 #include <Compiler.h>
+
+#define NOMINMAX
+#include <Windows.h>
 
 #include <cassert>
 
@@ -24,6 +28,10 @@ public:
 #include "CppUnitTest.h"
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #endif
+
+template<> inline std::wstring 
+Microsoft::VisualStudio::CppUnitTestFramework::ToString<CompilerError>(const CompilerError& t)
+{ RETURN_WIDE_STRING(t); }
 
 namespace Tests
 {
@@ -104,7 +112,7 @@ namespace Tests
 		TEST_METHOD(TestTokenize)
 		{
 			auto res = Compiler::Tokenize("+++++++++++++++++-[[+[-]]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
-			Assert::IsTrue(res.success(), wstring("The provided code is valid, however:\n"s + (res.success() ? "" : res._getU())).c_str());
+			Assert::IsTrue(res.success(), wstring("The provided code is valid, however:\n"s + (res.success() ? "" : res._getU().message)).c_str());
 
 			std::string recon = Reconstruct(res._getE());
 			std::string strip = Strip("+++++++++++++++++-[[+[-]]]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
@@ -122,10 +130,10 @@ namespace Tests
 		TEST_METHOD(TestParse)
 		{
 			auto tokens = Compiler::Tokenize("+++++++++++++++++-[[+[-]]+]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 			auto parse = Compiler::Parse(tokens._consumeE());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
 
 			std::string recon = Reconstruct(parse._getE());
 			std::string strip = Strip("+++++++++++++++++-[[+[-]]+]\n//]\n<< < >> > <>\n//<><>\nmain:	main//+"s);
@@ -134,10 +142,10 @@ namespace Tests
 
 
 			tokens = Compiler::Tokenize("+[[[+]]-]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 			parse = Compiler::Parse(tokens._consumeE());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
 
 			recon = Reconstruct(parse._getE());
 			strip = Strip("+[[[+]]-]"s);
@@ -146,14 +154,14 @@ namespace Tests
 
 
 			tokens = Compiler::Tokenize("+[[[+]]-"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 			parse = Compiler::Parse(tokens._consumeE());
 			Assert::IsFalse(parse.success(), wstring("The provided code is invalid, however parsing succeeded:\n"s).c_str());
 			Assert::AreEqual(Compiler::GetUnmatchedOpenError({ 0, 1 }), parse._getU());
 
 			tokens = Compiler::Tokenize("+[[+]]-]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 			parse = Compiler::Parse(tokens._consumeE());
 			Assert::IsFalse(parse.success(), wstring("The provided code is invalid, however parsing succeeded:\n"s).c_str());
@@ -163,10 +171,10 @@ namespace Tests
 		TEST_METHOD(TestOptimize)
 		{
 			auto tokens = Compiler::Tokenize("[[++<>-]]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 			auto parse = Compiler::Parse(tokens._consumeE());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
 
 			auto ast = parse._getE();
 			std::string recon = Reconstruct(ast);
@@ -174,7 +182,7 @@ namespace Tests
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 			auto anal = Compiler::Analyze(ast);
-			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value().message : "")).c_str());
 
 			Compiler::Optimize(ast);
 			recon = Reconstruct(ast);
@@ -184,10 +192,10 @@ namespace Tests
 
 
 			tokens = Compiler::Tokenize("[[++]+-]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 			parse = Compiler::Parse(tokens._consumeE());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
 
 			ast = parse._getE();
 			recon = Reconstruct(ast);
@@ -195,7 +203,7 @@ namespace Tests
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 			anal = Compiler::Analyze(ast);
-			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value().message : "")).c_str());
 
 			Compiler::Optimize(ast);
 			recon = Reconstruct(ast);
@@ -205,10 +213,10 @@ namespace Tests
 
 
 			tokens = Compiler::Tokenize("[[++<>-]+-]label:[[++<>-]+-];[[++<>-]+-]"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 			parse = Compiler::Parse(tokens._consumeE());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
 
 			ast = parse._getE();
 			recon = Reconstruct(ast);
@@ -216,7 +224,7 @@ namespace Tests
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 			anal = Compiler::Analyze(ast);
-			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value().message : "")).c_str());
 
 			Compiler::Optimize(ast);
 			recon = Reconstruct(ast);
@@ -227,10 +235,10 @@ namespace Tests
 		TEST_METHOD(TestIntermediate)
 		{
 			auto tokens = Compiler::Tokenize("[[++<>-]+-]label:[[++<>-]+-];label label"s);
-			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 			auto parse = Compiler::Parse(tokens._consumeE());
-			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
 
 			auto ast = parse._getE();
 			std::string recon = Reconstruct(ast);
@@ -238,7 +246,7 @@ namespace Tests
 			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 			auto anal = Compiler::Analyze(ast);
-			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value() : "")).c_str());
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value().message : "")).c_str());
 
 			// NO OPTIMIZE
 
@@ -301,7 +309,7 @@ namespace Tests
 			if (ec) Assert::IsTrue(false, wstring(ec.message()).c_str());
 
 
-			Assert::AreEqual(0, Compiler::Compile(p));
+			Assert::IsFalse(Compiler::Compile(p));
 
 			auto out = GetExecutableOutput(p.outputPath.string());
 			Assert::IsTrue(out.success());
@@ -328,17 +336,17 @@ namespace Tests
 				Assert::IsFalse(strip.empty());
 
 				auto tokens = Compiler::Tokenize(file);
-				Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+				Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 				auto parse = Compiler::Parse(tokens._consumeE());
-				Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU())).c_str());
+				Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
 				auto ast = parse._getE();
 				auto recon = Reconstruct(ast);
 
 				Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
 
 				auto analize = Compiler::Analyze(ast);
-				Assert::IsFalse(analize.has_value(), wstring("The provided code is valid, however:\n"s + (analize.has_value() ? analize.value() : "")).c_str());
+				Assert::IsFalse(analize.has_value(), wstring("The provided code is valid, however:\n"s + (analize.has_value() ? analize.value().message : "")).c_str());
 			}
 		}
 
@@ -368,7 +376,7 @@ namespace Tests
 				auto file = path(name);
 
 				auto tokens = Compiler::Tokenize(file);
-				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 				auto parse = Compiler::Parse(tokens._consumeE());
 				Assert::IsFalse(parse.success(), wstring(name + " is invalid, however parsing succeeded\n"s).c_str());
@@ -386,10 +394,10 @@ namespace Tests
 				auto file = path(name);
 
 				auto tokens = Compiler::Tokenize(file);
-				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens._getU())).c_str());
+				Assert::IsTrue(tokens.success(), wstring(name + " is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
 
 				auto parse = Compiler::Parse(tokens._consumeE());
-				Assert::IsTrue(parse.success(), wstring(name + " is valid, however\n"s + (parse.success() ? "" : parse._getU())).c_str());
+				Assert::IsTrue(parse.success(), wstring(name + " is valid, however\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
 
 				auto analyze = Compiler::Analyze(parse._getE());
 				Assert::IsTrue(analyze.has_value(), wstring(name + " is invalid, however analyzation succeeded\n"s).c_str());

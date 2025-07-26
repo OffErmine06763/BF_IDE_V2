@@ -128,7 +128,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_TCC_STATIC;TCC_IS_NATIVE;TCC_TARGET_X86_64;TCC_TARGET_PE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -150,7 +150,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EXE;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_TCC_STATIC;TCC_IS_NATIVE;TCC_TARGET_X86_64;TCC_TARGET_PE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EXE;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -172,7 +172,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_TCC_STATIC;TCC_IS_NATIVE;TCC_TARGET_X86_64;TCC_TARGET_PE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -200,7 +200,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EXE;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_TCC_STATIC;TCC_IS_NATIVE;TCC_TARGET_X86_64;TCC_TARGET_PE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EXE;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -222,7 +222,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_TCC_STATIC;TCC_IS_NATIVE;TCC_TARGET_X86_64;TCC_TARGET_PE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -244,7 +244,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EXE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_TCC_STATIC;TCC_IS_NATIVE;TCC_TARGET_X86_64;TCC_TARGET_PE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EXE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -266,7 +266,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_TCC_STATIC;TCC_IS_NATIVE;TCC_TARGET_X86_64;TCC_TARGET_PE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -294,7 +294,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EXE;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_TCC_STATIC;TCC_IS_NATIVE;TCC_TARGET_X86_64;TCC_TARGET_PE</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EXE;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -316,17 +316,21 @@
     <ClCompile Include="MainComp.cpp" />
     <ClCompile Include="Src\AST.cpp" />
     <ClCompile Include="Src\Compiler.cpp" />
+    <ClCompile Include="Src\CompilerError.cpp" />
     <ClCompile Include="Src\Emulator.cpp" />
     <ClCompile Include="Src\IR.cpp" />
+    <ClCompile Include="Src\Program.cpp" />
     <ClCompile Include="Src\Token.cpp" />
     <ClCompile Include="Src\Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\AST.h" />
     <ClInclude Include="Src\Compiler.h" />
+    <ClInclude Include="Src\CompilerError.h" />
     <ClInclude Include="Src\CompilerUtility.h" />
     <ClInclude Include="Src\Emulator.h" />
     <ClInclude Include="Src\IR.h" />
+    <ClInclude Include="Src\Program.h" />
     <ClInclude Include="Src\Token.h" />
     <ClInclude Include="Src\Utility.h" />
   </ItemGroup>

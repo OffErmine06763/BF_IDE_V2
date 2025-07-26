@@ -6,10 +6,10 @@
 #include <Terminal.h>
 
 
-expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& content)
+// #################################################################### TOKENIZE ###########################################################################
+expected<TokenizeResult, CompilerError> Compiler::Tokenize(const std::string& content)
 {
 	TokenizeResult res;
-	res.tokens.reserve(content.length()); // in standard bf 1 char = 1 token
 
 	u32 row = 0, col = 0;
 	for (size_t i = 0; i < content.length(); i++)
@@ -31,7 +31,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 				continue;
 			}
 			else
-				return { GetInvalidCommentError(row, col) };
+				return GetInvalidCommentError(row, col);
 		}
 		else if (BF_ALL_S.contains(c))
 		{
@@ -82,7 +82,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 					if (i == content.length())
 						break;
 					else if (!std::isalpha(content[i]))
-						return { "Labels must start with a letter: [" + std::to_string(row) + ':' + std::to_string(col) + ']' };
+						return GetInvalidLabelNameError(row, col);
 
 					size_t start = i;
 					do {
@@ -108,7 +108,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 					if (i == content.length())
 						break;
 					else if (!std::isalpha(content[i]))
-						return { "Labels must start with a letter: [" + std::to_string(row) + ':' + std::to_string(col) + ']' };
+						return GetInvalidLabelNameError(row, col);
 
 					size_t start = i;
 					do {
@@ -120,7 +120,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 				} while (content[i] == ',' || content[i] == ' ' || content[i] == '\t');
 			}
 			else
-				return { "Invalid preprocessor directive at position [" + std::to_string(row) + ':' + std::to_string(col) + ']' };
+				return GetInvalidPreprocessorError(row, col);
 		}
 		else if (c != ' ' && c != '\t' && c != '\n')
 			return GetUnreconTokenError(c, row, col);
@@ -133,6 +133,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 
 
 
+// #################################################################### PARSE ##############################################################################
 class Parser
 {
 public:
@@ -180,7 +181,7 @@ private:
 	const TokenizeResult& tr;
 };
 
-static expected<Loop, std::string> ParseLoop(Parser& parser, TU& tu)
+static expected<Loop, CompilerError> ParseLoop(Parser& parser, TU& tu)
 {
 	const auto& [start, iteration] = parser.Consume();
 	Loop loop = { start.count, start.ID };
@@ -190,7 +191,7 @@ static expected<Loop, std::string> ParseLoop(Parser& parser, TU& tu)
 	while (!parser.Done())
 	{
 		const auto& [token, iteration] = parser.Consume();
-		expected<Loop, std::string> subLoop = { "" };
+		expected<Loop, CompilerError> subLoop = CompilerError{ CompilerError::NONE, "" };
 		u32 id, subcount;
 		Loop sub;
 
@@ -250,29 +251,29 @@ static expected<Loop, std::string> ParseLoop(Parser& parser, TU& tu)
 			break;
 		case T_LABEL:
 			tu.bodies.insert({ loop.ID, body });
-			return { "Cannot declare a label inside a loop\n" };
+			return Compiler::GetLabelInLoopError();
 		case T_RETURN:
 			body.push_back({ Return{} });
 			break;
 		}
 	}
 	tu.bodies.insert({ loop.ID, body });
-	return { Compiler::GetUnmatchedOpenError(parser.Position(start.ID)) };
+	return Compiler::GetUnmatchedOpenError(parser.Position(start.ID));
 }
-static expected<Label, std::string> ParseLabel(Parser& parser, TU& tu)
+static expected<Label, CompilerError> ParseLabel(Parser& parser, TU& tu)
 {
 	Label label = { parser.Consume().first.ID };
 	if (tu.labels.contains(label.ID))
-		return { Compiler::GetLabelRedefinitionError(tu.symbolsI.at(label.ID)) };
+		return Compiler::GetLabelRedefinitionError(tu.symbolsI.at(label.ID));
 	if (tu.externs.contains(tu.symbolsI.at(label.ID)))
-		return { "Label " + tu.symbolsI.at(label.ID) + " declared as extern but defined in the current file" };
+		return Compiler::GetLabelExternDeclaredError(tu.symbolsI.at(label.ID));
 	tu.labels.insert(label.ID);
 	std::vector<Stmt> body;
 
 	while (!parser.Done())
 	{
 		const auto& [token, iteration] = parser.Consume();
-		expected<Loop, std::string> subLoop = { "" };
+		expected<Loop, CompilerError> subLoop = CompilerError{ CompilerError::NONE, "" };
 
 		switch (token.type)
 		{
@@ -283,8 +284,7 @@ static expected<Label, std::string> ParseLabel(Parser& parser, TU& tu)
 		case T_LOOPS:
 			parser.Back();
 			subLoop = ParseLoop(parser, tu);
-			if (!subLoop.success())
-			{
+			if (!subLoop.success()) {
 				tu.bodies.insert({ label.ID, body });
 				return subLoop.getU().value();
 			}
@@ -292,7 +292,7 @@ static expected<Label, std::string> ParseLabel(Parser& parser, TU& tu)
 			break;
 		case T_LOOPE:
 			tu.bodies.insert({ label.ID, body });
-			return { Compiler::GetUnmatchedCloseError(parser.Position(token.ID)) };
+			return Compiler::GetUnmatchedCloseError(parser.Position(token.ID));
 		case T_GOTO:
 			body.push_back({ Goto{ token.ID } });
 			tu.gotos.insert(token.ID);
@@ -310,14 +310,14 @@ static expected<Label, std::string> ParseLabel(Parser& parser, TU& tu)
 	tu.bodies.insert({ label.ID, body });
 	return label;
 }
-static expected<Block, std::string> ParseRoot(Parser& parser, TU& tu)
+static expected<Block, CompilerError> ParseRoot(Parser& parser, TU& tu)
 {
 	Block block;
 	while (!parser.Done())
 	{
 		const auto& [token, iteration] = parser.Consume();
-		expected<Loop, std::string> subLoop = { "" };
-		expected<Label, std::string> subLabel = { "" };
+		expected<Loop , CompilerError> subLoop  = CompilerError{ CompilerError::NONE, "" };
+		expected<Label, CompilerError> subLabel = CompilerError{ CompilerError::NONE, "" };
 
 		switch (token.type)
 		{
@@ -333,7 +333,7 @@ static expected<Block, std::string> ParseRoot(Parser& parser, TU& tu)
 			block.items.push_back({ Stmt{ subLoop.getE().value() } });
 			break;
 		case T_LOOPE:
-			return { Compiler::GetUnmatchedCloseError(parser.Position(token.ID)) };
+			return Compiler::GetUnmatchedCloseError(parser.Position(token.ID));
 		case T_GOTO:
 			block.items.push_back({ Stmt{ Goto{ token.ID } } });
 			tu.gotos.insert(token.ID);
@@ -347,7 +347,7 @@ static expected<Block, std::string> ParseRoot(Parser& parser, TU& tu)
 			block.items.push_back({ Decl{ subLabel.getE().value() } });
 			break;
 		case T_RETURN:
-			// intentionally allow returns outside a label, will be a warning
+			// intentionally allow returns outside a label, will be a TODO: warning
 			block.items.push_back({ Stmt{ Return{} } });
 			break;
 		}
@@ -356,7 +356,7 @@ static expected<Block, std::string> ParseRoot(Parser& parser, TU& tu)
 	return block;
 }
 
-expected<TU, std::string> Compiler::Parse(TokenizeResult&& tr)
+expected<TU, CompilerError> Compiler::Parse(TokenizeResult&& tr)
 {
 	TU tu;
 	tu.symbolsI = std::move(tr.symbolsI);
@@ -376,17 +376,18 @@ expected<TU, std::string> Compiler::Parse(TokenizeResult&& tr)
 
 
 
-std::optional<std::string> Compiler::Analyze(const TU& tu)
+// #################################################################### ANALYZE ############################################################################
+std::optional<CompilerError> Compiler::Analyze(const TU& tu)
 {
 	for (const u32 id : tu.gotos)
 	{
 		if (!tu.labels.contains(id) && !tu.externs.contains(tu.symbolsI.at(id)))
-			return { "Undefined label \""s + tu.symbolsI.at(id) + '\"' };
+			return GetUndefinedLabelError(tu.symbolsI.at(id));
 	}
 	for (const std::string& exp : tu.exports)
 	{
 		if (!tu.symbolsS.contains(exp))
-			return { "Exported symbol \"" + exp + "\" not defined" };
+			return GetUndefinedLabelError(exp);
 	}
 
 	return std::nullopt;
@@ -394,6 +395,7 @@ std::optional<std::string> Compiler::Analyze(const TU& tu)
 
 
 
+// #################################################################### OPTIMIZE ###########################################################################
 enum class MergeResult : u8 { NOOP, HALF, FULL };
 static MergeResult Merge(Stmt& prev, Stmt& stmt)
 {
@@ -559,6 +561,7 @@ void Compiler::Optimize(TU& tu)
 
 
 
+// #################################################################### INTERMEDIATE #######################################################################
 static void IntermediateStatement(const Stmt& s, IR& ir, const TU& tu);
 static void IntermediateLoop(const Loop& lo, IR& ir, const TU& tu)
 {
@@ -628,6 +631,7 @@ IR Compiler::Intermediate(TU&& tu)
 
 
 
+// #################################################################### ASSEMBLY ###########################################################################
 void Compiler::ToASM_AMDWin64(const IR& ir, std::ostream& out, bool main)
 {
 	if (main)
@@ -797,8 +801,8 @@ void Compiler::ToASM_AMDWin64(const IR& ir, std::ostream& out, bool main)
 
 
 
-
-bool Compiler::ParseArgs(Program& p, const std::vector<std::string>& args)
+// #################################################################### COMPILE ###########################################################################
+static CompilerError ParseArgs(Program& p, const std::vector<std::string>& args)
 {
 	for (size_t i = 1; i < args.size(); i++)
 	{
@@ -807,14 +811,12 @@ bool Compiler::ParseArgs(Program& p, const std::vector<std::string>& args)
 			p.tgts.push_back(arg);
 		else if (arg == "-h" || arg == "-help") {
 			std::cout << ReadFile("Res/help.txt");
-			return false;
+			return { CompilerError::HELP, ReadFile("Res/help.txt") };
 		}
 		else if (arg == "-o" || arg == "-out" || arg == "--out")
 		{
-			if (i == args.size() - 1) {
-				std::cout << "Specify output filename after flag " << arg << '\n';
-				return false;
-			}
+			if (i == args.size() - 1)
+				return Compiler::GetOutputFilenameError(arg);
 			p.outputPath = args[++i];
 		}
 		else if (arg == "-keep" || arg == "--keep")
@@ -823,20 +825,16 @@ bool Compiler::ParseArgs(Program& p, const std::vector<std::string>& args)
 			p.inter = Program::ALL;
 		else if (arg == "-i" || arg == "-inter" || arg == "--inter")
 		{
-			if (i == args.size() - 1) {
-				std::cout << "Specify intermediate output folder after flag " << arg << '\n';
-				return false;
-			}
+			if (i == args.size() - 1)
+				return Compiler::GetIntermediatePathError(arg);
 			p.interPath = args[++i];
 		}
 		else if (arg == "-nopt" || arg == "--nopt")
 			p.optimize = false;
 		else if (arg == "-phase" || arg == "--phase")
 		{
-			if (i == args.size() - 1) {
-				std::cout << "Specify target phase after flag " << arg << " (tokenize, parse, analyze, optimize, intermediate)\n";
-				return false;
-			}
+			if (i == args.size() - 1)
+				return Compiler::GetPhaseNameError(arg);
 			else if (args[++i] == "tokenize")
 				p.tgtPhase = Program::TOKEN;
 			else if (args[i] == "parse")
@@ -847,73 +845,43 @@ bool Compiler::ParseArgs(Program& p, const std::vector<std::string>& args)
 				p.tgtPhase = Program::OPT;
 			else if (args[i] == "intermediate")
 				p.tgtPhase = Program::INTER;
-			else {
-				std::cout << "Unrecognized compilation phase specified " << args[++i] << '\n';
-				return false;
-			}
+			else
+				return Compiler::GetPhaseUnknownError(arg);
 		}
 		else if (arg == "-m" || arg == "-main" || arg == "--main")
 		{
-			if (i == args.size() - 1) {
-				std::cout << "Specify main file after flag " << arg << '\n';
-				return false;
-			}
+			if (i == args.size() - 1)
+				return Compiler::GetMainNameError(arg);
 			i++;
 			p.main = args[i];
 		}
 	}
 
-	return true;
+	return { CompilerError::NONE, "" };
 }
 
-u32 RunCommand(const std::wstring& command)
-{
-	STARTUPINFO si = { sizeof(STARTUPINFO) };
-	PROCESS_INFORMATION pi;
+u32 RunCommand(const std::wstring& command);
 
-	auto flag = NORMAL_PRIORITY_CLASS;
-
-	if (!CreateProcessW(NULL, const_cast<wchar_t*>(command.c_str()),
-					    NULL, NULL, FALSE, flag, NULL, NULL, &si, &pi))
-	{
-		std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
-		return -1;
-	}
-
-	WaitForSingleObject(pi.hProcess, INFINITE);
-
-	DWORD exitCode = 0;
-	GetExitCodeProcess(pi.hProcess, &exitCode);
-
-	CloseHandle(pi.hProcess);
-	CloseHandle(pi.hThread);
-
-	return exitCode;
-}
-
-int Compiler::Compile(const std::vector<std::string>& args)
+CompilerError Compiler::Compile(const std::vector<std::string>& args)
 {
 	Program p;
-	if (!ParseArgs(p, args))
-		return 1;
+	auto error = ParseArgs(p, args);
+	if (error)
+		return error;
 
 	return Compile(p);
 }
-
-int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3)
+CompilerError Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3)
 {
 	auto error = p.Validate();
 	if (error)
-	{
-		std::cout << error.value();
-		return -1;
-	}
+		return error;
 
 	{
 		std::string cmd = "cmd /c "s + cmd1;
-		int reqEC = RunCommand(std::wstring(cmd.begin(), cmd.end()));
+		u32 reqEC = RunCommand(std::wstring(cmd.begin(), cmd.end()));
 		if (reqEC != 0)
-			return reqEC;
+			return { CompilerError::GENERIC | reqEC, "Requirements not met (NASM missing)"s };
 	}
 
 	stdc::nanoseconds total = 0ns;
@@ -936,10 +904,7 @@ int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& c
 		std::cout << "Tokenization done in: "; print_time(std::cout, end - start) << '\n';
 
 		if (!expTokens.success())
-		{
-			std::cout << Terminal::TEXT_F_BRED << expTokens._getU() << Terminal::TEXT_RESET << '\n';
-			return 1;
-		}
+			return expTokens._getU();
 
 		auto& tokens = expTokens._getE();
 		if (p.inter == Program::ALL)
@@ -960,10 +925,7 @@ int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& c
 		std::cout << "Parsing done in: "; print_time(std::cout, end - start) << '\n';
 
 		if (!expParse.success())
-		{
-			std::cout << Terminal::TEXT_F_BRED << expParse._getU() << Terminal::TEXT_RESET << '\n';
-			return 1;
-		}
+			return expParse._getU();
 
 		auto& ast = expParse._getE();
 		if (p.inter == Program::ALL)
@@ -977,17 +939,14 @@ int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& c
 
 		start = stdc::clock::now();
 
-		auto expAnalyze = Compiler::Analyze(ast);
+		auto expAnal = Compiler::Analyze(ast);
 
 		end = stdc::clock::now();
 		total += end - start;
 		std::cout << "Analyzing done in: "; print_time(std::cout, end - start) << '\n';
 
-		if (expAnalyze.has_value())
-		{
-			std::cout << Terminal::TEXT_F_BRED << expAnalyze.value() << Terminal::TEXT_RESET << '\n';
-			return 1;
-		}
+		if (expAnal.has_value())
+			return expAnal.value();
 
 		bool main = p.IsMainFile(path, ast);
 
@@ -1075,7 +1034,7 @@ int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& c
 
 		u32 asslinkEC = RunCommand(std::wstring(command.begin(), command.end()));
 		if (asslinkEC != 0)
-			return asslinkEC;
+			return { CompilerError::GENERIC | asslinkEC, "Failed to assemble or link"s };
 	}
 
 
@@ -1092,8 +1051,6 @@ int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& c
 	std::cout << "Compilation done in: "; print_time(std::cout, total + external) << " ("; print_time(std::cout, total) << ")\n";
 
 
-
-
 	if (p.inter != Program::ALL)
 	{
 		std::error_code ec;
@@ -1102,7 +1059,7 @@ int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& c
 			if (ec) {
 				std::cout << Terminal::TEXT_F_BRED << "Failed to remove " << pasm
 					      << ", cause:\n" << Terminal::TEXT_RESET << ec.message() << '\n';
-				return ec.value();
+				return { CompilerError::GENERIC | ec.value(), "Failed to remove "s + pasm.string() + ", cause:\n" + ec.message() };
 			}
 		}
 	}
@@ -1116,17 +1073,41 @@ int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& c
 			if (ec) {
 				std::cout << Terminal::TEXT_F_BRED << "Failed to remove " << pobj
 						  << ", cause:\n" << Terminal::TEXT_RESET << ec.message() << '\n';
-				return ec.value();
+				return { CompilerError::GENERIC | ec.value(), "Failed to remove "s + pobj.string() + ", cause:\n" + ec.message() };
 			}
 		}
 	}
 
-	return 0;
+	return { CompilerError::NONE, "" };
 }
 
-int Compiler::Compile(Program& p)
+
+
+
+
+u32 RunCommand(const std::wstring& command)
 {
-	return _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat");
+	STARTUPINFO si = { sizeof(STARTUPINFO) };
+	PROCESS_INFORMATION pi;
+
+	auto flag = NORMAL_PRIORITY_CLASS;
+
+	if (!CreateProcessW(NULL, const_cast<wchar_t*>(command.c_str()),
+		NULL, NULL, FALSE, flag, NULL, NULL, &si, &pi))
+	{
+		std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
+		return -1;
+	}
+
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	DWORD exitCode = 0;
+	GetExitCodeProcess(pi.hProcess, &exitCode);
+
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+
+	return exitCode;
 }
 
 

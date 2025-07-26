@@ -220,7 +220,8 @@ struct expected
 		return std::holds_alternative<T>(content) ? std::get<T>(content) : std::nullopt;
 	}
 
-	bool success() { return std::holds_alternative<E>(content); }
+	bool success() const { return std::holds_alternative<E>(content); }
+	operator bool() const { return success(); }
 };
 // ################################################################## EXPECTED ##################################################################
 

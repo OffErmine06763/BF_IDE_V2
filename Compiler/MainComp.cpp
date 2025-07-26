@@ -3,6 +3,7 @@
 
 #include "Src/Compiler.h"
 
+#include <Terminal.h>
 
 // TODO: preprocessor directive to set the memory tape size
 // TODO: functional optional
@@ -19,5 +20,11 @@ int main(int argc, char** argv)
 
 	// abbondante sopprimere il sacrificio tronco buono
 	//Compiler::Compile({ args.begin(), args.end() });
-	Compiler::Compile({ "Compiler", "Res/Code/Code.bf", "Res/Code/Code2.bf", "-m", "Res/Code/Code.bf", "-o", "Generated/CODE.exe" });
+	CompilerError error = Compiler::Compile({ "Compiler", "Res/Code/Code.bf", "Res/Code/Code2.bf", "-m", "Res/Code/Code.bf", "-o", "Generated/CODE.exe"});
+
+	if (error)
+	{
+		std::cout << Terminal::TEXT_F_BRED << "Compilation Error:\n" 
+				  << Terminal::TEXT_RESET << error << '\n';
+	}
 }
