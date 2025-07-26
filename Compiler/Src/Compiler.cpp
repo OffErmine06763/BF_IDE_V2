@@ -69,8 +69,8 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 			std::string externstr = "extern", exportstr = "export";
 			if (content.substr(i + 1, externstr.length()) == externstr)
 			{
-				i += externstr.length() + 1;
-				col += externstr.length() + 1;
+				i   += externstr.length() + 1;
+				col += to<u32>(externstr.length() + 1);
 
 				do
 				{
@@ -96,7 +96,7 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 			else if (content.substr(i + 1, exportstr.length()) == exportstr)
 			{
 				i += exportstr.length() + 1;
-				col += exportstr.length() + 1;
+				col += to<u32>(exportstr.length() + 1);
 
 				do
 				{
@@ -121,22 +121,6 @@ expected<TokenizeResult, std::string> Compiler::Tokenize(const std::string& cont
 			}
 			else
 				return { "Invalid preprocessor directive at position [" + std::to_string(row) + ':' + std::to_string(col) + ']' };
-
-			//if (i < content.length() - 1 && std::isalpha(content[i + 1]))
-			//{
-			//	i++;
-			//	col++;
-			//	size_t start = i;
-			//	do {
-			//		i++;
-			//		col++;
-			//	} while (i < content.length() && std::isalnum(content[i]));
-
-			//	res.AddToken(T_INCLUDE, content.substr(start, i - start));
-			//	i--;
-			//	continue;
-			//}
-			//return { "Invalid include at position ["s + std::to_string(row) + ':' + std::to_string(col) + ']' };
 		}
 		else if (c != ' ' && c != '\t' && c != '\n')
 			return GetUnreconTokenError(c, row, col);
@@ -582,7 +566,7 @@ static void IntermediateLoop(const Loop& lo, IR& ir, const TU& tu)
 	u32 endid = ir.NextID++;
 	
 	ir.code.push_back({ .type = IR_LOOP, .ID = id });
-	ir.names.insert({ id, std::format("_LOOP_START_{}", id) }); // TODO: forbid '_LOOP' starting label names
+	ir.names.insert({ id, std::format("_LOOP_START_{}", id) });
 	ir.code.push_back({ .type = IR_JZ, .ID = endid });
 	
 	for (const Stmt& s : tu.bodies.at(id))
@@ -590,7 +574,7 @@ static void IntermediateLoop(const Loop& lo, IR& ir, const TU& tu)
 	
 	ir.code.push_back({ .type = IR_JMP, .ID = id });
 	ir.code.push_back({ .type = IR_LOOP, .ID = endid });
-	ir.names.insert({ endid, std::format("_LOOP_END_{}", endid) }); // TODO: forbid '_LOOP' starting label names
+	ir.names.insert({ endid, std::format("_LOOP_END_{}", endid) });
 }
 static void IntermediateOperation(const Operation& o, IR& ir, const TU& tu)
 {
@@ -656,7 +640,7 @@ void Compiler::ToASM_AMDWin64(const IR& ir, std::ostream& out, bool main)
 
 		out << "section .bss\n"
 			<< "    tape resb " << BF_MEMSIZE << '\n'
-			<< "    bytes_read resd 1\n"; // Reserve 4 bytes for the bytes read by StdIn
+			<< "    bytes_read resd 1\n"; // Reserve 4 bytes buffer for StdIn
 
 		out << '\n';
 	}
@@ -832,10 +816,6 @@ bool Compiler::ParseArgs(Program& p, const std::vector<std::string>& args)
 				return false;
 			}
 			p.outputPath = args[++i];
-			if (fs::is_directory(p.outputPath)) {
-				std::cout << "The output file must be a file\n";
-				return false;
-			}
 		}
 		else if (arg == "-keep" || arg == "--keep")
 			p.inter = Program::OBJ;
@@ -848,14 +828,6 @@ bool Compiler::ParseArgs(Program& p, const std::vector<std::string>& args)
 				return false;
 			}
 			p.interPath = args[++i];
-			if (fs::exists(p.interPath)) {
-				if (!fs::is_directory(p.interPath)) {
-					std::cout << "The intermediate output folder must be a folder\n";
-					return false;
-				}
-			}
-			else
-				fs::create_directories(p.interPath);
 		}
 		else if (arg == "-nopt" || arg == "--nopt")
 			p.optimize = false;
@@ -891,56 +863,18 @@ bool Compiler::ParseArgs(Program& p, const std::vector<std::string>& args)
 		}
 	}
 
-	if (p.outputPath.empty())
-	{
-		if (p.tgts.size() == 1)
-		{
-			if (fs::is_directory(p.tgts[0]))
-				p.outputPath = p.tgts[0].string() + ".exe";
-			else
-				p.outputPath = p.tgts[0].filename().string() + ".exe";
-		}
-		else
-			p.outputPath = "out.exe";
-	}
-
-	
-	for (size_t i = 0; i < p.tgts.size(); i++)
-	{
-		const fs::path& tgt = p.tgts[i];
-		if (!fs::is_directory(tgt))
-			continue;
-		for (const fs::path& sub : fs::directory_iterator(tgt))
-		{
-			if (sub.extension() == ".bf" || fs::is_directory(sub))
-				p.tgts.push_back(sub);
-		}
-		p.tgts.erase(p.tgts.begin() + i);
-		i--;
-	}
-
-	if (p.tgts.size() == 0)
-	{
-		std::cout << "Please provide the list of files to compile\n";
-		return false;
-	}
-	if (!p.main.empty() && stdr::find(p.tgts, p.main) == p.tgts.end())
-	{
-		std::cout << "The main file specified is not in the list of files to compile\n";
-		return false;
-	}
-
 	return true;
 }
 
-u32 RunCommandInDevPrompt(const std::wstring& command) {
+u32 RunCommand(const std::wstring& command)
+{
 	STARTUPINFO si = { sizeof(STARTUPINFO) };
 	PROCESS_INFORMATION pi;
 
 	auto flag = NORMAL_PRIORITY_CLASS;
 
 	if (!CreateProcessW(NULL, const_cast<wchar_t*>(command.c_str()),
-		NULL, NULL, FALSE, flag, NULL, NULL, &si, &pi))
+					    NULL, NULL, FALSE, flag, NULL, NULL, &si, &pi))
 	{
 		std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
 		return -1;
@@ -966,15 +900,21 @@ int Compiler::Compile(const std::vector<std::string>& args)
 	return Compile(p);
 }
 
-int Compiler::Compile(Program& p)
+int Compiler::_Compile(Program& p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3)
 {
+	auto error = p.Validate();
+	if (error)
 	{
-		int reqEC = RunCommandInDevPrompt(L"cmd /c CheckRequirements.bat");
+		std::cout << error.value();
+		return -1;
+	}
+
+	{
+		std::string cmd = "cmd /c "s + cmd1;
+		int reqEC = RunCommand(std::wstring(cmd.begin(), cmd.end()));
 		if (reqEC != 0)
 			return reqEC;
 	}
-
-	//Program prog;
 
 	stdc::nanoseconds total = 0ns;
 	std::vector<fs::path> asmPaths;
@@ -1117,23 +1057,26 @@ int Compiler::Compile(Program& p)
 
 	stdc::time_point start = stdc::clock::now();
 
-	std::stringstream ss;
-	ss << "cmd /c Assemble.bat ";
-	for (const fs::path& tgt : asmPaths) {
-		fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
-		ss << tgt << " " << pobj << " ";
-	}
-	ss << "&& LinkObj.bat " << p.outputPath << " \"";
-	for (const fs::path& tgt : asmPaths) {
-		fs::path path = (tgt.parent_path() / tgt.stem()).string() + ".obj";
-		ss << path << " ";
-	}
-	ss << '\"';
-	std::string command = ss.str();
+	
+	{
+		std::stringstream ss;
+		ss << "cmd /c " << cmd2 << ' ';
+		for (const fs::path& tgt : asmPaths) {
+			fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
+			ss << tgt << " " << pobj << " ";
+		}
+		ss << "&& " << cmd3 << ' ' << p.outputPath << " \"";
+		for (const fs::path& tgt : asmPaths) {
+			fs::path path = (tgt.parent_path() / tgt.stem()).string() + ".obj";
+			ss << path << " ";
+		}
+		ss << '\"';
+		std::string command = ss.str();
 
-	u32 asslinkEC = RunCommandInDevPrompt(std::wstring(command.begin(), command.end()));
-	if (asslinkEC != 0)
-		return asslinkEC;
+		u32 asslinkEC = RunCommand(std::wstring(command.begin(), command.end()));
+		if (asslinkEC != 0)
+			return asslinkEC;
+	}
 
 
 	stdc::time_point end = stdc::clock::now();
@@ -1156,7 +1099,7 @@ int Compiler::Compile(Program& p)
 		std::error_code ec;
 		for (const auto& pasm : asmPaths) {
 			bool res = fs::remove(pasm, ec);
-			if (!res) {
+			if (ec) {
 				std::cout << Terminal::TEXT_F_BRED << "Failed to remove " << pasm
 					      << ", cause:\n" << Terminal::TEXT_RESET << ec.message() << '\n';
 				return ec.value();
@@ -1170,7 +1113,7 @@ int Compiler::Compile(Program& p)
 		for (const auto& tgt : asmPaths) {
 			fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
 			bool res = fs::remove(pobj, ec);
-			if (!res) {
+			if (ec) {
 				std::cout << Terminal::TEXT_F_BRED << "Failed to remove " << pobj
 						  << ", cause:\n" << Terminal::TEXT_RESET << ec.message() << '\n';
 				return ec.value();
@@ -1179,6 +1122,11 @@ int Compiler::Compile(Program& p)
 	}
 
 	return 0;
+}
+
+int Compiler::Compile(Program& p)
+{
+	return _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat");
 }
 
 

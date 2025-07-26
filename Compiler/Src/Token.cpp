@@ -127,9 +127,8 @@ void TokenizeResult::AddExport(const std::string& symbol)
 std::ostream& operator<<(std::ostream& out, const TokenizeResult& tokens)
 {
 	int indent = 0;
-	for (const auto& [token, count] : tokens) {
-		if (count != 0) // TODO: make fast iterator
-			continue;
+	for (auto it = tokens.cbegin(); it != tokens.cend(); it.ForceNext()) {
+		const auto& [token, count] = *it;
 
 		if (token.type == T_LOOPE)
 			indent = std::max(indent - 1, 0);

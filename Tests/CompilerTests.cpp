@@ -1,13 +1,103 @@
 #include "pch.h"
-#include "CppUnitTest.h"
 #include <Compiler.h>
 
 #include <cassert>
 
-using namespace Microsoft::VisualStudio::CppUnitTestFramework;
+#ifdef TEST_EXE
+#define TEST_CLASS(x) class x
+#define TEST_METHOD(x) void x()
 
-namespace CompilerTests
+class Assert
 {
+public:
+	static void IsTrue(bool v, const std::wstring& msg) { std::wcout << v << ' ' << msg << '\n'; }
+	static void IsTrue(bool v) { std::wcout << v << '\n'; }
+	static void IsFalse(bool v, const std::wstring& msg) { std::wcout << v << ' ' << msg << '\n'; }
+	static void IsFalse(bool v) { std::wcout << v << '\n'; }
+	template <typename T>
+	static void AreEqual(T a, T b, const std::wstring& msg) { std::cout << a << ' ' << b << ' '; std::wcout << msg << '\n'; }
+	template <typename T>
+	static void AreEqual(T a, T b) { std::cout << a << ' ' << b << '\n'; }
+};
+
+#else
+#include "CppUnitTest.h"
+using namespace Microsoft::VisualStudio::CppUnitTestFramework;
+#endif
+
+namespace Tests
+{
+	expected<std::string, u32> GetExecutableOutput(const std::string& command) {
+		SECURITY_ATTRIBUTES sa;
+		sa.nLength = sizeof(sa);
+		sa.bInheritHandle = TRUE;
+		sa.lpSecurityDescriptor = NULL;
+
+		// Create pipes for stdout
+		HANDLE hStdoutRead, hStdoutWrite;
+		if (!CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0))
+			return { 1 };
+
+		// Ensure the read handle is not inherited
+		SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0);
+
+		// Set up process startup info
+		PROCESS_INFORMATION pi;
+		STARTUPINFO si;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		si.hStdError = hStdoutWrite;
+		si.hStdOutput = hStdoutWrite;
+		si.dwFlags |= STARTF_USESTDHANDLES;
+		ZeroMemory(&pi, sizeof(pi));
+
+		// Create the process
+		if (!CreateProcess(
+			NULL,                   // No module name (use command line)
+			const_cast<LPWSTR>(std::wstring(command.begin(), command.end()).c_str()), // Command line
+			NULL,                   // Process handle not inheritable
+			NULL,                   // Thread handle not inheritable
+			TRUE,                   // Set handle inheritance to TRUE
+			CREATE_NO_WINDOW,       // Creation flags (no window)
+			NULL,                   // Use parent's environment block
+			NULL,                   // Use parent's starting directory
+			&si,                    // Pointer to STARTUPINFO structure
+			&pi                     // Pointer to PROCESS_INFORMATION structure
+		)) {
+			CloseHandle(hStdoutRead);
+			CloseHandle(hStdoutWrite);
+			return { 2 };
+		}
+
+		// Close the write end of the pipe so we can read from it
+		CloseHandle(hStdoutWrite);
+
+		// Read output from the child process
+		std::string result;
+		constexpr DWORD BUFSIZE = 4096;
+		CHAR chBuf[BUFSIZE];
+		DWORD dwRead;
+		BOOL bSuccess = FALSE;
+		HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+		for (;;) {
+			bSuccess = ReadFile(hStdoutRead, chBuf, BUFSIZE, &dwRead, NULL);
+			if (!bSuccess || dwRead == 0) break;
+
+			result.append(chBuf, dwRead);
+		}
+
+		// Wait for the process to complete
+		WaitForSingleObject(pi.hProcess, INFINITE);
+
+		// Close handles
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+		CloseHandle(hStdoutRead);
+
+		return result;
+	}
+
 	TEST_CLASS(CompilerTests)
 	{
 	public:
@@ -155,32 +245,70 @@ namespace CompilerTests
 			auto ir = Compiler::Intermediate(std::move(ast));
 			recon = Reconstruct(ir);
 			std::string exp =
-				"LABEL _LOOP1\n"
-				"LABEL _LOOP9\n"
+				"LOOP _LOOP_START_1\n"
+				"JZ _LOOP_END_11\n"
+				"LOOP _LOOP_START_9\n"
+				"JZ _LOOP_END_12\n"
 				"INC 2\n"
 				"LEFT 1\n"
 				"RIGHT 1\n"
 				"DEC 1\n"
-				"JNZ _LOOP9\n"
+				"JMP _LOOP_START_9\n"
+				"LOOP _LOOP_END_12\n"
 				"INC 1\n"
 				"DEC 1\n"
-				"JNZ _LOOP1\n"
+				"JMP _LOOP_START_1\n"
+				"LOOP _LOOP_END_11\n"
 				"LABEL label\n"
-				"LABEL _LOOP5\n"
-				"LABEL _LOOP10\n"
+				"LOOP _LOOP_START_5\n"
+				"JZ _LOOP_END_13\n"
+				"LOOP _LOOP_START_10\n"
+				"JZ _LOOP_END_14\n"
 				"INC 2\n"
 				"LEFT 1\n"
 				"RIGHT 1\n"
 				"DEC 1\n"
-				"JNZ _LOOP10\n"
+				"JMP _LOOP_START_10\n"
+				"LOOP _LOOP_END_14\n"
 				"INC 1\n"
 				"DEC 1\n"
-				"JNZ _LOOP5\n"
+				"JMP _LOOP_START_5\n"
+				"LOOP _LOOP_END_13\n"
 				"RET\n"
-				"JMP label 1\n"
-				"JMP label 1\n"
+				"CALL label 1\n"
+				"CALL label 1\n"
 				;
 			Assert::AreEqual(exp, recon);
+		}
+
+		TEST_METHOD(TestLink)
+		{
+			Program p;
+			// Relative to Compiler folder
+			p.main = "../Tests/Res/Code_Valid_Link_1.bf";
+			p.tgts.push_back("../Tests/Res/Code_Valid_Link_1.bf");
+			p.tgts.push_back("../Tests/Res/Code_Valid_Link_2.bf");
+			p.outputPath = "../Tests/Generated/Valid_Link.exe";
+
+			std::error_code ec;
+#ifdef TEST_EXE
+			fs::path original = fs::current_path();
+			fs::current_path("../Compiler/", ec);
+#else
+			fs::path original = fs::current_path();
+			fs::current_path("../../Compiler/", ec);
+#endif
+			if (ec) Assert::IsTrue(false, wstring(ec.message()).c_str());
+
+
+			Assert::AreEqual(0, Compiler::Compile(p));
+
+			auto out = GetExecutableOutput(p.outputPath.string());
+			Assert::IsTrue(out.success());
+			Assert::AreEqual("hi momhi momhi momhi momhi mom"s, out._getE());
+
+			fs::current_path(original, ec);
+			if (ec) Assert::IsTrue(false, wstring(ec.message()).c_str());
 		}
 
 
@@ -272,7 +400,11 @@ namespace CompilerTests
 
 	private:
 		fs::path path(const std::string& str) {
-			return "../../CompilerTests/Res/" + str;
+#ifdef TEST_EXE
+			return "Res/" + str;
+#else
+			return "../../Tests/Res/" + str;
+#endif
 		}
 
 		std::wstring wstring(const std::string& s) { 
@@ -396,3 +528,11 @@ namespace CompilerTests
 		}
 	};
 }
+
+#ifdef TEST_EXE
+int main()
+{
+	Tests::CompilerTests test;
+	test.TestLink();
+}
+#endif

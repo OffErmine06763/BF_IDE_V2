@@ -90,7 +90,6 @@ struct Block
 	std::vector<BlockItem> items;
 };
 
-// TODO: add a preprocessor to identify includes, each of them will recursively call the tokenizer and parser
 struct TU
 {
 	Block body;

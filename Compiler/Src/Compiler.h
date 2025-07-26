@@ -5,6 +5,29 @@
 #include "IR.h"
 
 
+enum class CompilerError {
+	None = 0,
+	Requirements = 1,
+	AssemblerLinker = 2,
+	Unknown = 3
+};
+class CompilerErrorCategory : public std::error_category {
+public:
+	const char* name() const noexcept override {
+		return "CompilerError";
+	}
+
+	std::string message(int ev) const override {
+		switch (static_cast<CompilerError>(ev)) {
+		case CompilerError::None: return "No error";
+		case CompilerError::Requirements: return "Required tools (nasm) not found";
+		case CompilerError::AssemblerLinker: return "Failed to assemble or link";
+		case CompilerError::Unknown: return "Unknown error";
+		default: return "Unrecognized error";
+		}
+	}
+};
+
 struct Program
 {
 	enum InterOp
@@ -33,6 +56,60 @@ struct Program
 		else
 			return main == file;
 	}
+
+	std::optional<std::string> Validate()
+	{
+		if (tgts.size() == 0)
+			return { "Please provide the list of files to compile\n" };
+		if (!main.empty() && stdr::find(tgts, main) == tgts.end())
+			return { "The main file specified is not in the list of files to compile\n" };
+
+		if (outputPath.empty())
+		{
+			if (tgts.size() == 1)
+			{
+				if (fs::is_directory(tgts[0]))
+					outputPath = tgts[0].string() + ".exe";
+				else
+					outputPath = tgts[0].filename().string() + ".exe";
+			}
+			else
+				outputPath = "out.exe";
+		}
+
+		for (size_t i = 0; i < tgts.size(); i++)
+		{
+			const fs::path& tgt = tgts[i];
+			if (!fs::is_directory(tgt))
+				continue;
+			for (const fs::path& sub : fs::directory_iterator(tgt))
+			{
+				if (sub.extension() == ".bf" || fs::is_directory(sub))
+					tgts.push_back(sub);
+			}
+			tgts.erase(tgts.begin() + i);
+			i--;
+		}
+
+		if (fs::exists(outputPath)) {
+			if (fs::is_directory(outputPath))
+				return { "The output file must be a file" };
+		}
+		else
+			fs::create_directories(outputPath.parent_path());
+
+		if (!interPath.empty())
+		{
+			if (fs::exists(interPath)) {
+				if (!fs::is_directory(interPath))
+					return { "The intermediate output folder must be a folder" };
+			}
+			else
+				fs::create_directories(interPath);
+		}
+
+		return std::nullopt;
+	}
 };
 
 
@@ -42,6 +119,8 @@ public:
 	static bool ParseArgs(Program& p, const std::vector<std::string>& args);
 	static int Compile(const std::vector<std::string>& args);
 	static int Compile(Program& p);
+	/// used for testing, as the bat file paths are different
+	static int _Compile(Program& p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3);
 
 
 	// Lexical Analyzer / Scanner / Lexer
@@ -49,8 +128,6 @@ public:
 		std::ifstream in(file);
 		std::string content = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
 		in.close();
-		//auto res = Tokenize(content);
-		//prog.files.insert({ file, tr });
 		return Tokenize(content);
 	}
 	static expected<TokenizeResult, std::string> Tokenize(const std::string& content);

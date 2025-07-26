@@ -6,6 +6,8 @@
 # Custom
 *.ini
 Generated/
+Test Exe Debug/
+*.exe
 
 /App/history.bfidedata
 badapple.*

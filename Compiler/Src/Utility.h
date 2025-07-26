@@ -24,11 +24,13 @@
 #include <memory>
 #include <condition_variable>
 
+#include <regex>
+
 #ifdef _DEBUG
 #include <Terminal.h>
 #endif
 
-// ################################################################## TYPES ##################################################################
+// ################################################################## ALIASES ##################################################################
 namespace stdv = std::views;
 namespace stdr = std::ranges;
 namespace stdc = std::chrono;
@@ -51,11 +53,22 @@ template <typename K, typename V>
 using hmap = std::unordered_map<K, V>;
 template <typename V>
 using hset = std::unordered_set<V>;
-
+	
 namespace std::chrono {
-	using clock = stdc::high_resolution_clock;
+	using clock = high_resolution_clock;
 }
-// ################################################################## TYPES ##################################################################
+
+template <typename T>
+using uptr = std::unique_ptr<T>;
+template <typename T>
+using sptr = std::shared_ptr<T>;
+
+using callable = std::function<void(void)>;
+template <typename T>
+using consumer = std::function<void(T)>;
+template <typename T>
+using provider = std::function<T(void)>;
+// ################################################################## ALIASES ##################################################################
 
 
 // PAIR
@@ -75,17 +88,6 @@ std::string operator+(const std::string& left, const coord<T>& right) {
 }
 
 
-// FUNCTIONS
-template <typename T>
-using uptr = std::unique_ptr<T>;
-template <typename T>
-using sptr = std::shared_ptr<T>;
-using callable = std::function<void(void)>;
-template <typename T>
-using consumer = std::function<void(T)>;
-template <typename T>
-using provider = std::function<T(void)>;
-
 
 // CASTING
 template <typename T, typename X>
@@ -101,9 +103,9 @@ template <typename T, typename... Types>
 struct variant_contains<T, std::variant<Types...>> : std::disjunction<std::is_same<T, Types>...> {};
 
 template <typename T, typename Variant>
-concept InVariant = variant_contains<T, Variant>::value;
+concept in_variant = variant_contains<T, Variant>::value;
 template <typename T, typename... Variant>
-concept InVariants = (variant_contains<T, Variant>::value && ...);
+concept in_variants = (variant_contains<T, Variant>::value && ...);
 
 template <typename T, typename U>
 concept not_same_as = !std::same_as<T, U>;
@@ -135,9 +137,9 @@ struct visitor : Ts... { using Ts::operator()...; };
 
 // VARIANT
 template <typename V, typename... T>
-inline bool holds(const std::variant<T...>& var) { return std::holds_alternative<V>(var); }
-template <typename V, typename... T> requires InVariants<V, T...>
-inline bool holds(const T&... vars) { return (... && std::holds_alternative<V>(vars)); }
+bool inline constexpr holds(const std::variant<T...>& var) { return std::holds_alternative<V>(var); }
+template <typename V, typename... T> requires in_variants<V, T...>
+bool inline constexpr holds(const T&... vars) { return (... && std::holds_alternative<V>(vars)); }
 
 
 // CHRONO
@@ -147,6 +149,48 @@ std::ostream& print_time(std::ostream& out, const stdc::nanoseconds& time);
 // FILE
 std::string ReadFile(const fs::path& file);
 
+
+//struct RegexTest
+//{
+//	const std::string& str;
+//	size_t start, count;
+//};
+//
+//struct RegexFilter
+//{ 
+//	virtual bool _Match(RegexTest& test) const = 0;
+//};
+//
+//struct RegexCharFilter : public RegexFilter
+//{
+//	std::string list;
+//	bool white = true, range = false;
+//
+//	RegexCharFilter(const std::string& list, bool white = true, bool range = false);
+//
+//	bool _Match(RegexTest& test) const override;
+//	
+//	// NOTE: '.' (any char except \n) has white = false; range = false; list = "\n";
+//};
+//
+//struct RegexRepeatFilter : public RegexFilter
+//{
+//	u32 min, max;
+//	uptr<RegexFilter> query;
+//
+//	RegexRepeatFilter(u32 min, u32 max, RegexFilter* query);
+//
+//	bool _Match(RegexTest& test) const override;
+//};
+//
+//struct Regex
+//{
+//	std::vector<uptr<RegexFilter>> regex;
+//
+//	bool Parse(const std::string& regex);
+//
+//	bool Match(const std::string& test) const;
+//};
 
 
 // ################################################################## EXPECTED ##################################################################
@@ -171,7 +215,7 @@ struct expected
 	U& _getU() { return std::get<U>(content); }
 	E&& _consumeE() { return std::move(std::get<E>(content)); }
 	U&& _consumeU() { return std::move(std::get<U>(content)); }
-	template <typename T> requires InVariant<T, std::variant<E, U>>
+	template <typename T> requires in_variant<T, std::variant<E, U>>
 	std::optional<T> get() {
 		return std::holds_alternative<T>(content) ? std::get<T>(content) : std::nullopt;
 	}

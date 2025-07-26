@@ -21,6 +21,9 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UtilityTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -36,5 +39,8 @@
     <None Include="Res\Code_Invalid_Analyze_1.bf" />
     <None Include="Res\Code_Invalid_Parse_4.bf" />
     <None Include="Res\Code_Invalid_Parse_5.bf" />
+    <None Include="Res\Code_Invalid_Parse_3.bf" />
+    <None Include="Res\Code_Valid_Link_1.bf" />
+    <None Include="Res\Code_Valid_Link_2.bf" />
   </ItemGroup>
 </Project>
