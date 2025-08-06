@@ -19,8 +19,8 @@ int main(int argc, char** argv)
 				});
 
 	// abbondante sopprimere il sacrificio tronco buono
-	//Compiler::Compile({ args.begin(), args.end() });
-	CompilerError error = Compiler::Compile({ "Compiler", "Res/Code/Code.bf", "Res/Code/Code2.bf", "-m", "Res/Code/Code.bf", "-o", "Generated/CODE.exe"});
+	//CompilerError error = Compiler::Compile({ args.begin(), args.end() });
+	CompilerError error = Compiler::Compile({ "Compiler", "Res/Code/Code.bf", "Res/Code/Code2.bf", "-m", "Res/Code/Code.bf", "-o", "Generated/CODE.exe" });
 
 	if (error)
 	{

@@ -6,10 +6,17 @@
 
 class EditView;
 
+enum class CompilationTarget
+{
+	CURRENT, OPEN
+};
+
 class EditViewModel
 {
 public:
 	EditViewModel(EditView* view, EditModel* model, EditorModel* editor);
+
+	void OpenFile(const fs::path& path);
 
 	void StartEmulation();
 	void StopEmulation();
@@ -21,6 +28,8 @@ public:
 	void OnEmulationOutputChanged();
 	void OnEmulationInputRequested();
 	const std::string& GetEmulationOutput() { return m_Model->GetEmulationOutput(); }
+
+	void Compile(const CompilationTarget& file);
 
 	fs::path GetWorkDir() const { return m_Model->GetWorkDir(); }
 

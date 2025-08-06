@@ -13,7 +13,6 @@ public:
 
 	void OnCloseAll();
 	void OnPerformSave(Document& id);
-	void OnCloseFile(const idt id);
 	void OnOpenOrFocus(const fs::path& path);
 	void OnWantCloseFile(const u32 ind);
 	void OnWantFileChange(const Document& doc);

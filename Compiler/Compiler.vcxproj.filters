@@ -73,19 +73,21 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="CheckRequirements.bat">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="Assemble.bat">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="LinkObj.bat">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="Res\Code\Code.bf" />
     <None Include="Res\Code\Code2.bf" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Res\help.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="Assemble.bat">
+      <Filter>Source Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="CheckRequirements.bat">
+      <Filter>Source Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="LinkObj.bat">
+      <Filter>Source Files</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

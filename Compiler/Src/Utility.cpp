@@ -180,6 +180,23 @@ std::ostream& operator<<(std::ostream& out, const WorkingDirectory& d)
 {
 	return out << d.Path << ' ' << d.PathType;
 }
+
+void ShowInExplorer(const fs::path& path)
+{
+#if defined(_WIN32)
+	if (std::filesystem::is_directory(path))
+		std::system(("explorer \""s + path.string() + "\"").c_str());
+	else {
+		std::system(("explorer /select,\""s + path.string() + "\"").c_str());
+	}
+#elif defined(__APPLE__)
+	std::system((std::string("open \"") + path.string() + "\"").c_str());
+#elif defined(__linux__)
+	std::system((std::string("xdg-open \"") + path.string() + "\"").c_str());
+#else
+	std::cerr << "Unsupported platform.\n";
+#endif
+}
 // ################################################################## PATH ##################################################################
 
 

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <functional>
 
+// TODO: barra di ricerca
 
 class OpenProjectState : public State
 {

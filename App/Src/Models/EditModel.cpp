@@ -9,7 +9,13 @@ EditModel::EditModel(const fs::path& workdir, EditorModel* editor)
 	: m_Editor(editor)
 {
 	//m_Editor->SubscribeFocus([this](const Document& doc) { OnEditorFileChanged(doc.Path); });
-	m_Editor->OpenOrFocus(workdir);
+	if (fs::is_directory(workdir))
+		m_WorkDir = workdir;
+	else
+	{
+		m_WorkDir = workdir.parent_path();
+		m_Editor->OpenOrFocus(workdir);
+	}
 
 	//m_Editor.Subscribe<Document::idt>(EditorModel::FOCUS, [this](Document::idt param) { this->Test(param); });
 	//m_Editor.Subscribe<u32>(EditorModel::FOCUS, BIND(u32, Test));

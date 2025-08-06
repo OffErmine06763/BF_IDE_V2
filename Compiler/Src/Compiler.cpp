@@ -16,7 +16,10 @@ expected<TokenizeResult, CompilerError> Compiler::Tokenize(const std::string& co
 	{
 		const char c = content[i];
 
-		if (c == '\n') {
+		if (c == '\0')
+			break;
+		else if (c == '\n')
+		{
 			row++;
 			col = 0;
 			continue;

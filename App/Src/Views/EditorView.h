@@ -3,6 +3,7 @@
 #include "Models/EditorModel.h"
 #include "ViewModels/EditorViewModel.h"
 
+typedef unsigned int ImGuiID;
 
 struct ImGuiInputTextCallbackData;
 struct ImVec2;
@@ -23,9 +24,7 @@ public:
 	EditorView(EditorModel* model);
 	~EditorView() = default;
 
-	// void SetOnFileChangedCallback(const consumer<const fs::path&>& cb) { m_FileChangedCB = cb; }
-
-	void Render(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
+	void Render(ImGuiID dockspace_id /*, const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
 
 	// idt OpenFile(const fs::path& dir);
 	// idt OpenOrFocus(const fs::path& path);
@@ -37,6 +36,7 @@ public:
 	void CloseAll();
 	void CloseFile(const u32 ind);
 	void PerformedClose();
+	void AbortClose();
 	// 
 	// inline void RequestRedock() { m_WantRedock = true; }
 	// 
@@ -49,7 +49,7 @@ public:
 
 private:
 	void RenderMainMenu();
-	void RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
+	void RenderBody(ImGuiID dockspace_id /* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
 	void RenderClosingConfirmationUI();
 	void RenderRenamingDocUI();
 	void ProcessShortcuts();
@@ -71,7 +71,7 @@ private:
 	i32 m_FocusInd = InvalidIndex, m_RenamingDocInd = InvalidIndex;
 	idt m_WantFocus = InvalidID;
 
-	std::vector<u32> m_CloseQueue;
+	std::vector<u32> m_CloseQueueIds;
 
 	const std::vector<fs::path>& m_RecOpen, &m_RecClose;
 	std::vector<Document>& m_Documents;

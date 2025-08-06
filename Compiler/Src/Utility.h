@@ -1,5 +1,6 @@
 #pragma once
 #include <inttypes.h>
+#include <numbers>
 
 #include <iostream>
 #include <fstream>
@@ -242,6 +243,8 @@ struct WorkingDirectory
 	const PathType PathType;
 };
 std::ostream& operator<<(std::ostream& out, const WorkingDirectory& d);
+
+void ShowInExplorer(const fs::path& path);
 // ################################################################## PATH ##################################################################
 
 

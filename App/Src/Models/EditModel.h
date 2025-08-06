@@ -30,7 +30,7 @@ private:
 
 private:
 	EditorModel* m_Editor;
-	const fs::path m_WorkDir;
+	fs::path m_WorkDir;
 
 
 	bool m_Emulating = false;

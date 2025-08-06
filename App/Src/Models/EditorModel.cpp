@@ -23,11 +23,14 @@ std::ostream& operator<<(std::ostream& out, const Document& doc)
 
 // TODO: warning for nested loops like [[...]] and <>><, it just makes no sense
 
-bool EditorModel::Close(std::vector<u32> inds, bool save)
+bool EditorModel::Close(std::vector<u32> ids, bool save)
 {
 	if (save && m_Locked) return false;
 
-	LOG("Closing files: " << inds << '\n');
+	LOG("Closing files: " << ids << '\n');
+
+	auto indsv = stdv::iota(0u, to<u32>(m_Documents.size())) | stdv::filter([&](u32 ind) { return stdr::find(ids, m_Documents[ind].Id) != ids.end(); });
+	std::vector<u32> inds = { indsv.begin(), indsv.end() };
 
 	// Update recently closed files
 	for (size_t ind : inds | stdv::take(RecentCloseSize))
@@ -103,7 +106,7 @@ void EditorModel::OpenOrFocus(const fs::path& dir)
 	LOG("Opening file " << dir << '\n');
 	Document newdoc = { dir };
 	m_Documents.push_back(newdoc);
-	m_FocusInd = m_Documents.size() - 1;
+	m_FocusInd = to<u32>(m_Documents.size()) - 1;
 
 	auto itr = stdr::find(m_RecOpen, dir);
 	if (itr != m_RecOpen.end())
@@ -132,10 +135,15 @@ void EditorModel::PerformSave(Document& doc) const
 	out.close();
 	doc.Dirty = false;
 }
-void EditorModel::PerformRename(Document& doc, const std::string& name)
+void EditorModel::PerformRename(const idt id, const std::string& name)
 {
 	if (m_Locked) return;
 
+	auto find = stdr::find(m_Documents, id, &Document::Id);
+	if (find == m_Documents.end())
+		return;
+
+	Document& doc = *find;
 	LOG("Renaming file " << doc << " to " << name << '\n');
 	doc.Name = name;
 	auto newpath = doc.Path.parent_path() / doc.Name;

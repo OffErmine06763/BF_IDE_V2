@@ -35,7 +35,7 @@ Microsoft::VisualStudio::CppUnitTestFramework::ToString<CompilerError>(const Com
 
 namespace Tests
 {
-	expected<std::string, u32> GetExecutableOutput(const std::string& command) {
+	static expected<std::string, u32> GetExecutableOutput(const std::string& command) {
 		SECURITY_ATTRIBUTES sa;
 		sa.nLength = sizeof(sa);
 		sa.bInheritHandle = TRUE;

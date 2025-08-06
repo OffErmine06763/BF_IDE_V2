@@ -11,6 +11,15 @@ class Compiler
 {
 public:
 	static CompilerError Compile(const std::vector<std::string>& args);
+	// TODO: how to access the script files when using the compiler as an API without providing the path offset
+	static CompilerError Compile(Program& p, const fs::path& offset)
+	{
+		auto original = fs::current_path();
+		fs::current_path(offset);
+		auto res = _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat");
+		fs::current_path(original);
+		return res;
+	}
 	static CompilerError Compile(Program& p) { return _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat"); }
 
 

@@ -16,19 +16,15 @@ void EditorViewModel::OnPerformSave(Document& doc)
 	m_Model->PerformSave(doc);
 }
 
-void EditorViewModel::OnCloseFile(const idt id)
-{
-}
-
 void EditorViewModel::OnOpenOrFocus(const fs::path& path)
 {
 	m_Model->OpenOrFocus(path);
 }
 
 
-void EditorViewModel::OnWantCloseFile(const u32 ind)
+void EditorViewModel::OnWantCloseFile(const u32 id)
 {
-	m_View->CloseFile(ind);
+	m_View->CloseFile(id);
 }
 
 void EditorViewModel::OnWantFileChange(const Document& doc)
@@ -45,10 +41,12 @@ void EditorViewModel::OnFileClosed(std::vector<u32> inds, bool save)
 
 void EditorViewModel::OnCancelClose()
 {
+	m_View->AbortClose();
 }
 
 void EditorViewModel::OnPerformRename(const idt id, const std::string& name)
 {
+	m_Model->PerformRename(id, name);
 }
 
 void EditorViewModel::OnEdit(Document* doc, const char change)
@@ -60,3 +58,4 @@ void EditorViewModel::OnCursorMoved(Document* doc, const i32 pos)
 {
 	m_Model->MoveCursor(doc, pos);
 }
+

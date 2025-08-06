@@ -24,16 +24,21 @@ EditorView::EditorView(EditorModel* model)
 
 void EditorView::CloseAll()
 {
-	m_CloseQueue.resize(m_Documents.size());
-	std::iota(m_CloseQueue.begin(), m_CloseQueue.end(), 0);
+	m_CloseQueueIds.resize(m_Documents.size());
+	stdr::transform(m_Documents, m_CloseQueueIds.begin(), [](const Document& doc) -> u32 { return doc.Id; });
+	//std::iota(m_CloseQueue.begin(), m_CloseQueue.end(), 0);
 }
-void EditorView::CloseFile(const u32 ind)
+void EditorView::CloseFile(const u32 id)
 {
-	m_CloseQueue.push_back(ind);
+	m_CloseQueueIds.push_back(id);
 }
 void EditorView::PerformedClose()
 {
-	m_CloseQueue.clear();
+	m_CloseQueueIds.clear();
+}
+void EditorView::AbortClose()
+{
+	m_CloseQueueIds.clear();
 }
 
 void EditorView::StartRename(const u32 ind)
@@ -48,11 +53,11 @@ void EditorView::Focused(const Document& doc)
 }
 
 
-void EditorView::Render(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */)
+void EditorView::Render(ImGuiID dockspace_id /*, const ImVec2& pos, const ImVec2& size // TAG: Toolbar */)
 {
 	ProcessShortcuts();
 	RenderMainMenu();
-	RenderBody(/* pos, size // TAG: Toolbar */);
+	RenderBody(dockspace_id /*, pos, size // TAG: Toolbar */);
 }
 void EditorView::ProcessShortcuts()
 {
@@ -66,7 +71,9 @@ void EditorView::ProcessShortcuts()
 		if (ImGui::IsKeyChordPressed(ES_Save.Chord) && !m_Locked)
 			m_VM.OnPerformSave(doc);
 		if (ImGui::IsKeyChordPressed(ES_CloseOne.Chord))
-			m_VM.OnCloseFile(doc.Id);
+			m_VM.OnWantCloseFile(doc.Id);
+		if (ImGui::IsKeyChordPressed(ES_Explorer.Chord))
+			ShowInExplorer(doc.Path);
 	}
 }
 void EditorView::RenderMainMenu()
@@ -115,7 +122,7 @@ void EditorView::RenderMainMenu()
 		ImGui::EndMainMenuBar();
 	}
 }
-void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Toolbar  */)
+void EditorView::RenderBody(ImGuiID parent_dockspace /* const ImVec2& pos, const ImVec2& size // TAG: Toolbar  */)
 {
 	static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
 
@@ -123,11 +130,12 @@ void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Too
 	// ImGui::SetNextWindowPos(pos);
 	// ImGui::SetNextWindowSize(size);
 
-	const ImGuiViewport* viewport = ImGui::GetMainViewport();
+	/*const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImGui::SetNextWindowSize(viewport->WorkSize);
+	ImGui::SetNextWindowSize(viewport->WorkSize);*/
 
-	bool window_contents_visible = ImGui::Begin("Documents", nullptr, flags);
+	ImGui::SetNextWindowDockID(parent_dockspace, ImGuiCond_Appearing);
+	bool window_contents_visible = ImGui::Begin("EditorViewDocuments", nullptr, flags);
 
 	ImGuiID dockspace_id = ImGui::GetID("EditorDockspace");
 	ImGui::DockSpace(dockspace_id, { 0, 0 }, ImGuiDockNodeFlags_None);
@@ -150,7 +158,7 @@ void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Too
 		bool visible = ImGui::Begin(doc.Name.c_str(), &notwantclose, window_flags);
 
 		if (!notwantclose)
-			m_VM.OnWantCloseFile(n);
+			m_VM.OnWantCloseFile(doc.Id);
 		if (ImGui::IsItemClicked() && n != m_FocusInd)
 			m_VM.OnWantFileChange(doc);
 
@@ -170,19 +178,22 @@ void EditorView::RenderBody(/* const ImVec2& pos, const ImVec2& size // TAG: Too
 
 	if (m_RenamingDocInd >= 0)
 		RenderRenamingDocUI();
-	if (!m_CloseQueue.empty())
+	if (!m_CloseQueueIds.empty())
 		RenderClosingConfirmationUI();
 
 	ImGui::End();
 }
 void EditorView::RenderClosingConfirmationUI()
 {
-	size_t unsaved = stdr::count_if(m_CloseQueue, &Document::Dirty, [this](const u32 n) -> const Document& { return m_Documents[n]; });
+	auto indsv = stdv::iota(0u, to<u32>(m_Documents.size())) | stdv::filter([&](u32 ind) { return stdr::find(m_CloseQueueIds, m_Documents[ind].Id) != m_CloseQueueIds.end(); });
+	std::vector<u32> inds = { indsv.begin(), indsv.end() };
+	size_t unsaved = stdr::count_if(inds, [this](u32 ind) { return m_Documents[ind].Dirty; });
 	if (unsaved == 0)
 	{
-		m_VM.OnFileClosed(m_CloseQueue, false);
+		m_VM.OnFileClosed(m_CloseQueueIds, false);
 		return;
 	}
+
 
 	if (!ImGui::IsPopupOpen("Save?"))
 		ImGui::OpenPopup("Save?");
@@ -191,7 +202,7 @@ void EditorView::RenderClosingConfirmationUI()
 		ImGui::Text("Save change to the following items?");
 		float item_height = ImGui::GetTextLineHeightWithSpacing();
 		if (ImGui::BeginChild(ImGui::GetID("frame"), ImVec2(-FLT_MIN, 6.25f * item_height), ImGuiChildFlags_FrameStyle))
-			for (u32 doc : m_CloseQueue)
+			for (u32 doc : inds)
 				if (m_Documents[doc].Dirty)
 					ImGui::Text("%s", m_Documents[doc].Name.c_str());
 		ImGui::EndChild();
@@ -199,20 +210,19 @@ void EditorView::RenderClosingConfirmationUI()
 		ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
 		if (ImGui::Button("Yes", button_size))
 		{
-			m_VM.OnFileClosed(m_CloseQueue, true);
+			m_VM.OnFileClosed(m_CloseQueueIds, true);
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("No", button_size))
 		{
-			m_VM.OnFileClosed(m_CloseQueue, false);
+			m_VM.OnFileClosed(m_CloseQueueIds, false);
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Cancel", button_size))
 		{
 			m_VM.OnCancelClose();
-			// m_CloseQueue.clear();
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::EndPopup();
@@ -278,11 +288,11 @@ void EditorView::DisplayDocContextMenu(const u32 n)
 	if (ImGui::MenuItem("Rename...", ES_Rename.Label, false, !m_Locked))
 		StartRename(n);
 	if (ImGui::MenuItem("Close", ES_CloseOne.Label))
-		m_VM.OnCloseFile(doc.Id);
+		m_VM.OnWantCloseFile(doc.Id);
+	if (ImGui::MenuItem("Show in File Explorer", ES_Explorer.Label))
+		ShowInExplorer(doc.Path);
 	ImGui::EndPopup();
 }
-
-
 
 
 //void EditorView::Lock(bool lock)
@@ -309,8 +319,8 @@ int DocumentEditorCallback(ImGuiInputTextCallbackData* data)
 	}
 	else if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
 	{
-		if (!IsValidBF(to<char>(data->EventChar)) && data->EventChar != '\n')
-			return 1;
+		//if (!IsValidBF(to<char>(data->EventChar)) && data->EventChar != '\n')
+			//return 1;
 		if (data->EventChar == BF_OPN)
 		{
 			// TODO: chiudi parentesi, già provati:

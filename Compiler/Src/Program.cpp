@@ -11,10 +11,11 @@ CompilerError Program::Validate()
 	{
 		if (tgts.size() == 1)
 		{
-			if (fs::is_directory(tgts[0]))
-				outputPath = tgts[0].string() + ".exe";
+			const auto& tgt = tgts[0];
+			if (fs::is_directory(tgt))
+				outputPath = tgt.string() + ".exe";
 			else
-				outputPath = tgts[0].filename().string() + ".exe";
+				outputPath = tgt.parent_path() / (tgt.stem().string() + ".exe");
 		}
 		else
 			outputPath = "out.exe";
@@ -38,7 +39,7 @@ CompilerError Program::Validate()
 		if (fs::is_directory(outputPath))
 			return { CompilerError::ARGS_OUT_FOLDER, "The output file must be a file" };
 	}
-	else
+	else if (!outputPath.parent_path().empty())
 		fs::create_directories(outputPath.parent_path());
 
 	if (!interPath.empty())
@@ -47,7 +48,7 @@ CompilerError Program::Validate()
 			if (!fs::is_directory(interPath))
 				return { CompilerError::ARGS_INTER_FILE, "The intermediate output folder must be a folder" };
 		}
-		else
+		else if(!interPath.parent_path().empty())
 			fs::create_directories(interPath);
 	}
 

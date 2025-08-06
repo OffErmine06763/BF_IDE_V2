@@ -60,7 +60,7 @@ public:
 	std::vector<Document>& GetDocuments()         { return m_Documents; }
 
 	void PerformSave(Document& doc) const;
-	void PerformRename(Document& doc, const std::string& name);
+	void PerformRename(const idt id, const std::string& name);
 
 	bool ChangeFile(const idt id);
 
