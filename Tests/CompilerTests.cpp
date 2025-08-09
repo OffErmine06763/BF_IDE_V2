@@ -1,11 +1,14 @@
 #include "pch.h"
-#define TEST
 #include <Compiler.h>
 
 #define NOMINMAX
 #include <Windows.h>
 
 #include <cassert>
+
+
+using namespace BFC;
+
 
 #ifdef TEST_EXE
 #define TEST_CLASS(x) class x
@@ -29,9 +32,11 @@ public:
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #endif
 
+
 template<> inline std::wstring 
 Microsoft::VisualStudio::CppUnitTestFramework::ToString<CompilerError>(const CompilerError& t)
 { RETURN_WIDE_STRING(t); }
+
 
 namespace Tests
 {
@@ -230,6 +235,53 @@ namespace Tests
 			recon = Reconstruct(ast);
 			strip = Strip("[+]label:[+];"s);
 			Assert::AreEqual(strip, recon, L"The optimized AST doesn't match the given code");
+
+
+
+			tokens = Compiler::Tokenize("+++-++"s);
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
+
+			parse = Compiler::Parse(tokens._consumeE());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
+
+			ast = parse._getE();
+			recon = Reconstruct(ast);
+			strip = Strip("+++-++"s);
+			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
+
+			anal = Compiler::Analyze(ast);
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value().message : "")).c_str());
+
+			Compiler::Optimize(ast);
+			recon = Reconstruct(ast);
+			strip = Strip("++++"s);
+			Assert::AreEqual(strip, recon, L"The optimized AST doesn't match the given code");
+			Assert::IsTrue(ast.body.items.size() == 1, L"The optimized AST should consist of a single node");
+
+
+
+			std::string code = std::string(202, '+') + std::string(1, '-') + std::string(56, '+');
+			tokens = Compiler::Tokenize(code);
+			Assert::IsTrue(tokens.success(), wstring("The provided code is valid, however:\n"s + (tokens.success() ? "" : tokens._getU().message)).c_str());
+
+			parse = Compiler::Parse(tokens._consumeE());
+			Assert::IsTrue(parse.success(), wstring("The provided code is valid, however:\n"s + (parse.success() ? "" : parse._getU().message)).c_str());
+
+			ast = parse._getE();
+			recon = Reconstruct(ast);
+			strip = Strip(code);
+			Assert::AreEqual(strip, recon, L"The generated AST doesn't match the given code");
+
+			anal = Compiler::Analyze(ast);
+			Assert::IsFalse(anal.has_value(), wstring("The provided code is valid, however:\n"s + (anal.has_value() ? anal.value().message : "")).c_str());
+
+			Compiler::Optimize(ast);
+			recon = Reconstruct(ast);
+			strip = Strip(std::string(257, '+'));
+			Assert::AreEqual(strip, recon, L"The optimized AST doesn't match the given code");
+			Assert::IsTrue(ast.body.items.size() == 2, L"The optimized AST should consist of a single node");
+			Assert::IsTrue(get<Operation>(get<Stmt>(ast.body.items[0].value).value).count == 255, L"The optimized AST should consist of a single node");
+			Assert::IsTrue(get<Operation>(get<Stmt>(ast.body.items[1].value).value).count == 0, L"The optimized AST should consist of a single node");
 		}
 
 		TEST_METHOD(TestIntermediate)
@@ -291,7 +343,7 @@ namespace Tests
 
 		TEST_METHOD(TestLink)
 		{
-			Program p;
+			CompilationParams p;
 			// Relative to Compiler folder
 			p.main = "../Tests/Res/Code_Valid_Link_1.bf";
 			p.tgts.push_back("../Tests/Res/Code_Valid_Link_1.bf");
@@ -404,6 +456,12 @@ namespace Tests
 			}
 		}
 
+
+		TEST_METHOD(TestMisc)
+		{
+			for (auto t = 0; t < TType::T_MAX; t++)
+				Assert::IsTrue(Token::ToString.contains((TType)t), wstring("Missing token string mapping for " + std::to_string(t)).c_str());
+		}
 
 
 	private:

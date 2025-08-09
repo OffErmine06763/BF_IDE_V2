@@ -71,7 +71,7 @@ void EditViewModel::OnEmulationInputRequested()
 
 void EditViewModel::Compile(const CompilationTarget& tgt)
 {
-	Program p;
+	BFC::CompilationParams p;
 	if (tgt == CompilationTarget::OPEN)
 	{
 		for (const Document& doc : m_Editor->GetDocuments())
@@ -80,6 +80,6 @@ void EditViewModel::Compile(const CompilationTarget& tgt)
 	else if (tgt == CompilationTarget::CURRENT)
 		p.tgts.push_back(m_Editor->GetFocusedFile()->Path);
 	p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
-	CompilerError err = Compiler::Compile(p, "../Compiler/");
+	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
 	if (err) LOG_COMP(err.message << '\n');
 }

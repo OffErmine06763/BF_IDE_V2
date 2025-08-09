@@ -34,8 +34,6 @@ void EditView::Render()
 		ImGui::DockBuilderAddNode(m_DockspaceID, ImGuiDockNodeFlags_DockSpace);
 		ImGui::DockBuilderSetNodeSize(m_DockspaceID, ImVec2(800, 600));
 
-		// Split into two nodes: left (new_dock_id_left) and right (dockspace_id)
-		m_DockIDCenter = m_DockspaceID;
 		m_DockIDLeft = ImGui::DockBuilderSplitNode(m_DockspaceID, ImGuiDir_Left, 0.25f, nullptr, &m_DockIDCenter);
 
 		// Dock "ChildWindow" into the left side
@@ -152,9 +150,17 @@ void EditView::RenderSidebars()
 {
 	if (m_LeftSidebarView != ToolView::NONE)
 	{
+		std::string tool_name;
+		switch (m_LeftSidebarView)
+		{
+		case ToolView::TREE: tool_name = "Tree"; break;
+		default: break;
+		}
+
 		bool open = true;
 		ImGui::SetNextWindowDockID(m_DockIDLeft, ImGuiCond_Appearing);
-		bool visible = ImGui::Begin("SidebarLeft", &open);
+		bool visible = ImGui::Begin((tool_name + "##SidebarLeft").c_str(), &open);
+		
 		if (!open)
 			m_LeftSidebarView = ToolView::NONE;
 		else

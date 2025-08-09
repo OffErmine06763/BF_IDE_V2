@@ -319,7 +319,7 @@
     <ClCompile Include="Src\CompilerError.cpp" />
     <ClCompile Include="Src\Emulator.cpp" />
     <ClCompile Include="Src\IR.cpp" />
-    <ClCompile Include="Src\Program.cpp" />
+    <ClCompile Include="Src\CompilationParams.cpp" />
     <ClCompile Include="Src\Token.cpp" />
     <ClCompile Include="Src\Utility.cpp" />
   </ItemGroup>
@@ -330,7 +330,7 @@
     <ClInclude Include="Src\CompilerUtility.h" />
     <ClInclude Include="Src\Emulator.h" />
     <ClInclude Include="Src\IR.h" />
-    <ClInclude Include="Src\Program.h" />
+    <ClInclude Include="Src\CompilationParams.h" />
     <ClInclude Include="Src\Token.h" />
     <ClInclude Include="Src\Utility.h" />
   </ItemGroup>
