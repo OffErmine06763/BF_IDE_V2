@@ -12,7 +12,7 @@ Document::Document(const fs::path& path)
 {
 	std::ifstream in(path);
 	Content = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-	in.close();
+	in.close();	
 }
 
 

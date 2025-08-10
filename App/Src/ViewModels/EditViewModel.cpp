@@ -1,5 +1,6 @@
 #include "EditViewModel.h"
 #include "States/EditState.h"
+#include "States/SelectProjectState.h"
 #include "App.h"
 #include "Views/EditView.h"
 
@@ -12,6 +13,8 @@ EditViewModel::EditViewModel(EditView* view, EditModel* model, EditorModel* edit
 	m_Model->SubEmuTerminated([this]() { OnEmulationTerminated(); });
 	m_Model->SubEmuOutput([this]() { OnEmulationOutputChanged(); });
 	m_Model->SubEmuInput([this]() { OnEmulationInputRequested(); });
+
+	LOG_GRAPHICS("EditViewModel Created\n");
 }
 
 
@@ -39,6 +42,10 @@ void EditViewModel::StopEmulation()
 	if (res) m_View->EmulationStopped();
 }
 
+void EditViewModel::GoHome()
+{
+	App::RequestNewState<SelectProjectState>();
+}
 void EditViewModel::CloseApp()
 {
 	App::RequestClose();
@@ -76,10 +83,19 @@ void EditViewModel::Compile(const CompilationTarget& tgt)
 	{
 		for (const Document& doc : m_Editor->GetDocuments())
 			p.tgts.push_back(doc.Path);
+		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
 	}
 	else if (tgt == CompilationTarget::CURRENT)
+	{
 		p.tgts.push_back(m_Editor->GetFocusedFile()->Path);
-	p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
+		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
+	}
+	else if (tgt == CompilationTarget::FOLDER)
+	{
+		const auto dir = GetWorkDir();
+		p.tgts.push_back(dir);
+		p.outputPath = dir / (dir.filename().string() + ".exe");
+	}
 	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
 	if (err) LOG_COMP(err.message << '\n');
 }

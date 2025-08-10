@@ -5,9 +5,10 @@ class State
 public:
 	virtual ~State() = default;
 
-	virtual void Render() {};
+	virtual void Init() {}
+	virtual void Render() {}
 
-	static constexpr auto Name = "State";
+	static constexpr auto Name = "State"; // TODO: why is this here?
 
 protected:
 	State() = default;

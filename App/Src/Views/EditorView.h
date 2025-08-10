@@ -22,7 +22,7 @@ public:
 
 public:
 	EditorView(EditorModel* model);
-	~EditorView() = default;
+	~EditorView() { LOG_GRAPHICS("EditorView Destroyed\n"); };
 
 	void Render(ImGuiID dockspace_id /*, const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
 

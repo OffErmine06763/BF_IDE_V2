@@ -38,8 +38,9 @@ void App::Init()
 		LOG_APP("Initializing Application\n");
 		Instance = std::unique_ptr<App>(new App());
 		// create state only after initialization
-		//Instance->m_State = std::make_unique<SelectProjectState>();
-		Instance->m_State = std::make_unique<EditState>(Instance->m_History.begin()->Path);
+		Instance->m_NewStateRequested = true;
+		//Instance->m_NextState = std::make_unique<SelectProjectState>();
+		Instance->m_NextState = std::make_unique<EditState>(Instance->m_History.begin()->Path);
 	}
 }
 
@@ -52,15 +53,16 @@ void App::Render(bool* done)
 }
 void App::_Render()
 {
-	ProcessGlobalShortcuts();
-	m_State->Render();
-
 	if (m_NewStateRequested)
 	{
 		m_NewStateRequested = false;
 		delete m_State.release();
 		m_State.swap(m_NextState);
+		m_State->Init();
 	}
+
+	ProcessGlobalShortcuts();
+	m_State->Render();
 }
 
 

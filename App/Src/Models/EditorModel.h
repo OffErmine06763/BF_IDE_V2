@@ -47,8 +47,8 @@ public:
 
 
 public:
-	EditorModel() = default;
-	~EditorModel() = default;
+	EditorModel() { LOG_APP("EditorModel Created\n"); }
+	~EditorModel() { LOG_APP("EditorModel Destroyed\n"); }
 
 	void Lock(bool lock) { m_Locked = lock; }
 

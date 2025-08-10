@@ -20,6 +20,8 @@ EditorView::EditorView(EditorModel* model)
 	auto focus = m_VM.GetFocusedFile();
 	if (focus)
 		m_FocusInd = std::distance(m_Documents.begin(), stdr::find(m_Documents, focus->Id, &Document::Id));
+
+	LOG_GRAPHICS("EditorView Created\n");
 }
 
 void EditorView::CloseAll()

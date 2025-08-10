@@ -10,6 +10,7 @@ public:
 
 public:
 	EditorViewModel(EditorView* view, EditorModel* model);
+	~EditorViewModel();
 
 	void OnCloseAll();
 	void OnPerformSave(Document& id);

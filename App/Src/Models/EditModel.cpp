@@ -17,6 +17,8 @@ EditModel::EditModel(const fs::path& workdir, EditorModel* editor)
 		m_Editor->OpenOrFocus(workdir);
 	}
 
+	LOG_APP("EditModel Created\n");
+
 	//m_Editor.Subscribe<Document::idt>(EditorModel::FOCUS, [this](Document::idt param) { this->Test(param); });
 	//m_Editor.Subscribe<u32>(EditorModel::FOCUS, BIND(u32, Test));
 	//BIND_MODEL(u32, Test, m_Editor, EditorModel::FOCUS);
@@ -28,6 +30,8 @@ EditModel::~EditModel()
 		m_Emulator->Stop();
 	if (m_Emulator && m_Emulator->joinable())
 		m_Emulator->join();
+
+	LOG_APP("EditModel Destroyed\n");
 }
 
 

@@ -11,9 +11,10 @@ class EditState : public State
 {
 public:
 	EditState(const fs::path& workdir);
-	~EditState() override = default;
+	~EditState() override;
 
-	void Render() override;
+	void Init() override { m_View.Init(); };
+	void Render() override { m_View.Render(); }
 
 	static constexpr auto Name = "EditState";
 

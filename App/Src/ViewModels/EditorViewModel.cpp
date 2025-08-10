@@ -4,6 +4,11 @@
 EditorViewModel::EditorViewModel(EditorView* view, EditorModel* model)
 	: m_View(view), m_Model(model)
 {
+	LOG_GRAPHICS("EditorViewModel Created\n");
+}
+EditorViewModel::~EditorViewModel()
+{
+	LOG_GRAPHICS("EditorViewModel Destroyed\n");
 }
 
 void EditorViewModel::OnCloseAll()

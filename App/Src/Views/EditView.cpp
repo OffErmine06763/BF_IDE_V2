@@ -1,17 +1,41 @@
 #include "EditView.h"
 #include "Shortcuts.h"
+#include "Tools/TreeTool.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
 
+// TODO: save view state when exit if the user opened a project, restore when opening the same project (store in History), but not for file/folder
+// TODO: ranaming a file open in the editor, from explorer, doesn't update the name in the view
+
 EditView::EditView(EditModel* model, EditorModel* editor)
-	: m_EditorView(editor), m_VM(this, model, editor), m_TreeRoot({ .Path = m_VM.GetWorkDir(), .Directory = true })
+	: m_EditorView(editor), m_VM(this, model, editor)
 {
+	LOG_GRAPHICS("EditView Created\n");
 }
 EditView::~EditView()
-{ }
+{
+	LOG_GRAPHICS("EditView Destroyed\n");
+}
 
+void EditView::Init()
+{
+	m_DockspaceID = ImGui::GetID("EditMainWindowDockspace");
+	ImGui::DockBuilderRemoveNode(m_DockspaceID);
+	ImGui::DockBuilderAddNode(m_DockspaceID, ImGuiDockNodeFlags_DockSpace);
+	ImGui::DockBuilderSetNodeSize(m_DockspaceID, ImVec2(800, 600));
+
+	m_DockIDLeft = ImGui::DockBuilderSplitNode(m_DockspaceID, ImGuiDir_Left, 0.25f, nullptr, &m_DockIDCenter);
+
+	// Dock "ChildWindow" into the left side
+	//ImGui::DockBuilderDockWindow("SidebarLeft", m_DockIDLeft);
+
+	// Optionally dock another window on the right
+	//ImGui::DockBuilderDockWindow("EditorViewDocuments", m_DockIDCenter);
+
+	ImGui::DockBuilderFinish(m_DockspaceID);
+}
 void EditView::Render()
 {
 	ProcessShortcuts();
@@ -23,27 +47,6 @@ void EditView::Render()
 
 	RenderTools();
 	*/
-
-	static bool initialized = false;
-	if (!initialized)
-	{
-		initialized = true;
-
-		m_DockspaceID = ImGui::GetID("EditMainWindowDockspace");
-		ImGui::DockBuilderRemoveNode(m_DockspaceID);
-		ImGui::DockBuilderAddNode(m_DockspaceID, ImGuiDockNodeFlags_DockSpace);
-		ImGui::DockBuilderSetNodeSize(m_DockspaceID, ImVec2(800, 600));
-
-		m_DockIDLeft = ImGui::DockBuilderSplitNode(m_DockspaceID, ImGuiDir_Left, 0.25f, nullptr, &m_DockIDCenter);
-
-		// Dock "ChildWindow" into the left side
-		//ImGui::DockBuilderDockWindow("SidebarLeft", m_DockIDLeft);
-
-		// Optionally dock another window on the right
-		//ImGui::DockBuilderDockWindow("EditorViewDocuments", m_DockIDCenter);
-
-		ImGui::DockBuilderFinish(m_DockspaceID);
-	}
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::DockSpaceOverViewport(m_DockspaceID, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
@@ -68,7 +71,11 @@ void EditView::ProcessShortcuts()
 	else if (ImGui::IsKeyChordPressed(BFS_StopEmulation.Chord))
 		m_VM.StopEmulation();
 	if (ImGui::IsKeyChordPressed(AS_ToolTree.Chord))
-		OpenToolView(ToolView::TREE, ToolPosition::LEFT);
+	{
+		TreeTool* tool = new TreeTool(m_VM.GetWorkDir());
+		tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
+		OpenToolView(tool, ToolPosition::LEFT);
+	}
 }
 void EditView::RenderMainMenu()
 {
@@ -76,6 +83,8 @@ void EditView::RenderMainMenu()
 	{
 		if (ImGui::BeginMenu("App"))
 		{
+			if (ImGui::MenuItem("Home"))
+				m_VM.GoHome();
 			if (ImGui::MenuItem("Close", GS_CloseApp.Label))
 				m_VM.CloseApp();
 			ImGui::EndMenu();
@@ -86,6 +95,8 @@ void EditView::RenderMainMenu()
 				m_VM.Compile(CompilationTarget::CURRENT);
 			if (ImGui::MenuItem("Compile Open"))
 				m_VM.Compile(CompilationTarget::OPEN);
+			if (ImGui::MenuItem("Compile Folder"))
+				m_VM.Compile(CompilationTarget::FOLDER);
 			if (ImGui::MenuItem("Run", BFS_Emulate.Label, nullptr, m_CanEmulate))
 				m_VM.StartEmulation();
 			if (ImGui::MenuItem("Stop", BFS_StopEmulation.Label, nullptr, !m_CanEmulate))
@@ -94,8 +105,12 @@ void EditView::RenderMainMenu()
 		}
 		if (ImGui::BeginMenu("Tools"))
 		{
-			if (ImGui::MenuItem("Tree"))
-				OpenToolView(ToolView::TREE, ToolPosition::LEFT);
+			if (ImGui::MenuItem("Tree", AS_ToolTree.Label))
+			{
+				TreeTool* tool = new TreeTool(m_VM.GetWorkDir());
+				tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
+				OpenToolView(tool, ToolPosition::LEFT);
+			}
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -148,127 +163,19 @@ void EditView::RenderEditor()
 }
 void EditView::RenderSidebars()
 {
-	if (m_LeftSidebarView != ToolView::NONE)
+	if (m_LeftSidebarTool)
 	{
-		std::string tool_name;
-		switch (m_LeftSidebarView)
-		{
-		case ToolView::TREE: tool_name = "Tree"; break;
-		default: break;
-		}
-
 		bool open = true;
 		ImGui::SetNextWindowDockID(m_DockIDLeft, ImGuiCond_Appearing);
-		bool visible = ImGui::Begin((tool_name + "##SidebarLeft").c_str(), &open);
-		
+		bool visible = ImGui::Begin((m_LeftSidebarTool->Name() + "##SidebarLeft").c_str(), &open);
+
 		if (!open)
-			m_LeftSidebarView = ToolView::NONE;
+			delete m_LeftSidebarTool.release();
 		else
-		{
-			switch (m_LeftSidebarView)
-			{
-			case ToolView::TREE:
-				RenderTreeTool();
-				break;
-			default:
-				break;
-			}
-		}
+			m_LeftSidebarTool->Render();
+
 		ImGui::End();
 	}
-}
-
-
-void EditView::RenderTreeEntry(TreeEntry& entry)
-{
-	static const ImGuiTreeNodeFlags dir_flags  = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
-	static const ImGuiTreeNodeFlags file_flags = dir_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet;
-	
-	if (entry.Directory)
-	{
-		const bool node_open = ImGui::TreeNodeEx(entry.Path.string().c_str(), dir_flags, entry.Path.filename().string().c_str());
-		
-		if (entry.Collapsed && node_open)
-			m_TreeCacheCounter = 144;
-		entry.Collapsed = !node_open;
-				
-		if (ImGui::BeginPopupContextItem()) // right click
-		{
-			if (ImGui::MenuItem("Show in File Explorer"))
-				ShowInExplorer(entry.Path);
-			ImGui::EndPopup();
-		}
-
-		if (node_open)
-		{
-			for (TreeEntry& child : entry.Children)
-				RenderTreeEntry(child);
-			ImGui::TreePop();
-		}
-	}
-	else
-	{
-		ImGui::TreeNodeEx(entry.Path.string().c_str(), file_flags, entry.Path.filename().string().c_str());
-		
-		if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-		{
-			m_VM.OpenFile(entry.Path);
-		}
-
-		if (ImGui::BeginPopupContextItem()) // right click
-		{
-			if (ImGui::MenuItem("Show in File Explorer"))
-				ShowInExplorer(entry.Path);
-			ImGui::EndPopup();
-		}
-	}
-}
-void EditView::RenderTreeTool()
-{
-	RenderTreeEntry(m_TreeRoot);
-	
-	m_TreeCacheCounter++;
-	if (m_TreeCacheCounter < 144)
-		return;
-	m_TreeCacheCounter = 0;
-
-	CacheDirectoryTree(m_TreeRoot);
-}
-void EditView::CacheDirectoryTree(TreeEntry& parent)
-{
-	if (parent.Collapsed)
-		return;
-
-	std::vector<TreeEntry> newchildren;
-	for (const fs::path& p : fs::directory_iterator(parent.Path, fs::directory_options::skip_permission_denied))
-	{
-		TreeEntry entry;
-		if (parent.Map.contains(p))
-		{
-			TreeEntry& old = parent.Children[parent.Map[p]];
-			if (old.Directory == fs::is_directory(p))
-				entry = old;
-			else
-				entry = { .Path = p, .Directory = !old.Directory };
-		}
-		else
-			entry = { .Path = p, .Directory = fs::is_directory(p) };
-		
-		if (entry.Directory && !entry.Collapsed)
-			CacheDirectoryTree(entry);
-		newchildren.push_back(entry);
-	}
-	parent.Children = std::move(newchildren);
-	parent.Map.clear();
-	for (size_t i = 0; i < parent.Children.size(); i++)
-		parent.Map.insert({ parent.Children[i].Path, i });
-}
-
-
-void EditView::OpenToolView(ToolView view, ToolPosition pos)
-{
-	// TODO: unused pos
-	m_LeftSidebarView = view;
 }
 
 
@@ -302,4 +209,12 @@ void EditView::EmulationWantsInput(bool wants)
 		m_EmuInput = 0;
 		m_EmuFocusInput = true;
 	}
+}
+
+
+
+
+void EditView::OpenToolView(Tool* tool, ToolPosition pos)
+{
+	m_LeftSidebarTool.reset(tool);
 }

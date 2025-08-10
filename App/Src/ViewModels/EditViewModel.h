@@ -8,21 +8,24 @@ class EditView;
 
 enum class CompilationTarget
 {
-	CURRENT, OPEN
+	CURRENT, OPEN, FOLDER
 };
 
 class EditViewModel
 {
 public:
 	EditViewModel(EditView* view, EditModel* model, EditorModel* editor);
+	~EditViewModel() { LOG_GRAPHICS("EditViewModel Destroyed\n"); }
 
 	void OpenFile(const fs::path& path);
 
 	void StartEmulation();
 	void StopEmulation();
-	void CloseApp();
 	void CloseEmulationTab();
 	void EmulationInput(bf_mem_t input);
+	
+	void GoHome();
+	void CloseApp();
 
 	void OnEmulationTerminated();
 	void OnEmulationOutputChanged();

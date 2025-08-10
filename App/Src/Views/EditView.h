@@ -5,34 +5,27 @@
 
 typedef unsigned int ImGuiID;
 
-enum class ToolView
-{
-	NONE, TREE
-};
-enum class ToolPosition
-{
-	LEFT, RIGHT, BOTTOM
-};
+
+class Tool;
+
+template <typename S, std::enable_if_t<std::is_base_of_v<Tool, S>, bool> = true>
+concept ToolType = true;
+
 
 
 class EditView
 {
 public:
-	struct TreeEntry
+	enum class ToolPosition
 	{
-		fs::path Path;
-		bool Directory = false;
-		bool Collapsed = true;
-		std::vector<TreeEntry> Children;
-
-		/// maps a path in the cached m_TreeEntries to it's index in the vector
-		hmap<fs::path, size_t> Map; // TODO: replace with a tree structure, each node extends the parent path and contains the index
+		LEFT, RIGHT, BOTTOM
 	};
 
 public:
 	EditView(EditModel* model, EditorModel* editor);
 	~EditView();
 
+	void Init();
 	void Render();
 
 	void OpenEmulationTab(bool open = true);
@@ -43,7 +36,9 @@ public:
 	void EmulationOutputChanged();
 	void EmulationWantsInput(bool wants);
 
-	void OpenToolView(ToolView view, ToolPosition pos);
+	template <ToolType T, typename... Args>
+	void OpenToolView(ToolPosition pos, Args&&... args);
+	void OpenToolView(Tool* tool, ToolPosition pos);
 
 
 private:
@@ -52,12 +47,6 @@ private:
 	void RenderEmulation();
 	void RenderEditor();
 	void RenderSidebars();
-
-	void RenderTreeTool();
-
-
-	void CacheDirectoryTree(TreeEntry& parent);
-	void RenderTreeEntry(TreeEntry& entry);
 
 	// TAG: Toolbar
 	// void RenderEmulation() override; 
@@ -68,10 +57,7 @@ private:
 
 	ImGuiID m_DockspaceID = 0, m_DockIDLeft = 0, m_DockIDCenter = 0;
 
-	ToolView m_LeftSidebarView = ToolView::NONE;
-
-	TreeEntry m_TreeRoot;
-	u32 m_TreeCacheCounter = 0;
+	uptr<Tool> m_LeftSidebarTool;
 
 
 	bf_mem_t m_EmuInput = 0;
@@ -82,3 +68,12 @@ private:
 	bool m_EmuWantsInput = false;
 	bool m_EmuFocusInput = false;
 };
+
+
+
+template <ToolType T, typename... Args>
+inline void EditView::OpenToolView(ToolPosition pos, Args&&... args)
+{
+	Tool* tool = new T(std::forward<Args>(args)...);
+	OpenToolView(tool, pos);
+}
