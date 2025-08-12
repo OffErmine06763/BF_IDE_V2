@@ -38,13 +38,34 @@ void OpenProjectState::Render()
 	RenderDir(root);
 	ImGui::EndChild();
 
-	ImGui::End();
-	
 	if (m_WantDelete)
 	{
-		DeletePath(m_Selected);
-		m_WantDelete = false;
+		if (!ImGui::IsPopupOpen("Sure?"))
+			ImGui::OpenPopup("Sure?");
+		if (ImGui::BeginPopupModal("Sure?", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Are you sure to delete the selected element?");
+
+			ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
+			if (ImGui::Button("Yes", button_size))
+			{
+				DeletePath(m_Selected);
+				m_Selected.clear();
+				m_WantDelete = false;
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("No", button_size))
+			{
+				m_Selected.clear();
+				m_WantDelete = false;
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
 	}
+
+	ImGui::End();
 
 	RenderForms();
 }

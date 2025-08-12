@@ -28,6 +28,10 @@ void TreeTool::RenderTreeEntry(TreeEntry& entry)
 		{
 			if (ImGui::MenuItem("Show in File Explorer"))
 				ShowInExplorer(entry.Path);
+			if (ImGui::MenuItem("Compile"))
+				m_CompileEvent.Notify(entry.Path);
+			if (ImGui::MenuItem("Delete"))
+				m_DeleteEvent.Notify(entry.Path);
 			ImGui::EndPopup();
 		}
 
@@ -49,6 +53,10 @@ void TreeTool::RenderTreeEntry(TreeEntry& entry)
 		{
 			if (ImGui::MenuItem("Show in File Explorer"))
 				ShowInExplorer(entry.Path);
+			if (ImGui::MenuItem("Compile"))
+				m_CompileEvent.Notify(entry.Path);
+			if (ImGui::MenuItem("Delete"))
+				m_DeleteEvent.Notify(entry.Path);
 			ImGui::EndPopup();
 		}
 	}

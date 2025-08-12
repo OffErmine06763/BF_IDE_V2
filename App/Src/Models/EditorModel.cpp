@@ -186,6 +186,18 @@ void EditorModel::Edited(Document* doc, const char change)
 	doc->Dirty = true;
 }
 
+void EditorModel::OnPathDeleted(const fs::path& path)
+{
+	if (fs::is_directory(path))
+		return;
+
+	auto res = stdr::find(m_Documents, path, &Document::Path);
+	if (res != m_Documents.end())
+		m_Documents.erase(res);
+	// No need to update recent closed and open, since the file doesn't exist anymore
+	// might want to call the callback i guess
+}
+
 
 
 //listener_id EditorModel::Subscribe(Prop prop, callable& cb)

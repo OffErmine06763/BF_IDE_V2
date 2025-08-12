@@ -1,5 +1,7 @@
 #include "EditModel.h"
 
+#include "App.h"
+#include "States/SelectProjectState.h"
 
 //#define BIND(T, fn) [this](T p) { this->fn(p); }
 //#define BIND_MODEL(T, fn, model, event) model.Subscribe<T>(event, BIND(T, fn))
@@ -34,6 +36,25 @@ EditModel::~EditModel()
 	LOG_APP("EditModel Destroyed\n");
 }
 
+
+void EditModel::DeletePath(const fs::path& path)
+{
+	fs::remove_all(path);
+	m_DeletePathEvent.Notify(path);
+	if (path == m_WorkDir)
+	{
+		App::GetHistory().RemoveRecursive(path);
+		App::RequestNewState<SelectProjectState>();
+	}
+}
+
+
+
+// TODO: to emulate, compile the files, saving the map of symbols and positions
+//       when jumping to a label, find the file and position of that definition
+//       map<label, pair<file, position>>
+//       then just step through the unoptimized AST, moving the file focus, highlighting the current instruction
+//       showing i/o, updating the memory array...
 
 bool EditModel::StartEmulation()
 {

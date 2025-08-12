@@ -36,6 +36,7 @@ public:
 	void SetFavourite(const size_t index, const bool fav = true);
 	void SetFavourite(const fs::path& path, const bool fav = true);
 
+	void RemoveRecursive(const fs::path& path);
 	void Remove(const fs::path& path);
 	void Remove(const size_t index);
 

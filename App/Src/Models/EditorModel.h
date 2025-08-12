@@ -69,6 +69,7 @@ public:
 
 	const Document* GetFocusedFile() const { return m_FocusInd == InvalidIndex ? nullptr : &(m_Documents[m_FocusInd]); }
 
+	void OnPathDeleted(const fs::path& path);
 
 	//CREATE_BUS_FORWARDING_SUB(bus_t, Prop, m_EventBus)
 	/*listener_id Subscribe(const Prop prop, consumer<bus_payload_t> callable) { return m_EventBus.Subscribe(prop, callable); }

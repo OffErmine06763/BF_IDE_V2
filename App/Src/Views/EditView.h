@@ -40,6 +40,7 @@ public:
 	void OpenToolView(ToolPosition pos, Args&&... args);
 	void OpenToolView(Tool* tool, ToolPosition pos);
 
+	void RenderDeleteConfirmationUI();
 
 private:
 	void ProcessShortcuts();
@@ -55,10 +56,11 @@ private:
 	EditorView m_EditorView;
 	EditViewModel m_VM;
 
-	ImGuiID m_DockspaceID = 0, m_DockIDLeft = 0, m_DockIDCenter = 0;
+	ImGuiID m_DockspaceID = 0, m_DockIDLeft = 0, m_DockIDRight = 0, m_DockIDBottom = 0, m_DockIDCenter = 0;
 
-	uptr<Tool> m_LeftSidebarTool;
+	uptr<Tool> m_LeftSidebarTool, m_RightSidebarTool, m_BottomSidebarTool;
 
+	fs::path m_PathToDelete;
 
 	bf_mem_t m_EmuInput = 0;
 	bool m_EmuTabOpen = false;

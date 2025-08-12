@@ -2,6 +2,7 @@
 #include "Models/EditModel.h"
 #include "Views/EditorView.h"
 #include "Utility.h"
+#include <Compiler.h>
 
 
 class EditView;
@@ -18,6 +19,7 @@ public:
 	~EditViewModel() { LOG_GRAPHICS("EditViewModel Destroyed\n"); }
 
 	void OpenFile(const fs::path& path);
+	void DeletePath(const fs::path& path);
 
 	void StartEmulation();
 	void StopEmulation();
@@ -33,6 +35,7 @@ public:
 	const std::string& GetEmulationOutput() { return m_Model->GetEmulationOutput(); }
 
 	void Compile(const CompilationTarget& file);
+	void Compile(const std::initializer_list<fs::path>& files);
 
 	fs::path GetWorkDir() const { return m_Model->GetWorkDir(); }
 

@@ -75,6 +75,9 @@ void App::ProcessGlobalShortcuts()
 
 void App::RequestOpenPath(const fs::path& path)
 {
+	if (!fs::exists(path))
+		return;
+
 	LOG_APP("Opening " << path << '\n');
 	Instance->m_History.SetAsMostRecent(path);
 	RequestNewState<EditState>(path);

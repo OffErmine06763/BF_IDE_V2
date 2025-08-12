@@ -25,6 +25,12 @@ void EditViewModel::OpenFile(const fs::path& path)
 
 	m_Editor->OpenOrFocus(path);
 }
+void EditViewModel::DeletePath(const fs::path& path)
+{
+	m_Model->DeletePath(path);
+	m_Editor->OnPathDeleted(path);
+}
+
 
 
 void EditViewModel::StartEmulation()
@@ -87,7 +93,9 @@ void EditViewModel::Compile(const CompilationTarget& tgt)
 	}
 	else if (tgt == CompilationTarget::CURRENT)
 	{
-		p.tgts.push_back(m_Editor->GetFocusedFile()->Path);
+		auto focus = m_Editor->GetFocusedFile();
+		if (!focus) return;
+		p.tgts.push_back(focus->Path);
 		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
 	}
 	else if (tgt == CompilationTarget::FOLDER)
@@ -96,6 +104,21 @@ void EditViewModel::Compile(const CompilationTarget& tgt)
 		p.tgts.push_back(dir);
 		p.outputPath = dir / (dir.filename().string() + ".exe");
 	}
+	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
+	if (err) LOG_COMP(err.message << '\n');
+}
+void EditViewModel::Compile(const std::initializer_list<fs::path>& files)
+{
+	if (files.size() == 0)
+		return;
+
+	BFC::CompilationParams p;
+	p.tgts = files;
+	auto first = p.tgts[0];
+	if (fs::is_directory(first))
+		p.outputPath = first / (first.filename().string() + ".exe");
+	else
+		p.outputPath = fs::path{ first }.replace_extension(".exe");
 	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
 	if (err) LOG_COMP(err.message << '\n');
 }

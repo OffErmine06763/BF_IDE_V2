@@ -127,3 +127,9 @@ void History::Remove(const size_t index)
 		Entries.erase(Entries.begin() + index);
 	}
 }
+void History::RemoveRecursive(const fs::path& path)
+{
+	for (size_t i = 0; i < Entries.size(); i++)
+		if (Entries[i].Path.string().starts_with(path.string()))
+			Remove(i);
+}

@@ -1,13 +1,14 @@
 #include "EditView.h"
 #include "Shortcuts.h"
 #include "Tools/TreeTool.h"
+#include "Tools/MemoryTool.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
 
 // TODO: save view state when exit if the user opened a project, restore when opening the same project (store in History), but not for file/folder
-// TODO: ranaming a file open in the editor, from explorer, doesn't update the name in the view
+// TODO: renaming a file open in the editor, from explorer, doesn't update the name in the view
 
 EditView::EditView(EditModel* model, EditorModel* editor)
 	: m_EditorView(editor), m_VM(this, model, editor)
@@ -26,7 +27,9 @@ void EditView::Init()
 	ImGui::DockBuilderAddNode(m_DockspaceID, ImGuiDockNodeFlags_DockSpace);
 	ImGui::DockBuilderSetNodeSize(m_DockspaceID, ImVec2(800, 600));
 
-	m_DockIDLeft = ImGui::DockBuilderSplitNode(m_DockspaceID, ImGuiDir_Left, 0.25f, nullptr, &m_DockIDCenter);
+	m_DockIDLeft   = ImGui::DockBuilderSplitNode(m_DockspaceID, ImGuiDir_Left, 0.25f, nullptr, &m_DockIDCenter);
+	m_DockIDRight  = ImGui::DockBuilderSplitNode(m_DockspaceID, ImGuiDir_Right, 0.25f, nullptr, &m_DockIDCenter);
+	m_DockIDBottom = ImGui::DockBuilderSplitNode(m_DockspaceID, ImGuiDir_Down, 0.25f, nullptr, &m_DockIDCenter);
 
 	// Dock "ChildWindow" into the left side
 	//ImGui::DockBuilderDockWindow("SidebarLeft", m_DockIDLeft);
@@ -62,6 +65,9 @@ void EditView::Render()
 	// 	m_Emulator = nullptr;
 	// 	m_Editor.Lock(false);
 	// }
+
+	if (!m_PathToDelete.empty())
+		RenderDeleteConfirmationUI();
 }
 
 void EditView::ProcessShortcuts()
@@ -74,7 +80,13 @@ void EditView::ProcessShortcuts()
 	{
 		TreeTool* tool = new TreeTool(m_VM.GetWorkDir());
 		tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
+		tool->SubscribeCompile([this](const fs::path& path) { m_VM.Compile({ path }); });
+		tool->SubscribeDelete([this](const fs::path& path) { m_PathToDelete = path; });
 		OpenToolView(tool, ToolPosition::LEFT);
+	}
+	if (ImGui::IsKeyChordPressed(AS_ToolMemory.Chord))
+	{
+		OpenToolView<MemoryTool>(ToolPosition::BOTTOM);
 	}
 }
 void EditView::RenderMainMenu()
@@ -109,7 +121,13 @@ void EditView::RenderMainMenu()
 			{
 				TreeTool* tool = new TreeTool(m_VM.GetWorkDir());
 				tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
+				tool->SubscribeCompile([this](const fs::path& path) { m_VM.Compile({ path }); });
+				tool->SubscribeDelete([this](const fs::path& path) { m_PathToDelete = path; });
 				OpenToolView(tool, ToolPosition::LEFT);
+			}
+			if (ImGui::MenuItem("Memory", AS_ToolMemory.Label))
+			{
+				OpenToolView<MemoryTool>(ToolPosition::BOTTOM);
 			}
 			ImGui::EndMenu();
 		}
@@ -169,10 +187,30 @@ void EditView::RenderSidebars()
 		ImGui::SetNextWindowDockID(m_DockIDLeft, ImGuiCond_Appearing);
 		bool visible = ImGui::Begin((m_LeftSidebarTool->Name() + "##SidebarLeft").c_str(), &open);
 
-		if (!open)
-			delete m_LeftSidebarTool.release();
-		else
-			m_LeftSidebarTool->Render();
+		if (open)   m_LeftSidebarTool->Render();
+		else delete m_LeftSidebarTool.release();
+
+		ImGui::End();
+	}
+	if (m_RightSidebarTool)
+	{
+		bool open = true;
+		ImGui::SetNextWindowDockID(m_DockIDRight, ImGuiCond_Appearing);
+		bool visible = ImGui::Begin((m_RightSidebarTool->Name() + "##SidebarRight").c_str(), &open);
+
+		if (open)   m_RightSidebarTool->Render();
+		else delete m_RightSidebarTool.release();
+
+		ImGui::End();
+	}
+	if (m_BottomSidebarTool)
+	{
+		bool open = true;
+		ImGui::SetNextWindowDockID(m_DockIDBottom, ImGuiCond_Appearing);
+		bool visible = ImGui::Begin((m_BottomSidebarTool->Name() + "##SidebarBottom").c_str(), &open);
+
+		if (open)   m_BottomSidebarTool->Render();
+		else delete m_BottomSidebarTool.release();
 
 		ImGui::End();
 	}
@@ -216,5 +254,44 @@ void EditView::EmulationWantsInput(bool wants)
 
 void EditView::OpenToolView(Tool* tool, ToolPosition pos)
 {
-	m_LeftSidebarTool.reset(tool);
+	switch (pos)
+	{
+	case EditView::ToolPosition::LEFT:
+		m_LeftSidebarTool.reset(tool);
+		break;
+	case EditView::ToolPosition::RIGHT:
+		m_RightSidebarTool.reset(tool);
+		break;
+	case EditView::ToolPosition::BOTTOM:
+		m_BottomSidebarTool.reset(tool);
+		break;
+	default:
+		break;
+	}
+}
+
+
+void EditView::RenderDeleteConfirmationUI()
+{
+	if (!ImGui::IsPopupOpen("Sure?"))
+		ImGui::OpenPopup("Sure?");
+	if (ImGui::BeginPopupModal("Sure?", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text("Are you sure to delete the selected element?");
+
+		ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
+		if (ImGui::Button("Yes", button_size))
+		{
+			m_VM.DeletePath(m_PathToDelete);
+			m_PathToDelete.clear();
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("No", button_size))
+		{
+			m_PathToDelete.clear();
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
 }

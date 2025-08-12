@@ -99,6 +99,9 @@
     <ClCompile Include="Src\Views\Tools\Tool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Views\Tools\MemoryTool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vendor\imgui\imconfig.h">
@@ -180,6 +183,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Src\Views\Tools\Tool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Views\Tools\MemoryTool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

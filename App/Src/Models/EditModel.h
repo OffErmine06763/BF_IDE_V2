@@ -11,6 +11,8 @@ public:
 	EditModel(const fs::path& workdir, EditorModel* editor);
 	~EditModel();
 
+	void DeletePath(const fs::path& path);
+
 	bool StartEmulation();
 	bool StopEmulation();
 	bool EmulationInput(bf_mem_t input);
@@ -32,6 +34,7 @@ private:
 	EditorModel* m_Editor;
 	fs::path m_WorkDir;
 
+	Event<const fs::path&> m_DeletePathEvent;
 
 	bool m_Emulating = false;
 	std::string m_EmuOutput;
