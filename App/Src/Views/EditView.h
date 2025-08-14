@@ -41,6 +41,7 @@ public:
 	void OpenToolView(Tool* tool, ToolPosition pos);
 
 	void RenderDeleteConfirmationUI();
+	void RenderNewFileUI();
 
 private:
 	void ProcessShortcuts();
@@ -60,7 +61,7 @@ private:
 
 	uptr<Tool> m_LeftSidebarTool, m_RightSidebarTool, m_BottomSidebarTool;
 
-	fs::path m_PathToDelete;
+	fs::path m_PathToDelete, m_PathToNew;
 
 	bf_mem_t m_EmuInput = 0;
 	bool m_EmuTabOpen = false;

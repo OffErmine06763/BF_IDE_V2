@@ -68,6 +68,8 @@ void EditView::Render()
 
 	if (!m_PathToDelete.empty())
 		RenderDeleteConfirmationUI();
+	else if (!m_PathToNew.empty())
+		RenderNewFileUI();
 }
 
 void EditView::ProcessShortcuts()
@@ -82,12 +84,11 @@ void EditView::ProcessShortcuts()
 		tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
 		tool->SubscribeCompile([this](const fs::path& path) { m_VM.Compile({ path }); });
 		tool->SubscribeDelete([this](const fs::path& path) { m_PathToDelete = path; });
+		tool->SubscribeNew([this](const fs::path& path) { m_PathToNew = path; });
 		OpenToolView(tool, ToolPosition::LEFT);
 	}
 	if (ImGui::IsKeyChordPressed(AS_ToolMemory.Chord))
-	{
 		OpenToolView<MemoryTool>(ToolPosition::BOTTOM);
-	}
 }
 void EditView::RenderMainMenu()
 {
@@ -123,6 +124,7 @@ void EditView::RenderMainMenu()
 				tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
 				tool->SubscribeCompile([this](const fs::path& path) { m_VM.Compile({ path }); });
 				tool->SubscribeDelete([this](const fs::path& path) { m_PathToDelete = path; });
+				tool->SubscribeNew([this](const fs::path& path) { m_PathToNew = path; });
 				OpenToolView(tool, ToolPosition::LEFT);
 			}
 			if (ImGui::MenuItem("Memory", AS_ToolMemory.Label))
@@ -292,6 +294,30 @@ void EditView::RenderDeleteConfirmationUI()
 			m_PathToDelete.clear();
 			ImGui::CloseCurrentPopup();
 		}
+		ImGui::EndPopup();
+	}
+}
+void EditView::RenderNewFileUI()
+{
+	if (!ImGui::IsPopupOpen("New"))
+		ImGui::OpenPopup("New");
+	if (ImGui::BeginPopupModal("New", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		static char data[256] = "";
+		if (ImGui::InputText("Name", data, 256, ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			fs::path newpath = fs::is_directory(m_PathToNew) ? m_PathToNew / data : m_PathToNew.parent_path() / data;
+			std::ofstream(newpath).close();
+			memset(data, '\0', 256);
+			m_PathToNew.clear();
+		}
+		if (ImGui::Button("Close"))
+		{
+			memset(data, '\0', 256);
+			m_PathToNew.clear();
+			ImGui::CloseCurrentPopup();
+		}
+		
 		ImGui::EndPopup();
 	}
 }

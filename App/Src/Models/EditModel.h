@@ -21,14 +21,14 @@ public:
 	const std::string& GetEmulationOutput() const { return m_EmuOutput; }
 
 	listener_id SubEmuTerminated(callable cb) { return m_EmulationTerminatedEvent.Subscribe(cb); }
-	listener_id SubEmuOutput(callable cb) { return m_EmulationOutputEvent.Subscribe(cb); }
-	listener_id SubEmuInput(callable cb) { return m_EmulationInputEvent.Subscribe(cb); }
+	listener_id SubEmuOutput(consumer<bf_mem_t> cb) { return m_EmulationOutputEvent.Subscribe(cb); }
+	listener_id SubEmuInput(consumer<bf_mem_t> cb) { return m_EmulationInputEvent.Subscribe(cb); }
+	listener_id SubEmuWantInput(callable cb) { return m_EmulationWantInputEvent.Subscribe(cb); }
 
 
 private:
 	//void OnEditorFileChanged(const fs::path& dir);
 	void OnEmulationTerminated();
-	void _StopEmulation();
 
 private:
 	EditorModel* m_Editor;
@@ -36,10 +36,14 @@ private:
 
 	Event<const fs::path&> m_DeletePathEvent;
 
-	bool m_Emulating = false;
 	std::string m_EmuOutput;
-	uptr<Emulator> m_Emulator;
+	bf_mem_t m_EmuInput;
+	Emulator m_Emulator;
+	uptr<std::thread> m_EmulatorThread;
+	std::mutex m_EmuMutex;
+	std::condition_variable m_EmuCV;
+	
 
-	Event<void> m_EmulationTerminatedEvent, m_EmulationOutputEvent, m_EmulationInputEvent;
-	bool m_EmuWantsInput = false;
+	Event<void> m_EmulationStartedEvent, m_EmulationTerminatedEvent, m_EmulationWantInputEvent;
+	Event<bf_mem_t> m_EmulationOutputEvent, m_EmulationInputEvent;
 };

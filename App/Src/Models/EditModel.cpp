@@ -28,10 +28,13 @@ EditModel::EditModel(const fs::path& workdir, EditorModel* editor)
 }
 EditModel::~EditModel()
 {
-	if (m_Emulating)
-		m_Emulator->Stop();
-	if (m_Emulator && m_Emulator->joinable())
-		m_Emulator->join();
+	{
+		std::lock_guard lk(m_EmuMutex);
+		if (m_Emulator.Running())
+			m_Emulator.Stop();
+	}
+	if (m_EmulatorThread)
+		m_EmulatorThread->join();
 
 	LOG_APP("EditModel Destroyed\n");
 }
@@ -49,27 +52,54 @@ void EditModel::DeletePath(const fs::path& path)
 }
 
 
-
-// TODO: to emulate, compile the files, saving the map of symbols and positions
-//       when jumping to a label, find the file and position of that definition
-//       map<label, pair<file, position>>
-//       then just step through the unoptimized AST, moving the file focus, highlighting the current instruction
-//       showing i/o, updating the memory array...
-
 bool EditModel::StartEmulation()
 {
-	LOG("Starting Emulation of " << m_Editor->GetFocusedFile()->Name << '\n');
-	if (m_Emulating) return false;
+	LOG("Starting Emulation of " << m_WorkDir.filename() << '\n');
+	if (m_Emulator.Running()) return false;
 
-	m_Emulating = true;
+	m_Emulator.Reset();
+
 	m_EmuOutput.clear();
 	m_Editor->Lock(true);
-	if (m_Emulator && m_Emulator->joinable())
-		m_Emulator->join();
-	m_Emulator = std::make_unique<Emulator>(m_Editor->GetFocusedFile()->Path,
-		[this](const std::string& output) { m_EmuOutput.append(output); m_EmulationOutputEvent.Notify(); },
-		[this]() { m_EmuWantsInput = true; m_EmulationInputEvent.Notify(); },
-		[this]() { OnEmulationTerminated(); });
+	
+	BFC::CompilationParams p;
+	const auto dir = GetWorkDir();
+	p.tgts.push_back(dir);
+	BFC::CompilerError err = m_Emulator.Start(p);
+	if (err) LOG_COMP(err.message);
+
+	if (m_EmulatorThread) // m_Emulator.Running() is set to false before the thread actually terminating
+		m_EmulatorThread->join();
+	m_EmulatorThread = std::make_unique<std::thread>([&]()
+		{
+			m_EmulationStartedEvent.Notify();
+
+			while (m_Emulator.Running())
+			{
+				std::unique_lock lk(m_EmuMutex);
+
+				Emulator::StepParams p;
+				p.I = m_EmuInput;
+				m_Emulator.Step(p);
+
+				if (p.OutputGenerated) // first print any generated output
+				{
+					m_EmuOutput.push_back(p.O);
+					m_EmulationOutputEvent.Notify(p.O);
+				}
+				if (p.Error != Emulator::NONE)
+					std::cout << p.ErrorDescription; // TODO
+				else if (p.InputRequested)
+				{
+					m_EmulationWantInputEvent.Notify();
+					m_EmuCV.wait(lk);
+				}
+			}
+
+			// TODO: notifies should not be sent from this thread: TerminatedEvent -> StartEmulation -> Deadlock on join.
+			m_EmulationTerminatedEvent.Notify();
+			m_Editor->Lock(false);
+		});
 
 	return true;
 
@@ -81,36 +111,33 @@ bool EditModel::StartEmulation()
 }
 bool EditModel::StopEmulation()
 {
-	if (!m_Emulating) return false;
+	{
+		std::lock_guard lk(m_EmuMutex);
+		if (!m_Emulator.Running()) return false;
+		m_Emulator.Stop();
+	}
 
-	_StopEmulation();
+	if (m_EmulatorThread->joinable())
+		m_EmulatorThread->join();
+	m_EmulatorThread.reset();
 	m_Editor->Lock(false);
-	m_Emulating = false;
-
 	return true;
 }
 bool EditModel::EmulationInput(bf_mem_t input)
 {
-	if (!m_Emulating || !m_EmuWantsInput) return false;
-
-	m_Emulator->GiveInput(input);
+	std::lock_guard lk(m_EmuMutex);
+	if (!m_Emulator.Running() || !m_Emulator.WantsInput()) return false;
+	m_EmuInput = input;
+	m_EmuCV.notify_one();
 	return true;
 }
 void EditModel::OnEmulationTerminated()
 {
 	LOG("Emulation Terminated\n");
 	m_Editor->Lock(false);
-	m_Emulating = false;
 	m_EmulationTerminatedEvent.Notify();
 }
 
-
-void EditModel::_StopEmulation()
-{
-	LOG("Stopping Emulation\n");
-	m_Emulator->Stop();
-	m_Emulator->join();
-}
 
 //void EditModel::OnEditorFileChanged(const fs::path& dir)
 //{

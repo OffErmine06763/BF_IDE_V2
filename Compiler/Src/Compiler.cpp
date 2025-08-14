@@ -776,9 +776,10 @@ namespace BFC
 				else				 out << "    add rsi, " << line.count + 1 << '\n';
 				break;
 			case IR_O:
-				out << "    sub rsp, 32\n"
-					<< "    call _out\n"
-					<< "    add rsp, 32\n";
+				out << "    sub rsp, 32\n";
+				for (u32 count = 0; count <= line.count; count++)
+					out << "    call _out\n";
+				out << "    add rsp, 32\n";
 
 				//out << "    mov rcx, [rel hStdOut]\n"
 				//	<< "    mov rdx, rsi\n"				// lpBuffer
@@ -792,9 +793,10 @@ namespace BFC
 				//out << "    movzx rcx, byte [rsi]\n" << "    call putchar\n";
 				break;
 			case IR_I:
-				out << "    sub rsp, 32\n"
-					<< "    call _in\n"
-					<< "    add rsp, 32\n";
+				out << "    sub rsp, 32\n";
+				for (u32 count = 0; count <= line.count; count++)
+					out << "    call _in\n";
+				out << "    add rsp, 32\n";
 
 				//out << "    mov rcx, [rel hStdIn]\n"
 				//	<< "    mov rdx, rsi\n"					// lpBuffer
@@ -906,7 +908,7 @@ namespace BFC
 
 		return Compile(p);
 	}
-	CompilerError Compiler::_Compile(CompilationParams& p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3)
+	CompilerError Compiler::_Compile(CompilationParams p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3)
 	{
 		auto error = p.Validate();
 		if (error)
@@ -1121,29 +1123,29 @@ namespace BFC
 
 
 	u32 RunCommand(const std::wstring& command)
-{
-	STARTUPINFO si = { sizeof(STARTUPINFO) };
-	PROCESS_INFORMATION pi;
-
-	auto flag = NORMAL_PRIORITY_CLASS;
-
-	if (!CreateProcessW(NULL, const_cast<wchar_t*>(command.c_str()),
-		NULL, NULL, FALSE, flag, NULL, NULL, &si, &pi))
 	{
-		std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
-		return -1;
+		STARTUPINFO si = { sizeof(STARTUPINFO) };
+		PROCESS_INFORMATION pi;
+
+		auto flag = NORMAL_PRIORITY_CLASS;
+
+		if (!CreateProcessW(NULL, const_cast<wchar_t*>(command.c_str()),
+			NULL, NULL, FALSE, flag, NULL, NULL, &si, &pi))
+		{
+			std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
+			return -1;
+		}
+
+		WaitForSingleObject(pi.hProcess, INFINITE);
+
+		DWORD exitCode = 0;
+		GetExitCodeProcess(pi.hProcess, &exitCode);
+
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+
+		return exitCode;
 	}
-
-	WaitForSingleObject(pi.hProcess, INFINITE);
-
-	DWORD exitCode = 0;
-	GetExitCodeProcess(pi.hProcess, &exitCode);
-
-	CloseHandle(pi.hProcess);
-	CloseHandle(pi.hThread);
-
-	return exitCode;
-}
 
 
 }

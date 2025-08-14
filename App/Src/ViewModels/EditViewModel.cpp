@@ -11,8 +11,8 @@ EditViewModel::EditViewModel(EditView* view, EditModel* model, EditorModel* edit
 	: m_Model(model), m_View(view), m_Editor(editor)
 {
 	m_Model->SubEmuTerminated([this]() { OnEmulationTerminated(); });
-	m_Model->SubEmuOutput([this]() { OnEmulationOutputChanged(); });
-	m_Model->SubEmuInput([this]() { OnEmulationInputRequested(); });
+	m_Model->SubEmuOutput([this](bf_mem_t) { OnEmulationOutputChanged(); });
+	m_Model->SubEmuWantInput([this]() { OnEmulationInputRequested(); });
 
 	LOG_GRAPHICS("EditViewModel Created\n");
 }

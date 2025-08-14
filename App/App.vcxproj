@@ -148,6 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MainApp.cpp" />
+    <ClCompile Include="Src\Emulator.cpp" />
     <ClCompile Include="Src\Events\Event.cpp" />
     <ClCompile Include="Src\Events\EventBus.cpp" />
     <ClCompile Include="Src\Events\Observable.cpp" />
@@ -178,6 +179,7 @@
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\Emulator.h" />
     <ClInclude Include="Src\Events\Event.h" />
     <ClInclude Include="Src\Events\EventBus.h" />
     <ClInclude Include="Src\Events\Observable.h" />

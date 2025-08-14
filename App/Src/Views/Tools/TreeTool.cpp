@@ -32,6 +32,8 @@ void TreeTool::RenderTreeEntry(TreeEntry& entry)
 				m_CompileEvent.Notify(entry.Path);
 			if (ImGui::MenuItem("Delete"))
 				m_DeleteEvent.Notify(entry.Path);
+			if (ImGui::MenuItem("New"))
+				m_NewEvent.Notify(entry.Path);
 			ImGui::EndPopup();
 		}
 
@@ -46,7 +48,7 @@ void TreeTool::RenderTreeEntry(TreeEntry& entry)
 	{
 		ImGui::TreeNodeEx(entry.Path.string().c_str(), file_flags, entry.Path.filename().string().c_str());
 
-		if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+		if ((ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) || ImGui::IsItemActivated())
 			m_SelectEvent.Notify(entry.Path);
 
 		if (ImGui::BeginPopupContextItem()) // right click
@@ -57,6 +59,8 @@ void TreeTool::RenderTreeEntry(TreeEntry& entry)
 				m_CompileEvent.Notify(entry.Path);
 			if (ImGui::MenuItem("Delete"))
 				m_DeleteEvent.Notify(entry.Path);
+			if (ImGui::MenuItem("New"))
+				m_NewEvent.Notify(entry.Path.parent_path());
 			ImGui::EndPopup();
 		}
 	}

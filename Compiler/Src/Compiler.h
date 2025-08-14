@@ -17,7 +17,7 @@ namespace BFC
 	public:
 		static CompilerError Compile(const std::vector<std::string>& args);
 		// TODO: how to access the script files when using the compiler as an API without providing the path offset
-		static CompilerError Compile(CompilationParams& p, const fs::path& offset)
+		static CompilerError Compile(CompilationParams p, const fs::path& offset)
 		{
 			auto original = fs::current_path();
 			fs::current_path(offset);
@@ -25,7 +25,7 @@ namespace BFC
 			fs::current_path(original);
 			return res;
 		}
-		static CompilerError Compile(CompilationParams& p) { return _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat"); }
+		static CompilerError Compile(CompilationParams p) { return _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat"); }
 
 
 		/// Lexical Analyzer / Scanner / Lexer
@@ -62,7 +62,7 @@ namespace BFC
 
 	private:
 		/// used for testing, as the bat file paths are different
-		static CompilerError _Compile(CompilationParams& p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3);
+		static CompilerError _Compile(CompilationParams p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3);
 
 	public:
 		static inline CompilerError GetUnreconTokenError(const char c, const u32 row, const u32 col) {

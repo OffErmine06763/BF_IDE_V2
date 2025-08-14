@@ -30,6 +30,7 @@ public:
 	listener_id SubscribeSelect(consumer<const fs::path&> cb) { return m_SelectEvent.Subscribe(cb); }
 	listener_id SubscribeCompile(consumer<const fs::path&> cb) { return m_CompileEvent.Subscribe(cb); }
 	listener_id SubscribeDelete(consumer<const fs::path&> cb) { return m_DeleteEvent.Subscribe(cb); }
+	listener_id SubscribeNew(consumer<const fs::path&> cb) { return m_NewEvent.Subscribe(cb); }
 
 private:
 	void CacheDirectoryTree(TreeEntry& parent);
@@ -40,5 +41,5 @@ private:
 	TreeEntry m_TreeRoot;
 	u32 m_TreeCacheCounter = 0;
 
-	Event<const fs::path&> m_SelectEvent, m_CompileEvent, m_DeleteEvent;
+	Event<const fs::path&> m_SelectEvent, m_CompileEvent, m_DeleteEvent, m_NewEvent;
 };

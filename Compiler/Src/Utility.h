@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <condition_variable>
+#include <semaphore>
 
 #include <regex>
 
