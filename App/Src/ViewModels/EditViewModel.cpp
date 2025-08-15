@@ -11,7 +11,7 @@ EditViewModel::EditViewModel(EditView* view, EditModel* model, EditorModel* edit
 	: m_Model(model), m_View(view), m_Editor(editor)
 {
 	m_Model->SubEmuTerminated([this]() { OnEmulationTerminated(); });
-	m_Model->SubEmuOutput([this](bf_mem_t) { OnEmulationOutputChanged(); });
+	m_Model->SubEmuOutput([this](bf_mem_t o) { OnEmulationOutputChanged(o); });
 	m_Model->SubEmuWantInput([this]() { OnEmulationInputRequested(); });
 
 	LOG_GRAPHICS("EditViewModel Created\n");
@@ -44,8 +44,8 @@ void EditViewModel::StartEmulation()
 }
 void EditViewModel::StopEmulation()
 {
-	bool res = m_Model->StopEmulation();
-	if (res) m_View->EmulationStopped();
+	m_Model->StopEmulation();
+	m_View->EmulationStopped();
 }
 
 void EditViewModel::GoHome()
@@ -72,9 +72,9 @@ void EditViewModel::OnEmulationTerminated()
 	m_View->EmulationStopped();
 }
 
-void EditViewModel::OnEmulationOutputChanged()
+void EditViewModel::OnEmulationOutputChanged(bf_mem_t o)
 {
-	m_View->EmulationOutputChanged();
+	m_View->EmulationOutputChanged(o);
 }
 
 void EditViewModel::OnEmulationInputRequested()

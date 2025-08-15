@@ -63,6 +63,11 @@ void App::_Render()
 
 	ProcessGlobalShortcuts();
 	m_State->Render();
+
+	std::lock_guard lk(m_TaskMutex);
+	for (callable cb : m_Tasks)
+		cb();
+	m_Tasks.clear();
 }
 
 
@@ -81,4 +86,10 @@ void App::RequestOpenPath(const fs::path& path)
 	LOG_APP("Opening " << path << '\n');
 	Instance->m_History.SetAsMostRecent(path);
 	RequestNewState<EditState>(path);
+}
+
+void App::ScheduleTask(callable cb)
+{
+	std::lock_guard lk(Instance->m_TaskMutex);
+	Instance->m_Tasks.push_back(cb);
 }

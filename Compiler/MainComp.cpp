@@ -20,8 +20,8 @@ int main(int argc, char** argv)
 
 	// abbondante sopprimere il sacrificio tronco buono
 	//CompilerError error = Compiler::Compile({ args.begin(), args.end() });
-	BFC::CompilerError error = BFC::Compiler::Compile({ "Compiler", "Res/Code/Code.bf", "Res/Code/Code2.bf", "-m", "Res/Code/Code.bf", "-o", "Generated/CODE.exe" });
-	//BFC::CompilerError error = BFC::Compiler::Compile({ "Compiler", "Res/Code/badapple.bf", "-o", "Generated/CODE.exe" });
+	//BFC::CompilerError error = BFC::Compiler::Compile({ "Compiler", "Res/Code/Code.bf", "Res/Code/Code2.bf", "-m", "Res/Code/Code.bf", "-o", "Generated/CODE.exe" });
+	BFC::CompilerError error = BFC::Compiler::Compile({ "Compiler", "Res/Code/badapple.bf", "-o", "Generated/CODE.exe" });
 
 	if (error)
 	{

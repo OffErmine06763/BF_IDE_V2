@@ -30,7 +30,7 @@ public:
 	void CloseApp();
 
 	void OnEmulationTerminated();
-	void OnEmulationOutputChanged();
+	void OnEmulationOutputChanged(bf_mem_t o);
 	void OnEmulationInputRequested();
 	const std::string& GetEmulationOutput() { return m_Model->GetEmulationOutput(); }
 

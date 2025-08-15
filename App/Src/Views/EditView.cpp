@@ -235,10 +235,10 @@ void EditView::EmulationStopped()
 	m_CanEmulate = true;
 	m_EmuWantsInput = false;
 }
-void EditView::EmulationOutputChanged()
+void EditView::EmulationOutputChanged(bf_mem_t o)
 {
 	std::lock_guard<std::mutex> lock(m_EmuMutex);
-	m_EmuOutput = m_VM.GetEmulationOutput();
+	m_EmuOutput.push_back(o);
 }
 void EditView::EmulationWantsInput(bool wants)
 {

@@ -28,12 +28,10 @@ EditModel::EditModel(const fs::path& workdir, EditorModel* editor)
 }
 EditModel::~EditModel()
 {
-	{
-		std::lock_guard lk(m_EmuMutex);
-		if (m_Emulator.Running())
-			m_Emulator.Stop();
-	}
-	if (m_EmulatorThread)
+	std::lock_guard lk(m_EmuExtMtx);
+	if (m_Emulator.Running())
+		m_Emulator.Stop();
+	if (m_EmulatorThread && m_EmulatorThread->joinable())
 		m_EmulatorThread->join();
 
 	LOG_APP("EditModel Destroyed\n");
@@ -55,51 +53,30 @@ void EditModel::DeletePath(const fs::path& path)
 bool EditModel::StartEmulation()
 {
 	LOG("Starting Emulation of " << m_WorkDir.filename() << '\n');
-	if (m_Emulator.Running()) return false;
+
+	std::lock_guard lk1(m_EmuExtMtx);
+	{
+		std::lock_guard lk2(m_EmuLoopMtx);
+		if (m_Emulator.Running())
+			return false;
+	}
+	if (m_EmulatorThread && m_EmulatorThread->joinable()) // m_Emulator.Running() is set to false before the thread actually terminating
+		m_EmulatorThread->join();
 
 	m_Emulator.Reset();
 
 	m_EmuOutput.clear();
 	m_Editor->Lock(true);
-	
+
 	BFC::CompilationParams p;
 	const auto dir = GetWorkDir();
 	p.tgts.push_back(dir);
+	// rn can't move Start (which does the compilation) inside the new thread, as m_Emulator.Running() is set inside this function
+	// (it's quite fast in release, badapple in 0.3s)
 	BFC::CompilerError err = m_Emulator.Start(p);
 	if (err) LOG_COMP(err.message);
-
-	if (m_EmulatorThread) // m_Emulator.Running() is set to false before the thread actually terminating
-		m_EmulatorThread->join();
-	m_EmulatorThread = std::make_unique<std::thread>([&]()
-		{
-			m_EmulationStartedEvent.Notify();
-
-			while (m_Emulator.Running())
-			{
-				std::unique_lock lk(m_EmuMutex);
-
-				Emulator::StepParams p;
-				p.I = m_EmuInput;
-				m_Emulator.Step(p);
-
-				if (p.OutputGenerated) // first print any generated output
-				{
-					m_EmuOutput.push_back(p.O);
-					m_EmulationOutputEvent.Notify(p.O);
-				}
-				if (p.Error != Emulator::NONE)
-					std::cout << p.ErrorDescription; // TODO
-				else if (p.InputRequested)
-				{
-					m_EmulationWantInputEvent.Notify();
-					m_EmuCV.wait(lk);
-				}
-			}
-
-			// TODO: notifies should not be sent from this thread: TerminatedEvent -> StartEmulation -> Deadlock on join.
-			m_EmulationTerminatedEvent.Notify();
-			m_Editor->Lock(false);
-		});
+	
+	m_EmulatorThread = std::make_unique<std::thread>([&]() { EmulationLoop(); });
 
 	return true;
 
@@ -109,33 +86,63 @@ bool EditModel::StartEmulation()
 	m_CanEmulate = false;
 	*/
 }
-bool EditModel::StopEmulation()
+void EditModel::StopEmulation()
 {
+	LOG("Stopping Emulation\n");
+	std::lock_guard lk1(m_EmuExtMtx);
 	{
-		std::lock_guard lk(m_EmuMutex);
-		if (!m_Emulator.Running()) return false;
-		m_Emulator.Stop();
+		std::lock_guard lk2(m_EmuLoopMtx);
+		if (m_Emulator.Running())
+			m_Emulator.Stop();
 	}
-
-	if (m_EmulatorThread->joinable())
+	if (m_EmulatorThread && m_EmulatorThread->joinable())
 		m_EmulatorThread->join();
 	m_EmulatorThread.reset();
 	m_Editor->Lock(false);
-	return true;
 }
 bool EditModel::EmulationInput(bf_mem_t input)
 {
-	std::lock_guard lk(m_EmuMutex);
-	if (!m_Emulator.Running() || !m_Emulator.WantsInput()) return false;
+	std::lock_guard lk1(m_EmuExtMtx);
+	std::lock_guard lk2(m_EmuLoopMtx);
+	if (!m_Emulator.Running() || !m_Emulator.WantsInput())
+		return false;
 	m_EmuInput = input;
 	m_EmuCV.notify_one();
 	return true;
 }
-void EditModel::OnEmulationTerminated()
+void EditModel::EmulationLoop()
 {
-	LOG("Emulation Terminated\n");
-	m_Editor->Lock(false);
-	m_EmulationTerminatedEvent.Notify();
+	App::ScheduleTask([&]() { m_EmulationStartedEvent.Notify(); });
+
+	while (1)
+	{
+		std::unique_lock lk(m_EmuLoopMtx);
+		if (!m_Emulator.Running())
+			break;
+
+		Emulator::StepParams p;
+		p.I = m_EmuInput;
+		m_Emulator.Step(p);
+
+		if (p.OutputGenerated) // first print any generated output
+		{
+			m_EmuOutput.push_back(p.O);
+			App::ScheduleTask([this, p]() { m_EmulationOutputEvent.Notify(p.O); });
+		}
+		if (p.Error != Emulator::NONE)
+			std::cout << p.ErrorDescription; // TODO
+		else if (p.InputRequested)
+		{
+			App::ScheduleTask([&]() { m_EmulationWantInputEvent.Notify(); });
+			m_EmuCV.wait(lk);
+		}
+	}
+
+	App::ScheduleTask([&]()
+		{
+			m_EmulationTerminatedEvent.Notify();
+			m_Editor->Lock(false);
+		});
 }
 
 

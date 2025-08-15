@@ -640,6 +640,7 @@ namespace BFC
 	{
 		auto id = d.label.ID;
 		ir.code.push_back({ .type = IR_LABEL, .ID = id });
+
 		for (const Stmt& s : tu.bodies.at(id))
 			IntermediateStatement(s, ir, tu);
 	}

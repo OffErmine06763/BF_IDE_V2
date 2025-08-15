@@ -38,10 +38,6 @@ public:
 	std::vector<bf_mem_t>& GetMemory() { return m_Memory; }
 	bf_mem_t SetMemory(const u32 address, bf_mem_t value) { m_Memory[address] = value; }
 
-	listener_id SubscribeStart     (callable& cb)           { m_StartedEvent.Subscribe(cb); }
-	listener_id SubscribeTerminated(callable& cb)           { m_TerminatedEvent.Subscribe(cb); }
-	listener_id SubscribePaused    (callable& cb)           { m_PausedEvent.Subscribe(cb); }
-
 public:
 	static constexpr u32 MEM_SIZE = BF_MEMSIZE;
 
@@ -59,13 +55,13 @@ private:
 	{
 		BFC::IR IR;
 		fs::path Path;
+		std::map<u32, size_t> Loops;
+		std::map<u32, FunctionData> Functions;
 	};
-	std::map<u32, FunctionData> m_Functions;
 	std::vector<IRData> m_IRs;
 	std::stack<size_t> m_CurrentIR, m_CurrentInstruction;
 	u32 m_Counter = 0;
-
-	Event<void> m_StartedEvent, m_TerminatedEvent, m_PausedEvent;
+	size_t m_MainInd = -1;
 };
 
 /*

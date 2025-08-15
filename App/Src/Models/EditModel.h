@@ -14,7 +14,7 @@ public:
 	void DeletePath(const fs::path& path);
 
 	bool StartEmulation();
-	bool StopEmulation();
+	void StopEmulation();
 	bool EmulationInput(bf_mem_t input);
 
 	fs::path GetWorkDir() const { return m_WorkDir; }
@@ -28,7 +28,7 @@ public:
 
 private:
 	//void OnEditorFileChanged(const fs::path& dir);
-	void OnEmulationTerminated();
+	void EmulationLoop();
 
 private:
 	EditorModel* m_Editor;
@@ -37,10 +37,11 @@ private:
 	Event<const fs::path&> m_DeletePathEvent;
 
 	std::string m_EmuOutput;
-	bf_mem_t m_EmuInput;
+	bf_mem_t m_EmuInput = 0;
 	Emulator m_Emulator;
 	uptr<std::thread> m_EmulatorThread;
-	std::mutex m_EmuMutex;
+	/// Mutexes for locking the emulation loop inside m_EmulatorThread and for external operations over m_Emulator and the thread.
+	std::mutex m_EmuLoopMtx, m_EmuExtMtx;
 	std::condition_variable m_EmuCV;
 	
 

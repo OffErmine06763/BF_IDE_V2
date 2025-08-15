@@ -33,7 +33,7 @@ public:
 	void EmulationStarted();
 	void EmulationStopped();
 
-	void EmulationOutputChanged();
+	void EmulationOutputChanged(bf_mem_t o);
 	void EmulationWantsInput(bool wants);
 
 	template <ToolType T, typename... Args>

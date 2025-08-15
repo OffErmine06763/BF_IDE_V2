@@ -21,6 +21,9 @@ public:
 	static void RequestOpenPath(const fs::path& path);
 	static History& GetHistory() { return Instance->m_History; }
 
+	/// Run the lambda on the UI/main thread, at the end of each frame
+	static void ScheduleTask(callable cb);
+
 private:
 	App();
 	~App();
@@ -30,8 +33,10 @@ private:
 	void ProcessGlobalShortcuts();
 
 	std::unique_ptr<State> m_State = nullptr, m_NextState = nullptr;
-
 	bool m_IsOpen = true, m_NewStateRequested = false;
+
+	std::mutex m_TaskMutex;
+	std::vector<callable> m_Tasks;
 
 	History m_History;
 
