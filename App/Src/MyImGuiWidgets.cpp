@@ -1,6 +1,5 @@
 #include "MyImGuiWidgets.h"
 
-
 static void BoxSelectDeactivateDrag(ImGuiBoxSelectState* bs)
 {
     ImGuiContext& g = *GImGui;
@@ -57,6 +56,7 @@ static ImRect CalcScopeRect(ImGuiMultiSelectTempData* ms, ImGuiWindow* window)
         return scope_rect;
     }
 }
+
 
 namespace ImGui
 {
@@ -180,8 +180,6 @@ namespace ImGui
 
         return &ms->IO;
     }
-
-
     ImGuiMultiSelectIO* MyEndMultiSelect()
     {
         ImGuiContext& g = *GImGui;

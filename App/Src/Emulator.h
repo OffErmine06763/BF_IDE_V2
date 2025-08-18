@@ -36,6 +36,7 @@ public:
 	bool WantsInput() const { return m_WantsInput; }
 	bf_mem_t GetMemory(const u32 address) const { return m_Memory[address]; }
 	std::vector<bf_mem_t>& GetMemory() { return m_Memory; }
+	const std::vector<bf_mem_t>& GetCMemory() const { return m_Memory; }
 	bf_mem_t SetMemory(const u32 address, bf_mem_t value) { m_Memory[address] = value; }
 
 public:

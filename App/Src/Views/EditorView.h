@@ -24,7 +24,7 @@ public:
 	EditorView(EditorModel* model);
 	~EditorView() { LOG_GRAPHICS("EditorView Destroyed\n"); };
 
-	void Render(ImGuiID dockspace_id /*, const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
+	void Render(ImGuiID dockspace_id);
 
 	// idt OpenFile(const fs::path& dir);
 	// idt OpenOrFocus(const fs::path& path);
@@ -49,7 +49,7 @@ public:
 
 private:
 	void RenderMainMenu();
-	void RenderBody(ImGuiID dockspace_id /* const ImVec2& pos, const ImVec2& size // TAG: Toolbar */);
+	void RenderBody(ImGuiID dockspace_id);
 	void RenderClosingConfirmationUI();
 	void RenderRenamingDocUI();
 	void ProcessShortcuts();

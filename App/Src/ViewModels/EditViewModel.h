@@ -7,11 +7,6 @@
 
 class EditView;
 
-enum class CompilationTarget
-{
-	CURRENT, OPEN, FOLDER
-};
-
 class EditViewModel
 {
 public:
@@ -21,10 +16,12 @@ public:
 	void OpenFile(const fs::path& path);
 	void DeletePath(const fs::path& path);
 
-	void StartEmulation();
+	void StartEmulation(const CompilationTarget& tgt);
 	void StopEmulation();
 	void CloseEmulationTab();
 	void EmulationInput(bf_mem_t input);
+	bool IsEmulating();
+	const std::vector<bf_mem_t>& GetEmulationMemory();
 	
 	void GoHome();
 	void CloseApp();

@@ -24,4 +24,5 @@ const Shortcut
 // BF
 const Shortcut 
 	BFS_Emulate       = { ImGuiMod_Ctrl | ImGuiKey_E, "Ctrl+E" },
+	BFS_Compile       = { ImGuiMod_Ctrl | ImGuiKey_B, "Ctrl+B" },
 	BFS_StopEmulation = { ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_E, "Ctrl+Shift+E" };

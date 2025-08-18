@@ -25,7 +25,10 @@ public:
 	~TreeTool() override = default;
 
 	void Render() override;
-	std::string Name() const override { return "Tree"; }
+
+	inline std::string Name() const override { return "Tree"; }
+	inline Type GetType() const override { return _GetType(); }
+	static inline Type _GetType() { return TREE; }
 
 	listener_id SubscribeSelect(consumer<const fs::path&> cb) { return m_SelectEvent.Subscribe(cb); }
 	listener_id SubscribeCompile(consumer<const fs::path&> cb) { return m_CompileEvent.Subscribe(cb); }

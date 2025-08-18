@@ -1,13 +1,21 @@
 #pragma once
 #include <string>
 
+
 class Tool
 {
+public:
+	enum Type
+	{
+		NONE, TREE, MEMORY
+	};
+
 public:
 	virtual ~Tool() = default;
 
 	virtual void Render() {}
-	virtual std::string Name() const { return "Tool"; }
+	virtual inline std::string Name() const { return "Tool"; }
+	virtual inline Type GetType() const { return NONE; }
 
 protected:
 	Tool() = default;

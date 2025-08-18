@@ -44,27 +44,12 @@ void EditView::Render()
 	ProcessShortcuts();
 	RenderMainMenu();
 
-	/* TAG: Toolbar
-	const ImGuiViewport* viewport = ImGui::GetMainViewport();
-	m_EditorSize = viewport->WorkSize, m_EditorPos = viewport->WorkPos;
-
-	RenderTools();
-	*/
-
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::DockSpaceOverViewport(m_DockspaceID, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
 	
 	RenderEditor();
 	RenderSidebars();
 	RenderEmulation();
-
-	// if (!m_CanEmulate && m_Emulator != nullptr && m_Emulator->Done())
-	// {
-	// 	m_Emulator->join();
-	// 	m_CanEmulate = true;
-	// 	m_Emulator = nullptr;
-	// 	m_Editor.Lock(false);
-	// }
 
 	if (!m_PathToDelete.empty())
 		RenderDeleteConfirmationUI();
@@ -75,20 +60,15 @@ void EditView::Render()
 void EditView::ProcessShortcuts()
 {
 	if (ImGui::IsKeyChordPressed(BFS_Emulate.Chord))
-		m_VM.StartEmulation();
+		m_VM.StartEmulation(CompilationTarget::FOLDER);
 	else if (ImGui::IsKeyChordPressed(BFS_StopEmulation.Chord))
 		m_VM.StopEmulation();
+	if (ImGui::IsKeyChordPressed(BFS_Compile.Chord))
+		m_VM.Compile(CompilationTarget::FOLDER);
 	if (ImGui::IsKeyChordPressed(AS_ToolTree.Chord))
-	{
-		TreeTool* tool = new TreeTool(m_VM.GetWorkDir());
-		tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
-		tool->SubscribeCompile([this](const fs::path& path) { m_VM.Compile({ path }); });
-		tool->SubscribeDelete([this](const fs::path& path) { m_PathToDelete = path; });
-		tool->SubscribeNew([this](const fs::path& path) { m_PathToNew = path; });
-		OpenToolView(tool, ToolPosition::LEFT);
-	}
+		ToggleTreeView();
 	if (ImGui::IsKeyChordPressed(AS_ToolMemory.Chord))
-		OpenToolView<MemoryTool>(ToolPosition::BOTTOM);
+		ToggleMemoryTool();
 }
 void EditView::RenderMainMenu()
 {
@@ -104,33 +84,37 @@ void EditView::RenderMainMenu()
 		}
 		if (ImGui::BeginMenu("Run"))
 		{
-			if (ImGui::MenuItem("Compile Current"))
-				m_VM.Compile(CompilationTarget::CURRENT);
-			if (ImGui::MenuItem("Compile Open"))
-				m_VM.Compile(CompilationTarget::OPEN);
-			if (ImGui::MenuItem("Compile Folder"))
-				m_VM.Compile(CompilationTarget::FOLDER);
-			if (ImGui::MenuItem("Run", BFS_Emulate.Label, nullptr, m_CanEmulate))
-				m_VM.StartEmulation();
-			if (ImGui::MenuItem("Stop", BFS_StopEmulation.Label, nullptr, !m_CanEmulate))
-				m_VM.StopEmulation();
+			if (ImGui::BeginMenu("Compile"))
+			{
+				if (ImGui::MenuItem("Compile Current"))
+					m_VM.Compile(CompilationTarget::CURRENT);
+				if (ImGui::MenuItem("Compile Open"))
+					m_VM.Compile(CompilationTarget::OPEN);
+				if (ImGui::MenuItem("Compile Folder", BFS_Compile.Label))
+					m_VM.Compile(CompilationTarget::FOLDER);
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Emulate"))
+			{
+				if (ImGui::MenuItem("Emulate Current", nullptr, nullptr, m_CanEmulate))
+					m_VM.StartEmulation(CompilationTarget::CURRENT);
+				if (ImGui::MenuItem("Emulate Open", nullptr, nullptr, m_CanEmulate))
+					m_VM.StartEmulation(CompilationTarget::OPEN);
+				if (ImGui::MenuItem("Emulate Folder", BFS_Emulate.Label, nullptr, m_CanEmulate))
+					m_VM.StartEmulation(CompilationTarget::FOLDER);
+				if (ImGui::MenuItem("Stop", BFS_StopEmulation.Label, nullptr, !m_CanEmulate))
+					m_VM.StopEmulation();
+				ImGui::EndMenu();
+			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Tools"))
 		{
 			if (ImGui::MenuItem("Tree", AS_ToolTree.Label))
-			{
-				TreeTool* tool = new TreeTool(m_VM.GetWorkDir());
-				tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
-				tool->SubscribeCompile([this](const fs::path& path) { m_VM.Compile({ path }); });
-				tool->SubscribeDelete([this](const fs::path& path) { m_PathToDelete = path; });
-				tool->SubscribeNew([this](const fs::path& path) { m_PathToNew = path; });
-				OpenToolView(tool, ToolPosition::LEFT);
-			}
+				ToggleTreeView();
 			if (ImGui::MenuItem("Memory", AS_ToolMemory.Label))
-			{
-				OpenToolView<MemoryTool>(ToolPosition::BOTTOM);
-			}
+				ToggleMemoryTool();
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -271,6 +255,32 @@ void EditView::OpenToolView(Tool* tool, ToolPosition pos)
 		break;
 	}
 }
+void EditView::ToggleTreeView()
+{
+	if (m_LeftSidebarTool && m_LeftSidebarTool->GetType() == TreeTool::_GetType())
+		m_LeftSidebarTool.release();
+	else
+	{
+		TreeTool* tool = new TreeTool(m_VM.GetWorkDir());
+		tool->SubscribeSelect([this](const fs::path& path) { m_VM.OpenFile(path); });
+		tool->SubscribeCompile([this](const fs::path& path) { m_VM.Compile({ path }); });
+		tool->SubscribeDelete([this](const fs::path& path) { m_PathToDelete = path; });
+		tool->SubscribeNew([this](const fs::path& path) { m_PathToNew = path; });
+		OpenToolView(tool, ToolPosition::LEFT);
+	}
+}
+void EditView::ToggleMemoryTool()
+{
+	if (m_BottomSidebarTool && m_BottomSidebarTool->GetType() == MemoryTool::_GetType())
+		m_BottomSidebarTool.release();
+	else
+	{
+		MemoryTool* tool = new MemoryTool();
+		tool->SetMemory(&m_VM.GetEmulationMemory());
+		OpenToolView(tool, ToolPosition::BOTTOM);
+	}
+}
+
 
 
 void EditView::RenderDeleteConfirmationUI()

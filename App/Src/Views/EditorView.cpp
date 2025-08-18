@@ -55,11 +55,11 @@ void EditorView::Focused(const Document& doc)
 }
 
 
-void EditorView::Render(ImGuiID dockspace_id /*, const ImVec2& pos, const ImVec2& size // TAG: Toolbar */)
+void EditorView::Render(ImGuiID dockspace_id)
 {
 	ProcessShortcuts();
 	RenderMainMenu();
-	RenderBody(dockspace_id /*, pos, size // TAG: Toolbar */);
+	RenderBody(dockspace_id);
 }
 void EditorView::ProcessShortcuts()
 {
@@ -124,17 +124,9 @@ void EditorView::RenderMainMenu()
 		ImGui::EndMainMenuBar();
 	}
 }
-void EditorView::RenderBody(ImGuiID parent_dockspace /* const ImVec2& pos, const ImVec2& size // TAG: Toolbar  */)
+void EditorView::RenderBody(ImGuiID parent_dockspace)
 {
 	static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
-
-	// TAG: Toolbar
-	// ImGui::SetNextWindowPos(pos);
-	// ImGui::SetNextWindowSize(size);
-
-	/*const ImGuiViewport* viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImGui::SetNextWindowSize(viewport->WorkSize);*/
 
 	ImGui::SetNextWindowDockID(parent_dockspace, ImGuiCond_Appearing);
 	bool window_contents_visible = ImGui::Begin("EditorViewDocuments", nullptr, flags);

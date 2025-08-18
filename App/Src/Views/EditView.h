@@ -50,8 +50,8 @@ private:
 	void RenderEditor();
 	void RenderSidebars();
 
-	// TAG: Toolbar
-	// void RenderEmulation() override; 
+	void ToggleTreeView();
+	void ToggleMemoryTool();
 
 private:
 	EditorView m_EditorView;

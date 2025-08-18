@@ -32,10 +32,32 @@ void EditViewModel::DeletePath(const fs::path& path)
 }
 
 
-
-void EditViewModel::StartEmulation()
+void EditViewModel::GoHome()
 {
-	bool res = m_Model->StartEmulation();
+	App::RequestNewState<SelectProjectState>();
+}
+void EditViewModel::CloseApp()
+{
+	App::RequestClose();
+}
+
+
+void EditViewModel::StartEmulation(const CompilationTarget& tgt)
+{
+	bool res = m_Model->StartEmulation(tgt);
+	// TODO: ::emo_view:: spamming emulate fast enough causes double outputs being shown in the UI, perhaps because of notifications being sent as callbacks on the main thread
+	/* Log
+	Starting Emulation of "BF"
+	START -> thread #1 created
+	Starting Emulation of "BF"
+	Starting Emulation of "BF"
+	END -> thread #1 ended
+	START -> thread #2 created
+	STOP -> #1 end notified
+	Starting Emulation of "BF"
+	END -> thread #2 ended
+	STOP -> #2 end notified
+	*/
 	if (res)
 	{
 		m_View->EmulationStarted();
@@ -48,15 +70,6 @@ void EditViewModel::StopEmulation()
 	m_View->EmulationStopped();
 }
 
-void EditViewModel::GoHome()
-{
-	App::RequestNewState<SelectProjectState>();
-}
-void EditViewModel::CloseApp()
-{
-	App::RequestClose();
-}
-
 void EditViewModel::CloseEmulationTab()
 {
 	m_View->OpenEmulationTab(false);
@@ -67,20 +80,29 @@ void EditViewModel::EmulationInput(bf_mem_t input)
 	bool res = m_Model->EmulationInput(input);
 }
 
+bool EditViewModel::IsEmulating()
+{
+	return m_Model->IsEmulating();
+}
+const std::vector<bf_mem_t>& EditViewModel::GetEmulationMemory()
+{
+	return m_Model->GetEmulationMemory();
+}
+
 void EditViewModel::OnEmulationTerminated()
 {
 	m_View->EmulationStopped();
 }
-
 void EditViewModel::OnEmulationOutputChanged(bf_mem_t o)
 {
 	m_View->EmulationOutputChanged(o);
 }
-
 void EditViewModel::OnEmulationInputRequested()
 {
 	m_View->EmulationWantsInput(true);
 }
+
+
 
 void EditViewModel::Compile(const CompilationTarget& tgt)
 {

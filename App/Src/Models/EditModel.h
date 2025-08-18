@@ -4,6 +4,10 @@
 #include "EditorModel.h"
 #include "Events/Event.h"
 
+enum class CompilationTarget
+{
+	CURRENT, OPEN, FOLDER
+};
 
 class EditModel
 {
@@ -13,9 +17,11 @@ public:
 
 	void DeletePath(const fs::path& path);
 
-	bool StartEmulation();
+	bool StartEmulation(const CompilationTarget& tgt);
 	void StopEmulation();
 	bool EmulationInput(bf_mem_t input);
+	bool IsEmulating();
+	const std::vector<bf_mem_t>& GetEmulationMemory();
 
 	fs::path GetWorkDir() const { return m_WorkDir; }
 	const std::string& GetEmulationOutput() const { return m_EmuOutput; }

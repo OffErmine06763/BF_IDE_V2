@@ -50,9 +50,31 @@ void EditModel::DeletePath(const fs::path& path)
 }
 
 
-bool EditModel::StartEmulation()
+bool EditModel::StartEmulation(const CompilationTarget& tgt)
 {
-	LOG("Starting Emulation of " << m_WorkDir.filename() << '\n');
+	LOG("Starting Emulation\n");
+
+	BFC::CompilationParams p;
+	if (tgt == CompilationTarget::OPEN)
+	{
+		for (const Document& doc : m_Editor->GetDocuments())
+			p.tgts.push_back(doc.Path);
+		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
+	}
+	else if (tgt == CompilationTarget::CURRENT)
+	{
+		auto focus = m_Editor->GetFocusedFile();
+		if (!focus) return false;
+		p.tgts.push_back(focus->Path);
+		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
+	}
+	else if (tgt == CompilationTarget::FOLDER)
+	{
+		const auto dir = GetWorkDir();
+		p.tgts.push_back(dir);
+		p.outputPath = dir / (dir.filename().string() + ".exe");
+	}
+
 
 	std::lock_guard lk1(m_EmuExtMtx);
 	{
@@ -68,7 +90,6 @@ bool EditModel::StartEmulation()
 	m_EmuOutput.clear();
 	m_Editor->Lock(true);
 
-	BFC::CompilationParams p;
 	const auto dir = GetWorkDir();
 	p.tgts.push_back(dir);
 	// rn can't move Start (which does the compilation) inside the new thread, as m_Emulator.Running() is set inside this function
@@ -76,15 +97,10 @@ bool EditModel::StartEmulation()
 	BFC::CompilerError err = m_Emulator.Start(p);
 	if (err) LOG_COMP(err.message);
 	
+	std::cout << "START\n";
 	m_EmulatorThread = std::make_unique<std::thread>([&]() { EmulationLoop(); });
 
 	return true;
-
-	/* TAG: Toolbar
-	m_FirstShowEmulation = true;
-	m_ToolsVisible |= true;
-	m_CanEmulate = false;
-	*/
 }
 void EditModel::StopEmulation()
 {
@@ -100,6 +116,7 @@ void EditModel::StopEmulation()
 	m_EmulatorThread.reset();
 	m_Editor->Lock(false);
 }
+
 bool EditModel::EmulationInput(bf_mem_t input)
 {
 	std::lock_guard lk1(m_EmuExtMtx);
@@ -142,7 +159,23 @@ void EditModel::EmulationLoop()
 		{
 			m_EmulationTerminatedEvent.Notify();
 			m_Editor->Lock(false);
+			std::cout << "STOP\n";
 		});
+	// ::emo_view::
+	std::cout << "END\n";
+}
+
+bool EditModel::IsEmulating()
+{
+	std::lock_guard lk1(m_EmuExtMtx);
+	std::lock_guard lk2(m_EmuLoopMtx);
+	return m_Emulator.Running();
+}
+const std::vector<bf_mem_t>& EditModel::GetEmulationMemory()
+{
+	std::lock_guard lk1(m_EmuExtMtx);
+	std::lock_guard lk2(m_EmuLoopMtx);
+	return m_Emulator.GetCMemory();
 }
 
 
