@@ -22,15 +22,22 @@ public:
 	bool EmulationInput(bf_mem_t input);
 	bool IsEmulating();
 	const std::vector<bf_mem_t>& GetEmulationMemory();
+	const u32* GetEmulationAddress();
 
 	fs::path GetWorkDir() const { return m_WorkDir; }
 	const std::string& GetEmulationOutput() const { return m_EmuOutput; }
 
+	// Those are called by the main thread, no need to synch with the emulation locks.
+	listener_id SubEmuStarted(callable cb) { return m_EmulationStartedEvent.Subscribe(cb); }
 	listener_id SubEmuTerminated(callable cb) { return m_EmulationTerminatedEvent.Subscribe(cb); }
 	listener_id SubEmuOutput(consumer<bf_mem_t> cb) { return m_EmulationOutputEvent.Subscribe(cb); }
 	listener_id SubEmuInput(consumer<bf_mem_t> cb) { return m_EmulationInputEvent.Subscribe(cb); }
 	listener_id SubEmuWantInput(callable cb) { return m_EmulationWantInputEvent.Subscribe(cb); }
 
+	bool UnsubEmuOutput(listener_id id) { return m_EmulationOutputEvent.Unsubscribe(id); }
+	bool UnsubEmuWantInput(listener_id id) { return m_EmulationWantInputEvent.Unsubscribe(id); }
+	bool UnsubEmuTerminated(listener_id id) { return m_EmulationTerminatedEvent.Unsubscribe(id); }
+	bool UnsubEmuStarted(listener_id id) { return m_EmulationStartedEvent.Unsubscribe(id); }
 
 private:
 	//void OnEditorFileChanged(const fs::path& dir);

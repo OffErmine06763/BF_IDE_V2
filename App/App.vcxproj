@@ -167,6 +167,7 @@
     <ClCompile Include="Src\ViewModels\EditViewModel.cpp" />
     <ClCompile Include="Src\Views\EditorView.cpp" />
     <ClCompile Include="Src\Views\EditView.cpp" />
+    <ClCompile Include="Src\Views\Tools\EmulationIOTool.cpp" />
     <ClCompile Include="Src\Views\Tools\MemoryTool.cpp" />
     <ClCompile Include="Src\Views\Tools\Tool.cpp" />
     <ClCompile Include="Src\Views\Tools\TreeTool.cpp" />
@@ -197,6 +198,7 @@
     <ClInclude Include="Src\ViewModels\EditViewModel.h" />
     <ClInclude Include="Src\Views\EditorView.h" />
     <ClInclude Include="Src\Views\EditView.h" />
+    <ClInclude Include="Src\Views\Tools\EmulationIOTool.h" />
     <ClInclude Include="Src\Views\Tools\MemoryTool.h" />
     <ClInclude Include="Src\Views\Tools\Tool.h" />
     <ClInclude Include="Src\Views\Tools\TreeTool.h" />

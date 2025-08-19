@@ -177,6 +177,12 @@ const std::vector<bf_mem_t>& EditModel::GetEmulationMemory()
 	std::lock_guard lk2(m_EmuLoopMtx);
 	return m_Emulator.GetCMemory();
 }
+const u32* EditModel::GetEmulationAddress()
+{
+	std::lock_guard lk1(m_EmuExtMtx);
+	std::lock_guard lk2(m_EmuLoopMtx);
+	return m_Emulator.GetAddress();
+}
 
 
 //void EditModel::OnEditorFileChanged(const fs::path& dir)

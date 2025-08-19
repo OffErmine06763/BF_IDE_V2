@@ -11,8 +11,6 @@ EditViewModel::EditViewModel(EditView* view, EditModel* model, EditorModel* edit
 	: m_Model(model), m_View(view), m_Editor(editor)
 {
 	m_Model->SubEmuTerminated([this]() { OnEmulationTerminated(); });
-	m_Model->SubEmuOutput([this](bf_mem_t o) { OnEmulationOutputChanged(o); });
-	m_Model->SubEmuWantInput([this]() { OnEmulationInputRequested(); });
 
 	LOG_GRAPHICS("EditViewModel Created\n");
 }
@@ -61,18 +59,13 @@ void EditViewModel::StartEmulation(const CompilationTarget& tgt)
 	if (res)
 	{
 		m_View->EmulationStarted();
-		m_View->OpenEmulationTab();
+		m_View->OpenEmuIOTool();
 	}
 }
 void EditViewModel::StopEmulation()
 {
 	m_Model->StopEmulation();
 	m_View->EmulationStopped();
-}
-
-void EditViewModel::CloseEmulationTab()
-{
-	m_View->OpenEmulationTab(false);
 }
 
 void EditViewModel::EmulationInput(bf_mem_t input)
@@ -88,18 +81,14 @@ const std::vector<bf_mem_t>& EditViewModel::GetEmulationMemory()
 {
 	return m_Model->GetEmulationMemory();
 }
+const u32* EditViewModel::GetEmulationAddress()
+{
+	return m_Model->GetEmulationAddress();
+}
 
 void EditViewModel::OnEmulationTerminated()
 {
 	m_View->EmulationStopped();
-}
-void EditViewModel::OnEmulationOutputChanged(bf_mem_t o)
-{
-	m_View->EmulationOutputChanged(o);
-}
-void EditViewModel::OnEmulationInputRequested()
-{
-	m_View->EmulationWantsInput(true);
 }
 
 

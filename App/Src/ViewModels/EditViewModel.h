@@ -18,23 +18,31 @@ public:
 
 	void StartEmulation(const CompilationTarget& tgt);
 	void StopEmulation();
-	void CloseEmulationTab();
 	void EmulationInput(bf_mem_t input);
 	bool IsEmulating();
 	const std::vector<bf_mem_t>& GetEmulationMemory();
-	
+	const u32* GetEmulationAddress();
+
 	void GoHome();
 	void CloseApp();
 
 	void OnEmulationTerminated();
-	void OnEmulationOutputChanged(bf_mem_t o);
-	void OnEmulationInputRequested();
 	const std::string& GetEmulationOutput() { return m_Model->GetEmulationOutput(); }
 
 	void Compile(const CompilationTarget& file);
 	void Compile(const std::initializer_list<fs::path>& files);
 
 	fs::path GetWorkDir() const { return m_Model->GetWorkDir(); }
+
+	listener_id SubEmuOutput(consumer<bf_mem_t> cb) { return m_Model->SubEmuOutput(cb); }
+	listener_id SubEmuWantInput(callable cb) { return m_Model->SubEmuWantInput(cb); }
+	listener_id SubEmuTerminated(callable cb) { return m_Model->SubEmuTerminated(cb); }
+	listener_id SubEmuStarted(callable cb) { return m_Model->SubEmuStarted(cb); }
+
+	bool UnsubEmuOutput(listener_id id) { return m_Model->UnsubEmuOutput(id); }
+	bool UnsubEmuWantInput(listener_id id) { return m_Model->UnsubEmuWantInput(id); }
+	bool UnsubEmuTerminated(listener_id id) { return m_Model->UnsubEmuTerminated(id); }
+	bool UnsubEmuStarted(listener_id id) { return m_Model->UnsubEmuStarted(id); }
 
 private:
 	EditModel* m_Model;

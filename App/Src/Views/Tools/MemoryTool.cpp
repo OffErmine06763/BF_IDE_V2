@@ -32,7 +32,8 @@ void MemoryTool::Render()
 		static char buf[7] = "0x";
 
 		// NOTE: failed to prevent 0x deletion, and consequenly failed to prevent 'x' insertion anywhere but the second char
-		bool enter = ImGui::InputText("Search", buf, sizeof(buf), ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_EnterReturnsTrue, InputHexFilter);
+		ImGui::Text("Search");
+		bool enter = ImGui::InputText("##SearchInput", buf, sizeof(buf), ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_EnterReturnsTrue, InputHexFilter);
 		if (enter || ImGui::IsItemDeactivatedAfterEdit())
 		{
 			try {
@@ -43,6 +44,8 @@ void MemoryTool::Render()
 				find_address = 0;
 			}
 		}
+		ImGui::SameLine();
+		ImGui::Text("Current Address %d", *m_Address);
 	}
 
 

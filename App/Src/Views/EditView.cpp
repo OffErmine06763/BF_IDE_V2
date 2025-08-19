@@ -2,6 +2,7 @@
 #include "Shortcuts.h"
 #include "Tools/TreeTool.h"
 #include "Tools/MemoryTool.h"
+#include "Tools/EmulationIOTool.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -49,7 +50,6 @@ void EditView::Render()
 	
 	RenderEditor();
 	RenderSidebars();
-	RenderEmulation();
 
 	if (!m_PathToDelete.empty())
 		RenderDeleteConfirmationUI();
@@ -69,6 +69,8 @@ void EditView::ProcessShortcuts()
 		ToggleTreeView();
 	if (ImGui::IsKeyChordPressed(AS_ToolMemory.Chord))
 		ToggleMemoryTool();
+	if (ImGui::IsKeyChordPressed(AS_ToolEmuIO.Chord))
+		ToggleEmuIOTool();
 }
 void EditView::RenderMainMenu()
 {
@@ -115,51 +117,12 @@ void EditView::RenderMainMenu()
 				ToggleTreeView();
 			if (ImGui::MenuItem("Memory", AS_ToolMemory.Label))
 				ToggleMemoryTool();
+			if (ImGui::MenuItem("Emulation", AS_ToolEmuIO.Label))
+				ToggleEmuIOTool();
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
 	}
-}
-void EditView::RenderEmulation() {
-	if (!m_EmuTabOpen)
-		return;
-
-	// TODO: add button to reopen the tab
-	static ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize;
-
-	const ImGuiViewport* viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos({ viewport->WorkPos.x, viewport->WorkPos.y + viewport->WorkSize.y / 2 });
-	ImGui::SetNextWindowSize({ viewport->WorkSize.x, viewport->WorkSize.y / 2 });
-
-	bool wantclose = true;
-	ImGui::Begin("Emulation", &wantclose, flags);
-	if (!wantclose)
-		m_VM.CloseEmulationTab();
-
-	m_EmuMutex.lock();
-	ImGui::Text(m_EmuOutput.c_str());
-
-	if (m_EmuWantsInput)
-	{
-		ImGui::Text(">>"); ImGui::SameLine();
-		if (m_EmuFocusInput)
-		{
-			ImGui::SetKeyboardFocusHere();
-			m_EmuFocusInput = false;
-		}
-		ImGui::InputScalar("##input", ImGuiDataType_U8, &m_EmuInput, nullptr, nullptr, nullptr);
-		if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::Button("Confirm"))
-		{
-			// NOTE: must guarantee m_EmuWantsInput happens before any EmulationWantsInput(true)
-			m_EmuWantsInput = false;
-			m_VM.EmulationInput(m_EmuInput);
-		}
-	}
-
-	// release the lock after sending the input to the VM as another requested input will be set after rendering/sending.
-	m_EmuMutex.unlock();
-
-	ImGui::End();
 }
 void EditView::RenderEditor()
 {
@@ -167,98 +130,86 @@ void EditView::RenderEditor()
 }
 void EditView::RenderSidebars()
 {
-	if (m_LeftSidebarTool)
+	for (auto it = m_Tools.begin(); it != m_Tools.end(); true)
 	{
 		bool open = true;
-		ImGui::SetNextWindowDockID(m_DockIDLeft, ImGuiCond_Appearing);
-		bool visible = ImGui::Begin((m_LeftSidebarTool->Name() + "##SidebarLeft").c_str(), &open);
+		if (it->Position == ToolPosition::LEFT)
+		{
+			ImGui::SetNextWindowDockID(m_DockIDLeft, ImGuiCond_Appearing);
+			bool visible = ImGui::Begin((it->ToolPtr->Name() + "##SidebarLeft").c_str(), &open);
+		}
+		else if (it->Position == ToolPosition::RIGHT)
+		{
+			ImGui::SetNextWindowDockID(m_DockIDRight, ImGuiCond_Appearing);
+			bool visible = ImGui::Begin((it->ToolPtr->Name() + "##SidebarRight").c_str(), &open);
+		}
+		else
+		{
+			ImGui::SetNextWindowDockID(m_DockIDBottom, ImGuiCond_Appearing);
+			bool visible = ImGui::Begin((it->ToolPtr->Name() + "##SidebarBottom").c_str(), &open);
+		}
 
-		if (open)   m_LeftSidebarTool->Render();
-		else delete m_LeftSidebarTool.release();
-
-		ImGui::End();
-	}
-	if (m_RightSidebarTool)
-	{
-		bool open = true;
-		ImGui::SetNextWindowDockID(m_DockIDRight, ImGuiCond_Appearing);
-		bool visible = ImGui::Begin((m_RightSidebarTool->Name() + "##SidebarRight").c_str(), &open);
-
-		if (open)   m_RightSidebarTool->Render();
-		else delete m_RightSidebarTool.release();
-
-		ImGui::End();
-	}
-	if (m_BottomSidebarTool)
-	{
-		bool open = true;
-		ImGui::SetNextWindowDockID(m_DockIDBottom, ImGuiCond_Appearing);
-		bool visible = ImGui::Begin((m_BottomSidebarTool->Name() + "##SidebarBottom").c_str(), &open);
-
-		if (open)   m_BottomSidebarTool->Render();
-		else delete m_BottomSidebarTool.release();
+		if (open)
+		{
+			it->ToolPtr->Render();
+			it++;
+		}
+		else it = m_Tools.erase(it);
 
 		ImGui::End();
 	}
 }
 
 
-
-void EditView::OpenEmulationTab(bool open)
-{
-	m_EmuTabOpen = open;
-}
 void EditView::EmulationStarted()
 {
 	m_CanEmulate = false;
-	m_EmuInput = 0;
-	m_EmuOutput.clear();
 }
 void EditView::EmulationStopped()
 {
 	m_CanEmulate = true;
-	m_EmuWantsInput = false;
 }
-void EditView::EmulationOutputChanged(bf_mem_t o)
+
+
+
+bool EditView::CloseTool(Tool::Type type)
 {
-	std::lock_guard<std::mutex> lock(m_EmuMutex);
-	m_EmuOutput.push_back(o);
-}
-void EditView::EmulationWantsInput(bool wants)
-{
-	std::lock_guard<std::mutex> lock(m_EmuMutex);
-	m_EmuWantsInput = wants;
-	if (wants)
+	for (auto it = m_Tools.begin(); it != m_Tools.end(); it++)
 	{
-		m_EmuInput = 0;
-		m_EmuFocusInput = true;
+		if (it->ToolPtr->GetType() == type)
+		{
+			if (it->OnDestroy)
+				it->OnDestroy();
+			m_Tools.erase(it);
+			return true;
+		}
 	}
+	return false;
 }
-
-
-
+EditView::ToolIterator EditView::GetTool(Tool::Type type)
+{
+	for (auto it = m_Tools.begin(); it != m_Tools.end(); it++)
+		if (it->ToolPtr->GetType() == type)
+			return it;
+	return m_Tools.end();
+}
+bool EditView::IsToolOpen(Tool::Type type)
+{
+	for (auto it = m_Tools.begin(); it != m_Tools.end(); it++)
+		if (it->ToolPtr->GetType() == type)
+			return true;
+	return false;
+}
 
 void EditView::OpenToolView(Tool* tool, ToolPosition pos)
 {
-	switch (pos)
-	{
-	case EditView::ToolPosition::LEFT:
-		m_LeftSidebarTool.reset(tool);
-		break;
-	case EditView::ToolPosition::RIGHT:
-		m_RightSidebarTool.reset(tool);
-		break;
-	case EditView::ToolPosition::BOTTOM:
-		m_BottomSidebarTool.reset(tool);
-		break;
-	default:
-		break;
-	}
+	m_Tools.push_back({ std::unique_ptr<Tool>(tool), pos });
 }
+
 void EditView::ToggleTreeView()
 {
-	if (m_LeftSidebarTool && m_LeftSidebarTool->GetType() == TreeTool::_GetType())
-		m_LeftSidebarTool.release();
+	if (CloseTool(TreeTool::_GetType()))
+		return;
 	else
 	{
 		TreeTool* tool = new TreeTool(m_VM.GetWorkDir());
@@ -271,14 +222,55 @@ void EditView::ToggleTreeView()
 }
 void EditView::ToggleMemoryTool()
 {
-	if (m_BottomSidebarTool && m_BottomSidebarTool->GetType() == MemoryTool::_GetType())
-		m_BottomSidebarTool.release();
+	if (CloseTool(MemoryTool::_GetType()))
+		return;
 	else
 	{
 		MemoryTool* tool = new MemoryTool();
-		tool->SetMemory(&m_VM.GetEmulationMemory());
+		tool->SetMemory(&m_VM.GetEmulationMemory(), m_VM.GetEmulationAddress());
 		OpenToolView(tool, ToolPosition::BOTTOM);
 	}
+}
+void EditView::ToggleEmuIOTool()
+{
+	if (CloseTool(EmulationIOTool::_GetType()))
+		return;
+	else _OpenEmuIOTool();
+}
+
+void EditView::OpenEmuIOTool(bool open)
+{
+	if (open && IsToolOpen(EmulationIOTool::_GetType()))
+		return;
+	if (!open && !IsToolOpen(EmulationIOTool::_GetType()))
+		return;
+
+	_OpenEmuIOTool();
+}
+void EditView::_OpenEmuIOTool()
+{
+	EmulationIOTool* tool = new EmulationIOTool();
+
+	// Query the emulation output before setting the listeners.
+	// They are called at the end of every frame, on the main thread,
+	// which means that any output generated in the meantime will be notified.
+	tool->SetOutput(m_VM.GetEmulationOutput());
+	tool->SubscribeInput([this](bf_mem_t in) { m_VM.EmulationInput(in); });
+
+	listener_id id1 = m_VM.SubEmuOutput([this, tool](bf_mem_t out) { tool->OnEmulationOutput(out); });
+	listener_id id2 = m_VM.SubEmuWantInput([this, tool]() { tool->OnEmulationInputRequested(); });
+	listener_id id3 = m_VM.SubEmuTerminated([this, tool]() { tool->OnEmulationTerminated(); });
+	listener_id id4 = m_VM.SubEmuStarted([this, tool]() { tool->OnEmulationStarted(); });
+
+	OpenToolView(tool, ToolPosition::BOTTOM);
+
+	m_Tools.rbegin()->OnDestroy = [this, id1, id2, id3, id4]()
+		{
+			m_VM.UnsubEmuOutput(id1);
+			m_VM.UnsubEmuWantInput(id2);
+			m_VM.UnsubEmuTerminated(id3);
+			m_VM.UnsubEmuStarted(id4);
+		};
 }
 
 

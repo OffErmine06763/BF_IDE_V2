@@ -20,7 +20,8 @@ const Shortcut
 // TODO: change naming convention for shortcuts
 const Shortcut
 	AS_ToolTree   = { ImGuiMod_Ctrl | ImGuiKey_1, "Ctrl+1" },
-	AS_ToolMemory = { ImGuiMod_Ctrl | ImGuiKey_2, "Ctrl+2" };
+	AS_ToolMemory = { ImGuiMod_Ctrl | ImGuiKey_2, "Ctrl+2" },
+	AS_ToolEmuIO  = { ImGuiMod_Ctrl | ImGuiKey_3, "Ctrl+3" };
 // BF
 const Shortcut 
 	BFS_Emulate       = { ImGuiMod_Ctrl | ImGuiKey_E, "Ctrl+E" },

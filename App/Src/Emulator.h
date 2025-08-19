@@ -32,7 +32,7 @@ public:
 
 	bool Running() const { return m_Running; }
 
-	u32 GetAddress() const { return m_Address; }
+	u32* GetAddress() { return &m_Address; }
 	bool WantsInput() const { return m_WantsInput; }
 	bf_mem_t GetMemory(const u32 address) const { return m_Memory[address]; }
 	std::vector<bf_mem_t>& GetMemory() { return m_Memory; }
