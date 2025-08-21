@@ -59,6 +59,7 @@ private:
 	void ToggleTreeView();
 	void ToggleMemoryTool();
 	void ToggleEmuIOTool();
+	void ToggleEmuImgTool();
 
 	void _OpenEmuIOTool();
 

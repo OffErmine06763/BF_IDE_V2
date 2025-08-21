@@ -21,7 +21,8 @@ const Shortcut
 const Shortcut
 	AS_ToolTree   = { ImGuiMod_Ctrl | ImGuiKey_1, "Ctrl+1" },
 	AS_ToolMemory = { ImGuiMod_Ctrl | ImGuiKey_2, "Ctrl+2" },
-	AS_ToolEmuIO  = { ImGuiMod_Ctrl | ImGuiKey_3, "Ctrl+3" };
+	AS_ToolEmuIO  = { ImGuiMod_Ctrl | ImGuiKey_3, "Ctrl+3" },
+	AS_ToolEmuImg = { ImGuiMod_Ctrl | ImGuiKey_4, "Ctrl+4" };
 // BF
 const Shortcut 
 	BFS_Emulate       = { ImGuiMod_Ctrl | ImGuiKey_E, "Ctrl+E" },

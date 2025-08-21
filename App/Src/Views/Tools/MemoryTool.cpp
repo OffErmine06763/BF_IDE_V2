@@ -16,6 +16,8 @@ static int InputHexFilter(ImGuiInputTextCallbackData* data)
 }
 
 
+// TODO: none of this is synchronized with the emulation, however there should be no big issue since
+//       every operation is atomic, increment, decrement, left, right, IO...
 void MemoryTool::Render()
 {
 	if (!m_Memory)

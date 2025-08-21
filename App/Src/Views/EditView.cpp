@@ -3,6 +3,7 @@
 #include "Tools/TreeTool.h"
 #include "Tools/MemoryTool.h"
 #include "Tools/EmulationIOTool.h"
+#include "Tools/EmulationImageTool.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -71,6 +72,8 @@ void EditView::ProcessShortcuts()
 		ToggleMemoryTool();
 	if (ImGui::IsKeyChordPressed(AS_ToolEmuIO.Chord))
 		ToggleEmuIOTool();
+	if (ImGui::IsKeyChordPressed(AS_ToolEmuImg.Chord))
+		ToggleEmuImgTool();
 }
 void EditView::RenderMainMenu()
 {
@@ -117,8 +120,10 @@ void EditView::RenderMainMenu()
 				ToggleTreeView();
 			if (ImGui::MenuItem("Memory", AS_ToolMemory.Label))
 				ToggleMemoryTool();
-			if (ImGui::MenuItem("Emulation", AS_ToolEmuIO.Label))
+			if (ImGui::MenuItem("Emulation IO", AS_ToolEmuIO.Label))
 				ToggleEmuIOTool();
+			if (ImGui::MenuItem("Emulation Img", AS_ToolEmuImg.Label))
+				ToggleEmuImgTool();
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -236,6 +241,24 @@ void EditView::ToggleEmuIOTool()
 	if (CloseTool(EmulationIOTool::_GetType()))
 		return;
 	else _OpenEmuIOTool();
+}
+void EditView::ToggleEmuImgTool()
+{
+	if (CloseTool(EmulationImageTool::_GetType()))
+		return;
+	else
+	{
+		EmulationImageTool* tool = new EmulationImageTool();
+		tool->SetMemory(&m_VM.GetEmulationMemory());
+
+		listener_id id1 = m_VM.SubEmuOutput([this, tool](bf_mem_t out) { tool->OnOutput(); });
+		OpenToolView(tool, ToolPosition::RIGHT);
+		
+		m_Tools.rbegin()->OnDestroy = [this, id1]()
+			{
+				m_VM.UnsubEmuOutput(id1);
+			};
+	}
 }
 
 void EditView::OpenEmuIOTool(bool open)

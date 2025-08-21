@@ -2,6 +2,9 @@
 #include "Utility.h"
 #include "History.h"
 
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui.h>
+#include "d3d12_stuff.h"
 
 class State;
 
@@ -12,7 +15,7 @@ concept StateType = true;
 class App
 {
 public:
-	static void Init();
+	static void Init(ID3D12Device* d3d12_device, ExampleDescriptorHeapAllocator* d3d12_allocator);
 
 	static void Render(bool* done);
 	static inline void RequestClose() { Instance->m_IsOpen = false; }
@@ -44,6 +47,8 @@ public:
 	friend struct std::default_delete<App>;
 
 	static const fs::path HistoryPath;
+	static ID3D12Device* D3D12Device;
+	static ExampleDescriptorHeapAllocator* D3D12Allocator;
 };
 
 

@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "SelectProjectState.h"
 #include "OpenProjectState.h"
 #include "App.h"

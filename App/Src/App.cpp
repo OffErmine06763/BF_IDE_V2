@@ -8,6 +8,7 @@
 #include "States/EditState.h"
 
 #include <imgui.h>
+#include "d3d12_stuff.h"
 
 #include <format>
 
@@ -15,6 +16,8 @@
 
 std::unique_ptr<App> App::Instance = nullptr;
 const fs::path App::HistoryPath = fs::current_path() / "history.bfidedata";
+ID3D12Device* App::D3D12Device = nullptr;
+ExampleDescriptorHeapAllocator* App::D3D12Allocator = nullptr;
 
 
 App::App()
@@ -27,13 +30,15 @@ App::~App()
 	Terminal::ResetConsole();
 #endif
 }
-void App::Init()
+void App::Init(ID3D12Device* d3d12_device, ExampleDescriptorHeapAllocator* d3d12_allocator)
 {
 	if (Instance == nullptr)
 	{
 #ifdef _DEBUG
 		Terminal::SetUpConsole(); // TODO: handle exceptions
 #endif
+		D3D12Device = d3d12_device;
+		D3D12Allocator = d3d12_allocator;
 
 		LOG_APP("Initializing Application\n");
 		Instance = std::unique_ptr<App>(new App());
