@@ -9,6 +9,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <array>
 #include <unordered_set>
 #include <unordered_map>
 #include <set>
@@ -152,47 +153,17 @@ std::ostream& print_time(std::ostream& out, const stdc::nanoseconds& time);
 std::string ReadFile(const fs::path& file);
 
 
-//struct RegexTest
-//{
-//	const std::string& str;
-//	size_t start, count;
-//};
-//
-//struct RegexFilter
-//{ 
-//	virtual bool _Match(RegexTest& test) const = 0;
-//};
-//
-//struct RegexCharFilter : public RegexFilter
-//{
-//	std::string list;
-//	bool white = true, range = false;
-//
-//	RegexCharFilter(const std::string& list, bool white = true, bool range = false);
-//
-//	bool _Match(RegexTest& test) const override;
-//	
-//	// NOTE: '.' (any char except \n) has white = false; range = false; list = "\n";
-//};
-//
-//struct RegexRepeatFilter : public RegexFilter
-//{
-//	u32 min, max;
-//	uptr<RegexFilter> query;
-//
-//	RegexRepeatFilter(u32 min, u32 max, RegexFilter* query);
-//
-//	bool _Match(RegexTest& test) const override;
-//};
-//
-//struct Regex
-//{
-//	std::vector<uptr<RegexFilter>> regex;
-//
-//	bool Parse(const std::string& regex);
-//
-//	bool Match(const std::string& test) const;
-//};
+// COLORS
+struct RGBA
+{
+	u8 r, g, b, a;
+
+	RGBA() = default;
+	RGBA(u8 r, u8 g, u8 b, u8 a);
+	RGBA(u32 rgba);
+	void operator=(u32 rgba);
+	operator u32() const;
+};
 
 
 // ################################################################## EXPECTED ##################################################################

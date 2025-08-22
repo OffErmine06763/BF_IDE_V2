@@ -180,7 +180,7 @@ void Emulator::Step(StepParams& params)
 		if (m_CurrentIR.top() != m_MainInd)
 		{
 			params.Error = EOF_REACHED;
-			params.ErrorDescription = "Unexpected reach of EOF in file "s + ir.Path.filename().string();
+			params.ErrorDescription = "Unexpected reach of EOF in file "s + ir.Path.filename().string() + '\n';
 		}
 	}
 }

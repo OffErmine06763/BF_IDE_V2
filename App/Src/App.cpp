@@ -16,8 +16,7 @@
 
 std::unique_ptr<App> App::Instance = nullptr;
 const fs::path App::HistoryPath = fs::current_path() / "history.bfidedata";
-ID3D12Device* App::D3D12Device = nullptr;
-ExampleDescriptorHeapAllocator* App::D3D12Allocator = nullptr;
+App::DXData App::_DXData = { 0 };
 
 
 App::App()
@@ -30,15 +29,14 @@ App::~App()
 	Terminal::ResetConsole();
 #endif
 }
-void App::Init(ID3D12Device* d3d12_device, ExampleDescriptorHeapAllocator* d3d12_allocator)
+void App::Init(DXData data)
 {
 	if (Instance == nullptr)
 	{
 #ifdef _DEBUG
 		Terminal::SetUpConsole(); // TODO: handle exceptions
 #endif
-		D3D12Device = d3d12_device;
-		D3D12Allocator = d3d12_allocator;
+		_DXData = data;
 
 		LOG_APP("Initializing Application\n");
 		Instance = std::unique_ptr<App>(new App());
@@ -47,6 +45,11 @@ void App::Init(ID3D12Device* d3d12_device, ExampleDescriptorHeapAllocator* d3d12
 		//Instance->m_NextState = std::make_unique<SelectProjectState>();
 		Instance->m_NextState = std::make_unique<EditState>(Instance->m_History.begin()->Path);
 	}
+}
+void App::Stop()
+{
+	// Destroy the object to free any UI memory before the final checks at the end of main
+	Instance.reset();
 }
 
 
@@ -93,8 +96,40 @@ void App::RequestOpenPath(const fs::path& path)
 	RequestNewState<EditState>(path);
 }
 
+
+
 void App::ScheduleTask(callable cb)
 {
+	if (!Instance) return;
 	std::lock_guard lk(Instance->m_TaskMutex);
 	Instance->m_Tasks.push_back(cb);
 }
+
+//void App::ScheduleDXTask(callable cb)
+//{
+//	if (!Instance) return;
+//	std::lock_guard lk(Instance->m_DXTaskMutex);
+//	Instance->m_DXTasks.push_back(cb);
+//}
+//void App::ScheduleDXResourceRelease(callable cb)
+//{
+//	if (!Instance) return;
+//	std::lock_guard lk(Instance->m_DXResourceTaskMutex);
+//	Instance->m_DXResourceTasks.push_back(cb);
+//}
+//void App::ExecuteDXCommands()
+//{
+//	if (!Instance) return;
+//	std::lock_guard lk(Instance->m_DXTaskMutex);
+//	for (callable cb : Instance->m_DXTasks)
+//		cb();
+//	Instance->m_DXTasks.clear();
+//}
+//void App::ExecuteDXResourceTasks()
+//{
+//	if (!Instance) return;
+//	std::lock_guard lk(Instance->m_DXResourceTaskMutex);
+//	for (callable cb : Instance->m_DXResourceTasks)
+//		cb();
+//	Instance->m_DXResourceTasks.clear();
+//}

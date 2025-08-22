@@ -15,7 +15,17 @@ concept StateType = true;
 class App
 {
 public:
-	static void Init(ID3D12Device* d3d12_device, ExampleDescriptorHeapAllocator* d3d12_allocator);
+	struct DXData
+	{
+		ID3D12Device* Device;
+		ExampleDescriptorHeapAllocator* Allocator;
+		ID3D12DescriptorHeap* SrvDescHeap;
+		ID3D12GraphicsCommandList* CommandList;
+	};
+
+public:
+	static void Init(DXData data);
+	static void Stop();
 
 	static void Render(bool* done);
 	static inline void RequestClose() { Instance->m_IsOpen = false; }
@@ -26,6 +36,11 @@ public:
 
 	/// Run the lambda on the UI/main thread, at the end of each frame
 	static void ScheduleTask(callable cb);
+	
+	/*static void ScheduleDXResourceRelease(callable cb);
+	static void ScheduleDXTask(callable cb);
+	static void ExecuteDXCommands();
+	static void ExecuteDXResourceTasks();*/
 
 private:
 	App();
@@ -41,14 +56,19 @@ private:
 	std::mutex m_TaskMutex;
 	std::vector<callable> m_Tasks;
 
+	std::mutex m_DXTaskMutex;
+	std::vector<callable> m_DXTasks;
+	std::mutex m_DXResourceTaskMutex;
+	std::vector<callable> m_DXResourceTasks;
+
 	History m_History;
 
 public:
 	friend struct std::default_delete<App>;
 
 	static const fs::path HistoryPath;
-	static ID3D12Device* D3D12Device;
-	static ExampleDescriptorHeapAllocator* D3D12Allocator;
+	
+	static DXData _DXData;
 };
 
 

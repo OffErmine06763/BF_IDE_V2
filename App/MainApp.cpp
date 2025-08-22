@@ -150,7 +150,12 @@ int main(int, char**)
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-	App::Init(g_pd3dDevice, &g_pd3dSrvDescHeapAlloc);
+	App::DXData data;
+	data.Device = g_pd3dDevice;
+	data.SrvDescHeap = g_pd3dSrvDescHeap;
+	data.Allocator = &g_pd3dSrvDescHeapAlloc;
+	data.CommandList = g_pd3dCommandList;
+	App::Init(data);
 
 	// Main loop
 	bool done = false;
@@ -206,6 +211,8 @@ int main(int, char**)
 		g_pd3dCommandList->Reset(frameCtx->CommandAllocator, nullptr);
 		g_pd3dCommandList->ResourceBarrier(1, &barrier);
 
+		//App::ExecuteDXCommands();
+
 		// Render Dear ImGui graphics
 		const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
 		g_pd3dCommandList->ClearRenderTargetView(g_mainRenderTargetDescriptor[backBufferIdx], clear_color_with_alpha, 0, nullptr);
@@ -235,9 +242,21 @@ int main(int, char**)
 		g_pd3dCommandQueue->Signal(g_fence, fenceValue);
 		g_fenceLastSignaledValue = fenceValue;
 		frameCtx->FenceValue = fenceValue;
+
+		HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		if (g_fence->GetCompletedValue() < fenceValue)
+		{
+			g_fence->SetEventOnCompletion(fenceValue, event);
+			WaitForSingleObject(event, INFINITE);
+		}
+		CloseHandle(event);
+
+		//App::ExecuteDXResourceTasks();
 	}
 
 	WaitForLastSubmittedFrame();
+
+	App::Stop();
 
 	// Cleanup
 	ImGui_ImplDX12_Shutdown();

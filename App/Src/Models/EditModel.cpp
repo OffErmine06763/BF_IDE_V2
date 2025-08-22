@@ -145,6 +145,7 @@ void EditModel::EmulationLoop()
 		{
 			m_EmuOutput.push_back(p.O);
 			App::ScheduleTask([this, p]() { m_EmulationOutputEvent.Notify(p.O); });
+			std::this_thread::sleep_for(10ms);
 		}
 		if (p.Error != Emulator::NONE)
 			std::cout << p.ErrorDescription; // TODO

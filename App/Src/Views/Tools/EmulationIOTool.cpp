@@ -44,6 +44,7 @@ void EmulationIOTool::SetOutput(const std::string& out)
 }
 
 
+// TODO: what happens when the Tool is destroyed, but there is already a callback queued for the end of this frame?
 void EmulationIOTool::OnEmulationOutput(bf_mem_t o)
 {
 	std::lock_guard<std::mutex> lock(m_EmuMutex);
