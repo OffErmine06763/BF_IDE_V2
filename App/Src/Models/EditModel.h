@@ -36,6 +36,7 @@ public:
 
 	bool UnsubEmuOutput(listener_id id) { return m_EmulationOutputEvent.Unsubscribe(id); }
 	bool UnsubEmuWantInput(listener_id id) { return m_EmulationWantInputEvent.Unsubscribe(id); }
+	bool UnsubEmuInput(listener_id id) { return m_EmulationInputEvent.Unsubscribe(id); }
 	bool UnsubEmuTerminated(listener_id id) { return m_EmulationTerminatedEvent.Unsubscribe(id); }
 	bool UnsubEmuStarted(listener_id id) { return m_EmulationStartedEvent.Unsubscribe(id); }
 

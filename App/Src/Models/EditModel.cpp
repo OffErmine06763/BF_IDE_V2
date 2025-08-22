@@ -29,8 +29,12 @@ EditModel::EditModel(const fs::path& workdir, EditorModel* editor)
 EditModel::~EditModel()
 {
 	std::lock_guard lk(m_EmuExtMtx);
-	if (m_Emulator.Running())
-		m_Emulator.Stop();
+	{
+		std::lock_guard lk2(m_EmuLoopMtx);
+		if (m_Emulator.Running())
+			m_Emulator.Stop();
+		m_EmuCV.notify_all();
+	}
 	if (m_EmulatorThread && m_EmulatorThread->joinable())
 		m_EmulatorThread->join();
 
@@ -110,6 +114,7 @@ void EditModel::StopEmulation()
 		std::lock_guard lk2(m_EmuLoopMtx);
 		if (m_Emulator.Running())
 			m_Emulator.Stop();
+		m_EmuCV.notify_all();
 	}
 	if (m_EmulatorThread && m_EmulatorThread->joinable())
 		m_EmulatorThread->join();
@@ -145,7 +150,7 @@ void EditModel::EmulationLoop()
 		{
 			m_EmuOutput.push_back(p.O);
 			App::ScheduleTask([this, p]() { m_EmulationOutputEvent.Notify(p.O); });
-			std::this_thread::sleep_for(10ms);
+			//std::this_thread::sleep_for(5ms); // TODO: force a framerate only when treating the memory as an image
 		}
 		if (p.Error != Emulator::NONE)
 			std::cout << p.ErrorDescription; // TODO

@@ -17,7 +17,7 @@ void EmulationIOTool::Render()
 	std::lock_guard<std::mutex> lock(m_EmuMutex);
 	ImGui::TextUnformatted(m_EmuOutput.c_str());
 
-	if (m_EmuWantsInput)
+	if (m_EmuWantsInput && m_InputAllowed)
 	{
 		// TODO: weird behaviour when inputting chars instead of numbers
 		ImGui::TextUnformatted(">>"); ImGui::SameLine();
@@ -41,6 +41,11 @@ void EmulationIOTool::SetOutput(const std::string& out)
 {
 	std::lock_guard<std::mutex> lock(m_EmuMutex);
 	m_EmuOutput = out;
+}
+void EmulationIOTool::AllowInput(bool allow)
+{
+	std::lock_guard<std::mutex> lock(m_EmuMutex);
+	m_InputAllowed = allow;
 }
 
 

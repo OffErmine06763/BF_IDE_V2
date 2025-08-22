@@ -211,8 +211,6 @@ int main(int, char**)
 		g_pd3dCommandList->Reset(frameCtx->CommandAllocator, nullptr);
 		g_pd3dCommandList->ResourceBarrier(1, &barrier);
 
-		//App::ExecuteDXCommands();
-
 		// Render Dear ImGui graphics
 		const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
 		g_pd3dCommandList->ClearRenderTargetView(g_mainRenderTargetDescriptor[backBufferIdx], clear_color_with_alpha, 0, nullptr);
@@ -250,8 +248,6 @@ int main(int, char**)
 			WaitForSingleObject(event, INFINITE);
 		}
 		CloseHandle(event);
-
-		//App::ExecuteDXResourceTasks();
 	}
 
 	WaitForLastSubmittedFrame();

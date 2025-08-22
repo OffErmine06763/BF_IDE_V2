@@ -1,10 +1,7 @@
 #pragma once
 #include "Tool.h"
 #include "Utility.h"
-
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <backends/imgui_impl_dx12.h>
+#include "Events/Event.h"
 
 struct EmulationImageTool : public Tool
 {
@@ -17,27 +14,32 @@ public:
 	inline Type GetType() const override { return _GetType(); }
 	static inline Type _GetType() { return EMU_IMG; }
 
-	void OnOutput();
+	void OnOutput(bf_mem_t out);
+	void EmulationWantsInput();
+	void EmulationInput(bf_mem_t in);
+
 	void SetMemory(const std::vector<bf_mem_t>* memory) { m_Memory = memory; }
 
-private:
-	//void CreateImage(const std::vector<u8>& rgbaPixels);
-	/*void CreateImage2();
-	void UpdateImage(const std::vector<u32>& rgbaPixels);
+	listener_id SubscribeEmulationInput(consumer<bf_mem_t> cb) { return m_InputEvent.Subscribe(cb); }
+	listener_id SubscribeToggleRendering(consumer<bool> cb) { return m_ToggleRenderingEvent.Subscribe(cb); }
 
-	void CreateImage3();
-	void UpdateTexture2(const std::vector<u32>& rgbaPixels);
-	void CleanupTexture();*/
-
+	bool IsRendering() const { return m_Rendering; }
 
 private:
 	const std::vector<bf_mem_t>* m_Memory = nullptr;
 	std::array<RGBA, 256> m_Buffer;
 
-	bool m_332 = false, m_Smooth = false;
+	bool m_332 = false, m_Rendering = true, m_AdvanceFrame = false;
+	bf_mem_t m_LastOutput;
+	
+	enum Smoothing
+	{
+		NONE, BOX, GAUSS,
+		MAX
+	};
+	Smoothing m_Smoothing = NONE;
+	static inline const std::vector<std::string> m_SmoothingLabels = { "None"s, "Box"s, "Gauss"s };
 
-	/*ImTextureID tex_id;
-	ID3D12Resource* tex_resources = nullptr;
-	D3D12_GPU_DESCRIPTOR_HANDLE my_texture_srv_gpu_handle = { 0 };
-	D3D12_CPU_DESCRIPTOR_HANDLE my_texture_srv_cpu_handle = { 0 };*/
+	Event<bf_mem_t> m_InputEvent;
+	Event<bool> m_ToggleRenderingEvent;
 };

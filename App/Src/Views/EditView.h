@@ -76,7 +76,7 @@ private:
 	std::list<ToolInfo> m_Tools;
 
 	fs::path m_PathToDelete, m_PathToNew;
-	bool m_CanEmulate = true;
+	bool m_CanEmulate = true, m_AllowStdEmuInput = true;
 };
 
 

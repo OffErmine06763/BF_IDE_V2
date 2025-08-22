@@ -250,13 +250,27 @@ void EditView::ToggleEmuImgTool()
 	{
 		EmulationImageTool* tool = new EmulationImageTool();
 		tool->SetMemory(&m_VM.GetEmulationMemory());
+		tool->SubscribeEmulationInput([this](bf_mem_t in) { m_VM.EmulationInput(in); });
+		tool->SubscribeToggleRendering([this](bool rendering)
+			{
+				m_AllowStdEmuInput = !rendering;
+				auto io = GetTool(EmulationIOTool::_GetType());
+				((EmulationIOTool*)(io->ToolPtr.get()))->AllowInput(m_AllowStdEmuInput);
+			});
+		m_AllowStdEmuInput = !tool->IsRendering();
 
-		listener_id id1 = m_VM.SubEmuOutput([this, tool](bf_mem_t out) { tool->OnOutput(); });
+		listener_id id1 = m_VM.SubEmuOutput([this, tool](bf_mem_t out) { tool->OnOutput(out); });
+		listener_id id2 = m_VM.SubEmuWantInput([this, tool]() { tool->EmulationWantsInput(); });
+		listener_id id3 = m_VM.SubEmuInput([this, tool](bf_mem_t in) { tool->EmulationInput(in); });
+		
 		OpenToolView(tool, ToolPosition::RIGHT);
 		
-		m_Tools.rbegin()->OnDestroy = [this, id1]()
+		m_Tools.rbegin()->OnDestroy = [this, id1, id2, id3]()
 			{
 				m_VM.UnsubEmuOutput(id1);
+				m_VM.UnsubEmuWantInput(id2);
+				m_VM.UnsubEmuInput(id3);
+				m_AllowStdEmuInput = true;
 			};
 	}
 }
@@ -278,7 +292,11 @@ void EditView::_OpenEmuIOTool()
 	// They are called at the end of every frame, on the main thread,
 	// which means that any output generated in the meantime will be notified.
 	tool->SetOutput(m_VM.GetEmulationOutput());
-	tool->SubscribeInput([this](bf_mem_t in) { m_VM.EmulationInput(in); });
+	tool->SubscribeInput([this, tool](bf_mem_t in)
+		{
+			if (m_AllowStdEmuInput) m_VM.EmulationInput(in);
+		});
+	tool->AllowInput(m_AllowStdEmuInput);
 
 	listener_id id1 = m_VM.SubEmuOutput([this, tool](bf_mem_t out) { tool->OnEmulationOutput(out); });
 	listener_id id2 = m_VM.SubEmuWantInput([this, tool]() { tool->OnEmulationInputRequested(); });

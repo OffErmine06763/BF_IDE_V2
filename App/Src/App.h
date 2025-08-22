@@ -3,7 +3,6 @@
 #include "History.h"
 
 #define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui.h>
 #include "d3d12_stuff.h"
 
 class State;
@@ -36,11 +35,6 @@ public:
 
 	/// Run the lambda on the UI/main thread, at the end of each frame
 	static void ScheduleTask(callable cb);
-	
-	/*static void ScheduleDXResourceRelease(callable cb);
-	static void ScheduleDXTask(callable cb);
-	static void ExecuteDXCommands();
-	static void ExecuteDXResourceTasks();*/
 
 private:
 	App();

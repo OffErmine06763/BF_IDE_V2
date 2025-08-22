@@ -36,11 +36,13 @@ public:
 
 	listener_id SubEmuOutput(consumer<bf_mem_t> cb) { return m_Model->SubEmuOutput(cb); }
 	listener_id SubEmuWantInput(callable cb) { return m_Model->SubEmuWantInput(cb); }
+	listener_id SubEmuInput(consumer<bf_mem_t> cb) { return m_Model->SubEmuInput(cb); }
 	listener_id SubEmuTerminated(callable cb) { return m_Model->SubEmuTerminated(cb); }
 	listener_id SubEmuStarted(callable cb) { return m_Model->SubEmuStarted(cb); }
 
 	bool UnsubEmuOutput(listener_id id) { return m_Model->UnsubEmuOutput(id); }
 	bool UnsubEmuWantInput(listener_id id) { return m_Model->UnsubEmuWantInput(id); }
+	bool UnsubEmuInput(listener_id id) { return m_Model->UnsubEmuInput(id); }
 	bool UnsubEmuTerminated(listener_id id) { return m_Model->UnsubEmuTerminated(id); }
 	bool UnsubEmuStarted(listener_id id) { return m_Model->UnsubEmuStarted(id); }
 

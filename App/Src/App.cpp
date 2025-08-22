@@ -1,10 +1,8 @@
 #include "App.h"
 #include "Shortcuts.h"
 
-// #include "States/WorkingState.h"
 #include "States/SelectProjectState.h"
 #include "States/OpenProjectState.h"
-// #include "States/FileState.h"
 #include "States/EditState.h"
 
 #include <imgui.h>
@@ -72,10 +70,14 @@ void App::_Render()
 	ProcessGlobalShortcuts();
 	m_State->Render();
 
-	std::lock_guard lk(m_TaskMutex);
-	for (callable cb : m_Tasks)
+	std::vector<callable> tasks;
+	{
+		std::lock_guard lk(m_TaskMutex);
+		tasks = m_Tasks;
+		m_Tasks.clear();
+	}
+	for (callable cb : tasks)
 		cb();
-	m_Tasks.clear();
 }
 
 
@@ -104,32 +106,3 @@ void App::ScheduleTask(callable cb)
 	std::lock_guard lk(Instance->m_TaskMutex);
 	Instance->m_Tasks.push_back(cb);
 }
-
-//void App::ScheduleDXTask(callable cb)
-//{
-//	if (!Instance) return;
-//	std::lock_guard lk(Instance->m_DXTaskMutex);
-//	Instance->m_DXTasks.push_back(cb);
-//}
-//void App::ScheduleDXResourceRelease(callable cb)
-//{
-//	if (!Instance) return;
-//	std::lock_guard lk(Instance->m_DXResourceTaskMutex);
-//	Instance->m_DXResourceTasks.push_back(cb);
-//}
-//void App::ExecuteDXCommands()
-//{
-//	if (!Instance) return;
-//	std::lock_guard lk(Instance->m_DXTaskMutex);
-//	for (callable cb : Instance->m_DXTasks)
-//		cb();
-//	Instance->m_DXTasks.clear();
-//}
-//void App::ExecuteDXResourceTasks()
-//{
-//	if (!Instance) return;
-//	std::lock_guard lk(Instance->m_DXResourceTaskMutex);
-//	for (callable cb : Instance->m_DXResourceTasks)
-//		cb();
-//	Instance->m_DXResourceTasks.clear();
-//}
