@@ -4,6 +4,5 @@
 link /OUT:%~1 /ENTRY:_main /SUBSYSTEM:CONSOLE /NODEFAULTLIB %~2 kernel32.lib
 if %errorlevel% neq 0 (
     echo Linking failed with error %errorlevel%
-    pause
     exit /b %errorlevel%
 )

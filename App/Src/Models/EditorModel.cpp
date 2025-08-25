@@ -81,7 +81,7 @@ bool EditorModel::Close(std::vector<u32> ids, bool save)
 		// TODO: move focus to the previous focused element (keep navigation history, 
 		// note: the relative order in the docs list might change, must store the ID)
 		m_FocusInd = m_Documents.empty() ? InvalidIndex : 0;
-		dbg << "EditorModel::Close new focus index = " << m_FocusInd << '\n';
+		LOG("EditorModel::Close new focus index = " << m_FocusInd << '\n');
 		if (m_FocusInd != InvalidIndex) // TODO: must notify of lost focus
 			m_FocusEvent.Notify(m_Documents[m_FocusInd]);
 	}
@@ -96,6 +96,7 @@ void EditorModel::OpenOrFocus(const fs::path& dir)
 	if (itd != m_Documents.end())
 	{
 		LOG("Focusing file " << dir << '\n');
+		m_FocusInd = std::distance(m_Documents.begin(), itd);
 		auto itr = stdr::find(m_RecOpen, dir);
 		m_RecOpen.erase(itr);
 		m_RecOpen.insert(m_RecOpen.cbegin(), dir);
@@ -149,7 +150,7 @@ void EditorModel::PerformRename(const idt id, const std::string& name)
 	auto newpath = doc.Path.parent_path() / doc.Name;
 
 	std::filesystem::rename(doc.Path, newpath);
-	App::GetHistory().UpdatePath(doc.Path, newpath); // TODO: this should be in EditModel
+	App::GetHistory().UpdatePath(doc.Path, newpath);
 
 	auto it = stdr::find(m_RecOpen, doc.Path);
 	if (it != m_RecOpen.end())

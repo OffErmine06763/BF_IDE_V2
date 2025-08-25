@@ -22,6 +22,8 @@ public:
 	bool IsEmulating();
 	const std::vector<bf_mem_t>& GetEmulationMemory();
 	const u32* GetEmulationAddress();
+	void SetEmulationStepping(bool stepping);
+	void EmulationStep();
 
 	void GoHome();
 	void CloseApp();
@@ -31,6 +33,7 @@ public:
 
 	void Compile(const CompilationTarget& file);
 	void Compile(const std::initializer_list<fs::path>& files);
+	const std::stringbuf* GetCompilationOutput() const { return m_Model->GetCompilationOutput(); }
 
 	fs::path GetWorkDir() const { return m_Model->GetWorkDir(); }
 

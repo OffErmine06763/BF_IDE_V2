@@ -19,12 +19,15 @@ const Shortcut
 // A perche' non mi viene in mente un bel nome
 // TODO: change naming convention for shortcuts
 const Shortcut
-	AS_ToolTree   = { ImGuiMod_Ctrl | ImGuiKey_1, "Ctrl+1" },
-	AS_ToolMemory = { ImGuiMod_Ctrl | ImGuiKey_2, "Ctrl+2" },
-	AS_ToolEmuIO  = { ImGuiMod_Ctrl | ImGuiKey_3, "Ctrl+3" },
-	AS_ToolEmuImg = { ImGuiMod_Ctrl | ImGuiKey_4, "Ctrl+4" };
+	AS_ToolTree    = { ImGuiMod_Ctrl | ImGuiKey_1, "Ctrl+1" },
+	AS_ToolMemory  = { ImGuiMod_Ctrl | ImGuiKey_2, "Ctrl+2" },
+	AS_ToolEmuIO   = { ImGuiMod_Ctrl | ImGuiKey_3, "Ctrl+3" },
+	AS_ToolEmuImg  = { ImGuiMod_Ctrl | ImGuiKey_4, "Ctrl+4" },
+	AS_ToolCompOut = { ImGuiMod_Ctrl | ImGuiKey_5, "Ctrl+5" };
 // BF
 const Shortcut 
 	BFS_Emulate       = { ImGuiMod_Ctrl | ImGuiKey_E, "Ctrl+E" },
 	BFS_Compile       = { ImGuiMod_Ctrl | ImGuiKey_B, "Ctrl+B" },
+	BFS_EmuStep       = { ImGuiKey_F10 , "F10" },
+	BFS_EmuToggleStep = { ImGuiMod_Ctrl | ImGuiKey_F10 , "Ctrl+F10" },
 	BFS_StopEmulation = { ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_E, "Ctrl+Shift+E" };

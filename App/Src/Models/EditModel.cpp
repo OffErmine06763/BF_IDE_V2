@@ -54,6 +54,52 @@ void EditModel::DeletePath(const fs::path& path)
 }
 
 
+void EditModel::Compile(const std::initializer_list<fs::path>& files)
+{
+	if (files.size() == 0)
+		return;
+
+	BFC::CompilationParams p;
+	p.tgts = files;
+	auto first = p.tgts[0];
+	if (fs::is_directory(first))
+		p.outputPath = first / (first.filename().string() + ".exe");
+	else
+		p.outputPath = fs::path{ first }.replace_extension(".exe");
+	m_CompOStream.str("");
+	p.outputStream = &m_CompOStream;
+	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
+	if (err) m_CompOStream << err.message << '\n';
+}
+void EditModel::Compile(const CompilationTarget& tgt)
+{
+	BFC::CompilationParams p;
+	if (tgt == CompilationTarget::OPEN)
+	{
+		for (const Document& doc : m_Editor->GetDocuments())
+			p.tgts.push_back(doc.Path);
+		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
+	}
+	else if (tgt == CompilationTarget::CURRENT)
+	{
+		auto focus = m_Editor->GetFocusedFile();
+		if (!focus) return;
+		p.tgts.push_back(focus->Path);
+		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
+	}
+	else if (tgt == CompilationTarget::FOLDER)
+	{
+		const auto dir = GetWorkDir();
+		p.tgts.push_back(dir);
+		p.outputPath = dir / (dir.filename().string() + ".exe");
+	}
+	m_CompOStream.str("");
+	p.outputStream = &m_CompOStream;
+	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
+	if (err) m_CompOStream << err.message << '\n';
+}
+
+
 bool EditModel::StartEmulation(const CompilationTarget& tgt)
 {
 	LOG("Starting Emulation\n");
@@ -132,6 +178,16 @@ bool EditModel::EmulationInput(bf_mem_t input)
 	m_EmuCV.notify_one();
 	return true;
 }
+bool EditModel::EmulationStep()
+{
+	std::lock_guard lk1(m_EmuExtMtx);
+	std::lock_guard lk2(m_EmuLoopMtx);
+	if (!m_Emulator.Running() || !m_EmuStepping)
+		return false;
+	m_EmuCV.notify_one();
+	return true;
+}
+
 void EditModel::EmulationLoop()
 {
 	App::ScheduleTask([&]() { m_EmulationStartedEvent.Notify(); });
@@ -142,6 +198,9 @@ void EditModel::EmulationLoop()
 		if (!m_Emulator.Running())
 			break;
 
+		if (m_EmuStepping)
+			m_EmuCV.wait(lk);
+
 		Emulator::StepParams p;
 		p.I = m_EmuInput;
 		m_Emulator.Step(p);
@@ -150,7 +209,6 @@ void EditModel::EmulationLoop()
 		{
 			m_EmuOutput.push_back(p.O);
 			App::ScheduleTask([this, p]() { m_EmulationOutputEvent.Notify(p.O); });
-			//std::this_thread::sleep_for(5ms); // TODO: force a framerate only when treating the memory as an image
 		}
 		if (p.Error != Emulator::NONE)
 			std::cout << p.ErrorDescription; // TODO
@@ -188,6 +246,14 @@ const u32* EditModel::GetEmulationAddress()
 	std::lock_guard lk1(m_EmuExtMtx);
 	std::lock_guard lk2(m_EmuLoopMtx);
 	return m_Emulator.GetAddress();
+}
+void EditModel::SetEmulationStepping(bool stepping)
+{
+	std::lock_guard lk1(m_EmuExtMtx);
+	std::lock_guard lk2(m_EmuLoopMtx);
+	m_EmuStepping = stepping;
+	if (!stepping)
+		m_EmuCV.notify_all();
 }
 
 

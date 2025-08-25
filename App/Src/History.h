@@ -1,7 +1,7 @@
 #pragma once
 #include "Utility.h"
 
-// TODO: add callbacks for changes?
+// MAYBE: add callbacks for changes?
 struct History
 {
 public:

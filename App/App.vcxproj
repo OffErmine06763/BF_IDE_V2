@@ -168,6 +168,7 @@
     <ClCompile Include="Src\ViewModels\EditViewModel.cpp" />
     <ClCompile Include="Src\Views\EditorView.cpp" />
     <ClCompile Include="Src\Views\EditView.cpp" />
+    <ClCompile Include="Src\Views\Tools\CompilationOutputTool.cpp" />
     <ClCompile Include="Src\Views\Tools\EmulationImageTool.cpp" />
     <ClCompile Include="Src\Views\Tools\EmulationIOTool.cpp" />
     <ClCompile Include="Src\Views\Tools\MemoryTool.cpp" />
@@ -200,6 +201,7 @@
     <ClInclude Include="Src\ViewModels\EditViewModel.h" />
     <ClInclude Include="Src\Views\EditorView.h" />
     <ClInclude Include="Src\Views\EditView.h" />
+    <ClInclude Include="Src\Views\Tools\CompilationOutputTool.h" />
     <ClInclude Include="Src\Views\Tools\EmulationImageTool.h" />
     <ClInclude Include="Src\Views\Tools\EmulationIOTool.h" />
     <ClInclude Include="Src\Views\Tools\MemoryTool.h" />

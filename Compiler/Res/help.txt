@@ -6,6 +6,7 @@ compiler <code.bf/code_folder> [...]
 	[-i, -inter, --inter <path>]  | specify the path of the intermediates produced
 	[-all, --all]                 | if present, output intermediates for every phase
 	[-nopt, --nopt]               | if present, do not perform optimizations
+	[-v, -verbose, --verbose]     | if present, prints additional information
 	[-m, -main, --main <path>]    | specify the file to use as main
 	                              | when compiling a single file it is automatically treated as main
 	                              | if not specified, when compiling multiple files the main is the first passed in the args

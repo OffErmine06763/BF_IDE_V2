@@ -893,12 +893,22 @@ namespace BFC
 				i++;
 				p.main = args[i];
 			}
+			else if (arg == "-v" || arg == "-verbose" || arg == "--verbose")
+			{
+				p.verbose = true;
+			}
 		}
 
 		return { CompilerError::NONE, "" };
 	}
 
-	u32 RunCommand(const std::wstring& command);
+	struct RunCommandResult
+	{
+		u32 errorCode;
+		u32 exitCode;
+		std::string output;
+	};
+	RunCommandResult RunCommand(const std::string& command);
 
 	CompilerError Compiler::Compile(const std::vector<std::string>& args)
 	{
@@ -915,18 +925,23 @@ namespace BFC
 		if (error)
 			return error;
 
+		std::ostream& outstream = *p.outputStream;
+
 		{
 			std::string cmd = "cmd /c "s + cmd1;
-			u32 reqEC = RunCommand(std::wstring(cmd.begin(), cmd.end()));
-			if (reqEC != 0)
-				return { CompilerError::GENERIC | reqEC, "Requirements not met (NASM missing)"s };
+
+			RunCommandResult out = RunCommand(cmd);
+			if (out.errorCode != 0)
+				return { CompilerError::GENERIC, std::format("Failed to check for required software, error code {}", out.errorCode) };
+			else if (out.exitCode != 0)
+				return { CompilerError::GENERIC, "Requirements not met (NASM missing)"s };
 		}
 
 		stdc::nanoseconds total = 0ns;
 		std::vector<fs::path> asmPaths;
 		for (const fs::path& path : p.tgts)
 		{
-			std::cout << "Compiling file " << path << '\n';
+			outstream << "Compiling file " << path << '\n';
 			const fs::path ipath = p.GetIntermediatePath(path);
 			const std::string iname = path.stem().string();
 
@@ -939,7 +954,7 @@ namespace BFC
 
 			stdc::time_point end = stdc::clock::now();
 			total += end - start;
-			std::cout << "Tokenization done in: "; print_time(std::cout, end - start) << '\n';
+			if (p.verbose) { outstream << "Tokenization done in: "; print_time(outstream, end - start) << '\n'; }
 
 			if (!expTokens.success())
 				return expTokens._getU();
@@ -960,7 +975,7 @@ namespace BFC
 
 			end = stdc::clock::now();
 			total += end - start;
-			std::cout << "Parsing done in: "; print_time(std::cout, end - start) << '\n';
+			if (p.verbose) { outstream << "Parsing done in: "; print_time(outstream, end - start) << '\n'; }
 
 			if (!expParse.success())
 				return expParse._getU();
@@ -981,7 +996,7 @@ namespace BFC
 
 			end = stdc::clock::now();
 			total += end - start;
-			std::cout << "Analyzing done in: "; print_time(std::cout, end - start) << '\n';
+			if (p.verbose) { outstream << "Analyzing done in: "; print_time(outstream, end - start) << '\n'; }
 
 			if (expAnal.has_value())
 				return expAnal.value();
@@ -1001,11 +1016,14 @@ namespace BFC
 
 				end = stdc::clock::now();
 				total += end - start;
-				std::cout << "Optimizing done in: "; print_time(std::cout, end - start) << '\n';
-				size_t optimizedSize = ast.body.items.size();
-				for (const auto& sub : ast.bodies)
-					optimizedSize += sub.second.size();
-				std::cout << "  reduced size: " << ((f64)optimizedSize / initialSize * 100) << "%\n";
+				if (p.verbose)
+				{
+					outstream << "Optimizing done in: "; print_time(outstream, end - start) << '\n';
+					size_t optimizedSize = ast.body.items.size();
+					for (const auto& sub : ast.bodies)
+						optimizedSize += sub.second.size();
+					outstream << "  reduced size: " << ((f64)optimizedSize / initialSize * 100) << "%\n";
+				}
 
 				if (p.intermediates == CompilationParams::ALL)
 				{
@@ -1023,7 +1041,7 @@ namespace BFC
 
 			end = stdc::clock::now();
 			total += end - start;
-			std::cout << "IRC done in: "; print_time(std::cout, end - start) << '\n';
+			if (p.verbose) { outstream << "IRC done in: "; print_time(outstream, end - start) << '\n'; }
 
 			if (p.intermediates == CompilationParams::ALL)
 			{
@@ -1044,9 +1062,10 @@ namespace BFC
 
 			end = stdc::clock::now();
 			total += end - start;
-			std::cout << "ASM emitted in: "; print_time(std::cout, end - start) << '\n';
+			if (p.verbose) { outstream << "ASM emitted in: "; print_time(outstream, end - start) << '\n'; }
 
-			std::cout << '\n';
+			if (p.verbose)
+				outstream << '\n';
 		}
 
 
@@ -1070,15 +1089,26 @@ namespace BFC
 			ss << '\"';
 			std::string command = ss.str();
 
-			u32 asslinkEC = RunCommand(std::wstring(command.begin(), command.end()));
-			if (asslinkEC != 0)
-				return { CompilerError::GENERIC | asslinkEC, "Failed to assemble or link"s };
+			RunCommandResult out = RunCommand(command);
+			
+			size_t mic = out.output.find("Microsoft (R)");
+			size_t nl1 = out.output.find('\n', mic);
+			size_t nl2 = out.output.find('\n', nl1 + 1);
+			size_t nl3 = out.output.find('\n', nl2 + 1);
+			if (mic != std::string::npos && nl3 != std::string::npos)
+				out.output.erase(mic, nl3 - mic + 1);
+			
+			outstream << out.output << '\n';
+			if (out.errorCode != 0)
+				return { CompilerError::GENERIC, std::format("Failed to start assembler and linker, error code {}", out.errorCode) };
+			else if (out.exitCode != 0)
+				return { CompilerError::GENERIC, std::format("Linking or assembling failed with exit code {}", out.exitCode) };
 		}
 
 
 		stdc::time_point end = stdc::clock::now();
 		auto external = end - start;
-		std::cout << "Executable created in: "; print_time(std::cout, end - start) << '\n';
+		if (p.verbose) { outstream << "Executable created in: "; print_time(outstream, end - start) << '\n'; }
 
 		/*int result = system(command.c_str());
 		if (result != 0) {
@@ -1086,7 +1116,7 @@ namespace BFC
 			return 1;
 		}*/
 
-		std::cout << "Compilation done in: "; print_time(std::cout, total + external) << " ("; print_time(std::cout, total) << ")\n";
+		outstream << "Compilation done in: "; print_time(outstream, total + external) << " ("; print_time(outstream, total) << ")\n";
 
 
 		if (p.intermediates != CompilationParams::ALL)
@@ -1121,31 +1151,59 @@ namespace BFC
 
 
 
-
-
-	u32 RunCommand(const std::wstring& command)
+	RunCommandResult RunCommand(const std::string& command)
 	{
-		STARTUPINFO si = { sizeof(STARTUPINFO) };
-		PROCESS_INFORMATION pi;
+		HANDLE hStdOutRead, hStdOutWrite;
+		SECURITY_ATTRIBUTES sa{ sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
 
-		auto flag = NORMAL_PRIORITY_CLASS;
-
-		if (!CreateProcessW(NULL, const_cast<wchar_t*>(command.c_str()),
-			NULL, NULL, FALSE, flag, NULL, NULL, &si, &pi))
+		// Create pipe
+		if (!CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0))
 		{
-			std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
-			return -1;
+			return { .errorCode = GetLastError(), .exitCode = 0, .output = "" };
 		}
 
-		WaitForSingleObject(pi.hProcess, INFINITE);
+		// Ensure the read handle is not inherited
+		SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
 
+		PROCESS_INFORMATION pi{};
+		STARTUPINFOA si{};
+		si.cb = sizeof(si);
+		si.hStdOutput = hStdOutWrite;
+		si.hStdError = hStdOutWrite;
+		si.dwFlags |= STARTF_USESTDHANDLES;
+
+		// Create child process
+		if (!CreateProcessA(
+			nullptr,
+			const_cast<char*>(command.c_str()),
+			nullptr, nullptr, TRUE, CREATE_NO_WINDOW,
+			nullptr, nullptr, &si, &pi))
+		{
+			CloseHandle(hStdOutRead);
+			CloseHandle(hStdOutWrite);
+			return { .errorCode = GetLastError(), .exitCode = 0, .output = "" };
+		}
+
+		CloseHandle(hStdOutWrite); // parent doesn’t need write end
+
+		// Read output
+		char buffer[128];
+		DWORD bytesRead;
+		std::string result;
+		while (ReadFile(hStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+			buffer[bytesRead] = '\0';
+			result += buffer;
+		}
+
+		// Cleanup
+		CloseHandle(hStdOutRead);
+		WaitForSingleObject(pi.hProcess, INFINITE);
 		DWORD exitCode = 0;
 		GetExitCodeProcess(pi.hProcess, &exitCode);
-
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 
-		return exitCode;
+		return { .errorCode = 0, .exitCode = exitCode, .output = result };
 	}
 
 

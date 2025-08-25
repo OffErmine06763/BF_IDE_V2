@@ -68,6 +68,15 @@ void EditViewModel::StopEmulation()
 	m_View->EmulationStopped();
 }
 
+void EditViewModel::SetEmulationStepping(bool stepping)
+{
+	m_Model->SetEmulationStepping(stepping);
+}
+void EditViewModel::EmulationStep()
+{
+	m_Model->EmulationStep();
+}
+
 void EditViewModel::EmulationInput(bf_mem_t input)
 {
 	bool res = m_Model->EmulationInput(input);
@@ -95,41 +104,9 @@ void EditViewModel::OnEmulationTerminated()
 
 void EditViewModel::Compile(const CompilationTarget& tgt)
 {
-	BFC::CompilationParams p;
-	if (tgt == CompilationTarget::OPEN)
-	{
-		for (const Document& doc : m_Editor->GetDocuments())
-			p.tgts.push_back(doc.Path);
-		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
-	}
-	else if (tgt == CompilationTarget::CURRENT)
-	{
-		auto focus = m_Editor->GetFocusedFile();
-		if (!focus) return;
-		p.tgts.push_back(focus->Path);
-		p.outputPath = fs::path{ p.tgts[0] }.replace_extension(".exe");
-	}
-	else if (tgt == CompilationTarget::FOLDER)
-	{
-		const auto dir = GetWorkDir();
-		p.tgts.push_back(dir);
-		p.outputPath = dir / (dir.filename().string() + ".exe");
-	}
-	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
-	if (err) LOG_COMP(err.message << '\n');
+	m_Model->Compile(tgt);
 }
 void EditViewModel::Compile(const std::initializer_list<fs::path>& files)
 {
-	if (files.size() == 0)
-		return;
-
-	BFC::CompilationParams p;
-	p.tgts = files;
-	auto first = p.tgts[0];
-	if (fs::is_directory(first))
-		p.outputPath = first / (first.filename().string() + ".exe");
-	else
-		p.outputPath = fs::path{ first }.replace_extension(".exe");
-	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
-	if (err) LOG_COMP(err.message << '\n');
+	m_Model->Compile(files);
 }

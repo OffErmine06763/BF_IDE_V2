@@ -9,6 +9,7 @@ enum class CompilationTarget
 	CURRENT, OPEN, FOLDER
 };
 
+
 class EditModel
 {
 public:
@@ -17,12 +18,18 @@ public:
 
 	void DeletePath(const fs::path& path);
 
+	void Compile(const std::initializer_list<fs::path>& files);
+	void Compile(const CompilationTarget& tgt);
+	const std::stringbuf* GetCompilationOutput() const { return m_CompOStream.rdbuf(); }
+
 	bool StartEmulation(const CompilationTarget& tgt);
 	void StopEmulation();
 	bool EmulationInput(bf_mem_t input);
+	bool EmulationStep();
 	bool IsEmulating();
 	const std::vector<bf_mem_t>& GetEmulationMemory();
 	const u32* GetEmulationAddress();
+	void SetEmulationStepping(bool stepping);
 
 	fs::path GetWorkDir() const { return m_WorkDir; }
 	const std::string& GetEmulationOutput() const { return m_EmuOutput; }
@@ -50,6 +57,10 @@ private:
 
 	Event<const fs::path&> m_DeletePathEvent;
 
+
+	std::ostringstream m_CompOStream;
+
+
 	std::string m_EmuOutput;
 	bf_mem_t m_EmuInput = 0;
 	Emulator m_Emulator;
@@ -57,7 +68,7 @@ private:
 	/// Mutexes for locking the emulation loop inside m_EmulatorThread and for external operations over m_Emulator and the thread.
 	std::mutex m_EmuLoopMtx, m_EmuExtMtx;
 	std::condition_variable m_EmuCV;
-	
+	bool m_EmuStepping = false;
 
 	Event<void> m_EmulationStartedEvent, m_EmulationTerminatedEvent, m_EmulationWantInputEvent;
 	Event<bf_mem_t> m_EmulationOutputEvent, m_EmulationInputEvent;

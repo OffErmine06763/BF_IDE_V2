@@ -42,6 +42,7 @@ public:
 	void EmulationStopped();
 
 	void OpenEmuIOTool(bool open = true);
+	void OpenCompOutputTool(bool open = true);
 
 	void RenderDeleteConfirmationUI();
 	void RenderNewFileUI();
@@ -60,8 +61,10 @@ private:
 	void ToggleMemoryTool();
 	void ToggleEmuIOTool();
 	void ToggleEmuImgTool();
+	void ToggleCompOutputTool();
 
 	void _OpenEmuIOTool();
+	void _OpenCompOutputTool();
 
 	template <ToolType T, typename... Args>
 	void OpenToolView(ToolPosition pos, Args&&... args);
@@ -76,7 +79,7 @@ private:
 	std::list<ToolInfo> m_Tools;
 
 	fs::path m_PathToDelete, m_PathToNew;
-	bool m_CanEmulate = true, m_AllowStdEmuInput = true;
+	bool m_CanEmulate = true, m_AllowStdEmuInput = true, m_EmuStepping = false;
 };
 
 

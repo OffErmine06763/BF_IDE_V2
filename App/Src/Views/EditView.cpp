@@ -4,6 +4,7 @@
 #include "Tools/MemoryTool.h"
 #include "Tools/EmulationIOTool.h"
 #include "Tools/EmulationImageTool.h"
+#include "Tools/CompilationOutputTool.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -74,6 +75,15 @@ void EditView::ProcessShortcuts()
 		ToggleEmuIOTool();
 	if (ImGui::IsKeyChordPressed(AS_ToolEmuImg.Chord))
 		ToggleEmuImgTool();
+	if (ImGui::IsKeyChordPressed(AS_ToolCompOut.Chord))
+		ToggleCompOutputTool();
+	if (ImGui::IsKeyChordPressed(BFS_EmuToggleStep.Chord))
+	{
+		m_EmuStepping = !m_EmuStepping;
+		m_VM.SetEmulationStepping(m_EmuStepping);
+	}
+	if (m_EmuStepping && ImGui::IsKeyChordPressed(BFS_EmuStep.Chord))
+		m_VM.EmulationStep();
 }
 void EditView::RenderMainMenu()
 {
@@ -108,6 +118,18 @@ void EditView::RenderMainMenu()
 					m_VM.StartEmulation(CompilationTarget::OPEN);
 				if (ImGui::MenuItem("Emulate Folder", BFS_Emulate.Label, nullptr, m_CanEmulate))
 					m_VM.StartEmulation(CompilationTarget::FOLDER);
+				if (ImGui::MenuItem("Enable Emulation Stepping", BFS_EmuToggleStep.Label, nullptr, !m_EmuStepping))
+				{
+					m_EmuStepping = !m_EmuStepping;
+					m_VM.SetEmulationStepping(m_EmuStepping);
+				}
+				if (ImGui::MenuItem("Disable Emulation Stepping", BFS_EmuToggleStep.Label, nullptr, m_EmuStepping))
+				{
+					m_EmuStepping = !m_EmuStepping;
+					m_VM.SetEmulationStepping(m_EmuStepping);
+				}
+				if (ImGui::MenuItem("Step Instruction", BFS_EmuStep.Label, nullptr, m_EmuStepping))
+					m_VM.EmulationStep();
 				if (ImGui::MenuItem("Stop", BFS_StopEmulation.Label, nullptr, !m_CanEmulate))
 					m_VM.StopEmulation();
 				ImGui::EndMenu();
@@ -124,6 +146,8 @@ void EditView::RenderMainMenu()
 				ToggleEmuIOTool();
 			if (ImGui::MenuItem("Emulation Img", AS_ToolEmuImg.Label))
 				ToggleEmuImgTool();
+			if (ImGui::MenuItem("Compilation Output", AS_ToolCompOut.Label))
+				ToggleCompOutputTool();
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -274,6 +298,12 @@ void EditView::ToggleEmuImgTool()
 			};
 	}
 }
+void EditView::ToggleCompOutputTool()
+{
+	if (CloseTool(CompilationOutputTool::_GetType()))
+		return;
+	else _OpenCompOutputTool();
+}
 
 void EditView::OpenEmuIOTool(bool open)
 {
@@ -312,6 +342,25 @@ void EditView::_OpenEmuIOTool()
 			m_VM.UnsubEmuTerminated(id3);
 			m_VM.UnsubEmuStarted(id4);
 		};
+}
+void EditView::OpenCompOutputTool(bool open)
+{
+	if (open && IsToolOpen(CompilationOutputTool::_GetType()))
+		return;
+	if (!open && !IsToolOpen(CompilationOutputTool::_GetType()))
+		return;
+
+	_OpenCompOutputTool();
+}
+void EditView::_OpenCompOutputTool()
+{
+	CompilationOutputTool* tool = new CompilationOutputTool();
+
+	// Query the emulation output before setting the listeners.
+	// They are called at the end of every frame, on the main thread,
+	// which means that any output generated in the meantime will be notified.
+	tool->SetOutput(m_VM.GetCompilationOutput());
+	OpenToolView(tool, ToolPosition::BOTTOM);
 }
 
 

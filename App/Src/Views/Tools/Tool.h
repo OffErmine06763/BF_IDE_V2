@@ -7,7 +7,7 @@ class Tool
 public:
 	enum Type
 	{
-		NONE, TREE, MEMORY, EMU_IO, EMU_IMG
+		NONE, TREE, MEMORY, EMU_IO, EMU_IMG, COMP_OUT
 	};
 
 public:

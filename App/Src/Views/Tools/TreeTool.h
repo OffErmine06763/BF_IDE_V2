@@ -16,8 +16,8 @@ public:
 		bool Collapsed = true;
 		std::vector<TreeEntry> Children;
 
-		/// maps a path in the cached m_TreeEntries to it's index in the vector
-		hmap<fs::path, size_t> Map; // TODO: replace with a tree structure, each node extends the parent path and contains the index
+		/// maps a path in the cached Children to it's index in the vector
+		hmap<fs::path, size_t> Map;
 	};
 
 public:
@@ -39,10 +39,20 @@ private:
 	void CacheDirectoryTree(TreeEntry& parent);
 	void RenderTreeEntry(TreeEntry& entry);
 
+	// ::find::
+	//bool FindPath(fs::path& partial, const fs::path& parent, bool allow_partial_match);
 
 private:
 	TreeEntry m_TreeRoot;
 	u32 m_TreeCacheCounter = 0;
+
+	// ::find::
+	//struct FindNode
+	//{
+	//	std::string Name;
+	//	std::vector<FindNode> Children;
+	//};
+	//std::vector<FindNode> m_PathsToFind;
 
 	Event<const fs::path&> m_SelectEvent, m_CompileEvent, m_DeleteEvent, m_NewEvent;
 };

@@ -19,6 +19,7 @@ namespace BFC
 		enum TargetPhase { TOKEN, PARSE, ANAL, OPT, INTER, FULL };
 
 		bool optimize = true;
+		bool verbose = false;
 		/// Specify what to do with the intermediate files
 		InterOp intermediates = NONE;
 		/// Specify the path where to save the intermediates (must be a directory).
@@ -34,6 +35,8 @@ namespace BFC
 		/// Path of the main file (execution starts at its beginning and terminates when reaching its EOF).
 		/// It must be a file and listed in tgts (or inside a directory provided as a compilation target)
 		fs::path main;
+		/// Stream where to put the compilation progress messages
+		std::ostream* outputStream = &std::cout;
 
 
 		inline fs::path GetIntermediatePath(const fs::path& file) const {
