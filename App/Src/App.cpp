@@ -40,8 +40,11 @@ void App::Init(DXData data)
 		Instance = std::unique_ptr<App>(new App());
 		// create state only after initialization
 		Instance->m_NewStateRequested = true;
-		//Instance->m_NextState = std::make_unique<SelectProjectState>();
+#ifdef _DEBUG
 		Instance->m_NextState = std::make_unique<EditState>(Instance->m_History.begin()->Path);
+#else
+		Instance->m_NextState = std::make_unique<SelectProjectState>();
+#endif
 	}
 }
 void App::Stop()

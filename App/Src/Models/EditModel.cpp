@@ -68,7 +68,7 @@ void EditModel::Compile(const std::initializer_list<fs::path>& files)
 		p.outputPath = fs::path{ first }.replace_extension(".exe");
 	m_CompOStream.str("");
 	p.outputStream = &m_CompOStream;
-	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
+	BFC::CompilerError err = BFC::Compiler::Compile(p);
 	if (err) m_CompOStream << err.message << '\n';
 }
 void EditModel::Compile(const CompilationTarget& tgt)
@@ -95,7 +95,7 @@ void EditModel::Compile(const CompilationTarget& tgt)
 	}
 	m_CompOStream.str("");
 	p.outputStream = &m_CompOStream;
-	BFC::CompilerError err = BFC::Compiler::Compile(p, "../Compiler/");
+	BFC::CompilerError err = BFC::Compiler::Compile(p);
 	if (err) m_CompOStream << err.message << '\n';
 }
 

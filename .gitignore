@@ -371,3 +371,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/App/Assemble.bat
+/App/CheckRequirements.bat
+/App/LinkObj.bat
