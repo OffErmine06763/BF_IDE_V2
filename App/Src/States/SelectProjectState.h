@@ -34,4 +34,7 @@ private:
 	std::vector<Entry> Fav, Rec;
 
 	u32 CurrId = 0;
+
+	bool m_DraggingRec = false, m_DraggingFav = false;
+	bool request_move_from_rec = false, request_move_from_fav = false;
 };

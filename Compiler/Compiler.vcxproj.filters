@@ -69,6 +69,7 @@
   <ItemGroup>
     <None Include="Res\Code\Code.bf" />
     <None Include="Res\Code\Code2.bf" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Res\help.txt" />

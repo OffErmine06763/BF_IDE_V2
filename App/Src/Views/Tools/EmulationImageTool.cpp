@@ -179,6 +179,10 @@ void EmulationImageTool::EmulationInput(bf_mem_t in)
 
 void EmulationImageTool::Render()
 {
+	ImGui::PushTextWrapPos(ImGui::GetFontSize() * 25.0f);
+	ImGui::TextUnformatted("Treats the first 16x16 cells of memory as 1 byte encodings of color");
+	ImGui::PopTextWrapPos();
+	
 	if (ImGui::Checkbox("Render", &m_Rendering))
 	{
 		m_ToggleRenderingEvent.Notify(m_Rendering);

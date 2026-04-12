@@ -244,6 +244,9 @@ copy "$(SolutionDir)Compiler\LinkObj.bat" "$(ProjectDir)LinkObj.bat"</Command>
       <Project>{3f571f42-abbf-41fc-a3b3-9497a53392d8}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

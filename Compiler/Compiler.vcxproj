@@ -351,6 +351,7 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Compiler Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Compiler Release|x64'">true</DeploymentContent>
     </CopyFileToFolders>
+    <None Include="README.md" />
     <None Include="Res\Code\Code.bf" />
     <None Include="Res\Code\Code2.bf" />
   </ItemGroup>

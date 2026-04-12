@@ -9,6 +9,7 @@
 #include <iostream>
 #include <ranges>
 
+// TODO: drag and drop doesnt work
 
 // Extra functions to add deletion support to ImGuiSelectionBasicStorage
 struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
@@ -167,7 +168,6 @@ void SelectProjectState::RenderFav()
 	// Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
 	static ExampleSelectionWithDeletion selection;
 	static bool request_deletion_from_menu = false; // Queue deletion triggered from context menu
-	static bool request_move_from_menu = false;
 
 	ImGui::Text("Selection size: %d/%d", selection.Size, Fav.size());
 
@@ -182,8 +182,8 @@ void SelectProjectState::RenderFav()
 
 		const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (selection.Size > 0)) || request_deletion_from_menu;
 		request_deletion_from_menu = false;
-		const bool want_move = request_move_from_menu;
-		request_move_from_menu = false;
+		const bool want_move = request_move_from_fav;
+		request_move_from_fav = false;
 
 		const int item_curr_idx_to_focus = want_delete 
 			? selection.ApplyDeletionPreLoop(ms_io, to<int>(Fav.size())) 
@@ -238,12 +238,12 @@ void SelectProjectState::RenderFav()
 					{
 						ImVector<int> payload_items;
 						void* it = NULL;
-						ImGuiID id = 0;
+						ImGuiID ind = 0;
 						if (!item_is_selected)
 							payload_items.push_back(n);
 						else
-							while (selection.GetNextSelectedItem(&it, &id))
-								payload_items.push_back((int)id);
+							while (selection.GetNextSelectedItem(&it, &ind))
+								payload_items.push_back((int)ind);
 						ImGui::SetDragDropPayload("FAV_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
 					}
 
@@ -252,7 +252,7 @@ void SelectProjectState::RenderFav()
 					const int* payload_items = (int*)payload->Data;
 					const int payload_count = (int)payload->DataSize / (int)sizeof(int);
 					if (payload_count == 1)
-						ImGui::Text("Object %05d: %s", payload_items[0], Fav[payload_items[0]].Path.string()); // TODO: the payload is the ID of the entry, not the index
+						ImGui::Text("Object %05d: %s", payload_items[0], Fav[payload_items[0]].Path.filename().string().c_str());
 					else
 						ImGui::Text("Dragging %d objects", payload_count);
 
@@ -267,13 +267,34 @@ void SelectProjectState::RenderFav()
 					if (ImGui::Selectable(label.c_str()))
 						request_deletion_from_menu = true;
 					if (ImGui::Selectable("Remove from Favourites"))
-						request_move_from_menu = true;
+						request_move_from_fav = true;
 					ImGui::EndDisabled();
 					ImGui::Selectable("Close");
 					ImGui::EndPopup();
 				}
 
 				ImGui::PopID();
+			}
+		}
+
+		if (m_DraggingRec && !ImGui::GetCurrentContext()->DragDropActive)
+			m_DraggingRec = false;
+		else if (m_DraggingRec)
+		{
+			ImGui::Text("Drop Here");
+			if (ImGui::BeginDragDropTarget())
+			{
+				//LOG_APP("DROPPING\n");
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("REC_ITEMS"))
+				{
+					const int* items = (int*)payload->Data;
+					const int  count = (int)payload->DataSize / (int)sizeof(int);
+					for (int i = 0; i < count; i++)
+						request_move_from_rec = true;
+						//LOG_GRAPHICS("TODO: move item " << Rec[items[i]].Path.filename().string() << '\n');
+					m_DraggingRec = false;
+				}
+				ImGui::EndDragDropTarget();
 			}
 		}
 
@@ -297,7 +318,6 @@ void SelectProjectState::RenderRec()
 	// Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
 	static ExampleSelectionWithDeletion selection;
 	static bool request_deletion_from_menu = false; // Queue deletion triggered from context menu
-	static bool request_move_from_menu = false;
 
 	ImGui::Text("Selection size: %d/%d", selection.Size, Rec.size());
 
@@ -312,9 +332,14 @@ void SelectProjectState::RenderRec()
 
 		const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (selection.Size > 0)) || request_deletion_from_menu;
 		request_deletion_from_menu = false;
-		const bool want_move = request_move_from_menu;
-		request_move_from_menu = false;
+		const bool want_move = request_move_from_rec;
+		request_move_from_rec = false;
 
+		if (want_move)
+		{
+			for (int i = 0; i < selection._Storage.Data.Size; i++)
+				std::cout << selection._Storage.Data[i].key << ' ' << selection._Storage.Data[i].val_i << '\n';
+		}
 		const int item_curr_idx_to_focus = want_delete
 			? selection.ApplyDeletionPreLoop(ms_io, to<int>(Rec.size()))
 			: want_move
@@ -327,6 +352,7 @@ void SelectProjectState::RenderRec()
 			clipper.IncludeItemByIndex(item_curr_idx_to_focus); // Ensure focused item is not clipped.
 		if (ms_io->RangeSrcItem != -1)
 			clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
+
 
 		while (clipper.Step())
 		{
@@ -368,13 +394,14 @@ void SelectProjectState::RenderRec()
 					{
 						ImVector<int> payload_items;
 						void* it = NULL;
-						ImGuiID id = 0;
+						ImGuiID ind = 0;
 						if (!item_is_selected)
 							payload_items.push_back(n);
 						else
-							while (selection.GetNextSelectedItem(&it, &id))
-								payload_items.push_back((int)id);
-						ImGui::SetDragDropPayload("RECENT_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
+							while (selection.GetNextSelectedItem(&it, &ind))
+								payload_items.push_back((int)ind);
+						m_DraggingRec = true;
+						ImGui::SetDragDropPayload("REC_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
 					}
 
 					// Display payload content in tooltip
@@ -382,7 +409,7 @@ void SelectProjectState::RenderRec()
 					const int* payload_items = (int*)payload->Data;
 					const int payload_count = (int)payload->DataSize / (int)sizeof(int);
 					if (payload_count == 1)
-						ImGui::Text("Object %05d: %s", payload_items[0], Rec[payload_items[0]].Path.string()); // TODO: the payload is the ID of the entry, not the index
+						ImGui::Text("Object %05d: %s", payload_items[0], Rec[payload_items[0]].Path.filename().string().c_str());
 					else
 						ImGui::Text("Dragging %d objects", payload_count);
 
@@ -397,7 +424,7 @@ void SelectProjectState::RenderRec()
 					if (ImGui::Selectable(label.c_str()))
 						request_deletion_from_menu = true;
 					if (ImGui::Selectable("Set as Favourite"))
-						request_move_from_menu = true;
+						request_move_from_rec = true;
 					ImGui::EndDisabled();
 					ImGui::Selectable("Close");
 					ImGui::EndPopup();
