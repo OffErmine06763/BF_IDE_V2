@@ -10,7 +10,7 @@ Test Exe Debug/
 *.exe
 
 /App/history.bfidedata
-badapple.*
+badapple.bf
 
 
 # User-specific files
