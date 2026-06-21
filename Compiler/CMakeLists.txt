@@ -36,4 +36,17 @@ elseif (UNIX)
 
 	# GCC/Clang warnings
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+
+	add_custom_command(
+		TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			${CMAKE_SOURCE_DIR}/Scripts/CheckRequirements.sh
+			${CMAKE_SOURCE_DIR}/Scripts/Assemble.sh
+			${CMAKE_SOURCE_DIR}/Scripts/LinkObj.sh
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>
+		COMMAND ${CMAKE_COMMAND} -E chmod +x
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/CheckRequirements.sh
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Assemble.sh
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/LinkObj.sh
+	)
 endif()

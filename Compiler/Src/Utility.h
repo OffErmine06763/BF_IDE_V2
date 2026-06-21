@@ -214,7 +214,7 @@ struct WorkingDirectory
 	WorkingDirectory(const fs::path& path);
 
 	const fs::path Path;
-	const PathType PathType;
+	const PathType PathType_;
 };
 std::ostream& operator<<(std::ostream& out, const WorkingDirectory& d);
 

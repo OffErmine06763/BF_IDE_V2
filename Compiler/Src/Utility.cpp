@@ -62,13 +62,13 @@ std::ostream& operator<<(std::ostream& out, const PathType& t)
 }
 
 WorkingDirectory::WorkingDirectory(const fs::path& path)
-	: Path(path), PathType(GetPathType(path))
+	: Path(path), PathType_(GetPathType(path))
 {
 }
 
 std::ostream& operator<<(std::ostream& out, const WorkingDirectory& d)
 {
-	return out << d.Path << ' ' << d.PathType;
+	return out << d.Path << ' ' << d.PathType_;
 }
 
 void ShowInExplorer(const fs::path& path)
