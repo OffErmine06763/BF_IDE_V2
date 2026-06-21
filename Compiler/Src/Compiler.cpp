@@ -1194,6 +1194,7 @@ namespace BFC
 		// EXE
 	
 		stdc::nanoseconds external = 0ns;
+		bool same_platform = false;
 
 #ifdef _WIN32
 		if (p.tgtOS == CompilationParams::WINDOWS)
@@ -1201,6 +1202,7 @@ namespace BFC
 		if (p.tgtOS == CompilationParams::LINUX)
 #endif
 		{
+			same_platform = true;
 			stdc::time_point start = stdc::clock::now();
 
 			std::stringstream ss;
@@ -1255,7 +1257,7 @@ namespace BFC
 		outstream << "Compilation done in: "; print_time(outstream, total + external) << " ("; print_time(outstream, total) << ")\n";
 
 
-		if (p.intermediates != CompilationParams::ALL)
+		if (p.intermediates != CompilationParams::ALL && same_platform)
 		{
 			std::error_code ec;
 			for (const auto& pasm : asmPaths) {
@@ -1271,7 +1273,7 @@ namespace BFC
 				}
 			}
 		}
-		if (p.intermediates == CompilationParams::NONE)
+		if (p.intermediates == CompilationParams::NONE && same_platform)
 		{
 			std::error_code ec;
 

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Source files
-file(GLOB_RECURSE PROJECT_FILES "Src/*.cpp" "Src/*.h" "Src/*.hpp")
+file(GLOB_RECURSE PROJECT_FILES "Src/*.cpp" "Src/*.h" "Src/*.hpp" "MainComp.cpp")
 add_executable(${PROJECT_NAME} ${PROJECT_FILES})
 target_include_directories(${PROJECT_NAME} PRIVATE Src)
 
@@ -44,7 +44,10 @@ elseif (UNIX)
 			${CMAKE_SOURCE_DIR}/Scripts/Assemble.sh
 			${CMAKE_SOURCE_DIR}/Scripts/LinkObj.sh
 			$<TARGET_FILE_DIR:${PROJECT_NAME}>
-		COMMAND ${CMAKE_COMMAND} -E chmod +x
+	)
+	add_custom_command(
+		TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND chmod +x
 	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/CheckRequirements.sh
 	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Assemble.sh
 	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/LinkObj.sh

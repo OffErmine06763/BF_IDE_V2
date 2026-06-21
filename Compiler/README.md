@@ -6,7 +6,8 @@ The compiler can be utilized via command line (see [help file](Res/help.txt))
 or via the API (see to [CompilationParams.h](Src/CompilationParams.h))
 
 Works on Windows and Linux, and can generate assembly for either platform.<br>
-Note that if you generate code for another OS, assembly and linking will not be performed.
+Note that if you generate code for another OS, assembly and linking will not be performed
+and the output will be the asm files.
 
 ## Requirements
 
