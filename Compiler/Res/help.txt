@@ -13,3 +13,5 @@ compiler <code.bf/code_folder> [...]
 	[-phase, --phase <phase>]     | compilation phase where to stop 
 	                              | (tokenize, parse, analyze, optimize, intermediate)
 								  | the intermediate will be saved to file
+	[-tgt, --tgt <tgt>]           | specify for which OS to generate the code, the default is the current one
+	                              | (win, linux)

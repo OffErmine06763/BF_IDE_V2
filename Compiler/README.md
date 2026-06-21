@@ -5,11 +5,15 @@ Compiler for BF code (and custom extension, see later)
 The compiler can be utilized via command line (see [help file](Res/help.txt))
 or via the API (see to [CompilationParams.h](Src/CompilationParams.h))
 
+Works on Windows and Linux, and can generate assembly for either platform.<br>
+Note that if you generate code for another OS, assembly and linking will not be performed.
+
 ## Requirements
 
 The compiler just emits the assembly code of the BF code provided, assembling and linking rely on third pary programs.
 - NASM for assembling
-- Visual Studio 2022 for linking
+- Visual Studio 2022 for linking on Windows
+- GNU ld for linking on Linux
 
 ## Compilation Steps
 

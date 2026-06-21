@@ -887,53 +887,42 @@ namespace BFC
 			case IR_LABEL:
 				out << '\n' << ir.names.at(line.ID) << ":\n";
 				break;
-
 			case IR_INC:
 				if (line.count == 0) out << "    inc byte [rsi]\n";
 				else				 out << "    add byte [rsi], " << line.count + 1 << '\n';
 				break;
-
 			case IR_DEC:
 				if (line.count == 0) out << "    dec byte [rsi]\n";
 				else				 out << "    sub byte [rsi], " << line.count + 1 << '\n';
 				break;
-
 			case IR_LEFT:
 				if (line.count == 0) out << "    dec rsi\n";
 				else				 out << "    sub rsi, " << line.count + 1 << '\n';
 				break;
-
 			case IR_RIGHT:
 				if (line.count == 0) out << "    inc rsi\n";
 				else				 out << "    add rsi, " << line.count + 1 << '\n';
 				break;
-
 			case IR_O:
 				for (u32 count = 0; count <= line.count; count++)
 					out << "    call _out\n";
 				break;
-
 			case IR_I:
 				for (u32 count = 0; count <= line.count; count++)
 					out << "    call _in\n";
 				break;
-
 			case IR_GOTO:
 				out << "    call " << ir.names.at(line.ID) << '\n';
 				break;
-
 			case IR_RET:
 				out << "    ret\n";
 				break;
-
 			case IR_JZ:
 				out << "    cmp byte [rsi], 0\n" << "    je " << ir.names.at(line.ID) << '\n';
 				break;
-
 			case IR_JMP:
 				out << "    jmp " << ir.names.at(line.ID) << '\n';
 				break;
-
 			case IR_LOOP:
 				out << ir.names.at(line.ID) << ":\n";
 				break;
@@ -1010,6 +999,17 @@ namespace BFC
 			else if (arg == "-v" || arg == "-verbose" || arg == "--verbose")
 			{
 				p.verbose = true;
+			}
+			else if (arg == "-tgt" || arg == "--tgt")
+			{
+				if (i == args.size() - 1)
+					return Compiler::GetOSNameError(arg);
+				else if (args[++i] == "windows")
+					p.tgtOS = CompilationParams::WINDOWS;
+				else if (args[i] == "linux")
+					p.tgtOS = CompilationParams::LINUX;
+				else
+					return Compiler::GetOSUnknownError(arg);
 			}
 		}
 
@@ -1175,11 +1175,11 @@ namespace BFC
 			fs::path pasm = ipath / (iname + ".asm");
 			asmPaths.push_back(pasm);
 			std::ofstream out{ pasm };
-#ifdef _WIN32
-			Compiler::EmitASM_Win64(ir, out, main);
-#else
-			Compiler::EmitASM_Linux64(ir, out, main);
-#endif
+
+			if (p.tgtOS == CompilationParams::WINDOWS)
+				Compiler::EmitASM_Win64(ir, out, main);
+			else 
+				Compiler::EmitASM_Linux64(ir, out, main);
 			out.close();
 
 			end = stdc::clock::now();
@@ -1192,11 +1192,17 @@ namespace BFC
 
 
 		// EXE
-
-		stdc::time_point start = stdc::clock::now();
-
 	
+		stdc::nanoseconds external = 0ns;
+
+#ifdef _WIN32
+		if (p.tgtOS == CompilationParams::WINDOWS)
+#else
+		if (p.tgtOS == CompilationParams::LINUX)
+#endif
 		{
+			stdc::time_point start = stdc::clock::now();
+
 			std::stringstream ss;
 
 #ifdef _WIN32
@@ -1238,18 +1244,13 @@ namespace BFC
 				return { CompilerError::GENERIC, std::format("Failed to start assembler and linker, error code {}", out.errorCode) };
 			else if (out.exitCode != 0)
 				return { CompilerError::GENERIC, std::format("Linking or assembling failed with exit code {}", out.exitCode) };
+			
+			stdc::time_point end = stdc::clock::now();
+			external = end - start;
+			if (p.verbose) { outstream << "Executable created in: "; print_time(outstream, end - start) << '\n'; }
 		}
 
 
-		stdc::time_point end = stdc::clock::now();
-		auto external = end - start;
-		if (p.verbose) { outstream << "Executable created in: "; print_time(outstream, end - start) << '\n'; }
-
-		/*int result = system(command.c_str());
-		if (result != 0) {
-			std::cerr << "Build failed with error code: " << result << '\n';
-			return 1;
-		}*/
 
 		outstream << "Compilation done in: "; print_time(outstream, total + external) << " ("; print_time(outstream, total) << ")\n";
 

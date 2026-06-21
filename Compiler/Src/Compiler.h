@@ -120,6 +120,12 @@ namespace BFC
 		static inline CompilerError GetMainNameError(const std::string& flag) {
 			return { CompilerError::ARGS_MAIN_NAME, std::format("Specify main file after flag {}", flag) };
 		}
+		static inline CompilerError GetOSNameError(const std::string& flag) {
+			return { CompilerError::ARGS_OS, std::format("Specify target OS after flag {} (windows, linux)", flag) };
+		}
+		static inline CompilerError GetOSUnknownError(const std::string& os) {
+			return { CompilerError::ARGS_OS_UNKN, std::format("Unsupported OS specified \"{}\"", os) };
+		}
 
 
 

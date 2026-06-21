@@ -17,6 +17,7 @@ namespace BFC
 		};
 		/// [NOT SUPPORTED YET] Specify to which compilation phase stop the execution
 		enum TargetPhase { TOKEN, PARSE, ANAL, OPT, INTER, FULL };
+		enum TargetOS { WINDOWS, LINUX };
 
 		bool optimize = true;
 		bool verbose = false;
@@ -37,6 +38,8 @@ namespace BFC
 		fs::path main;
 		/// Stream where to put the compilation progress messages
 		std::ostream* outputStream = &std::cout;
+		/// OS for which to generate the executable
+		TargetOS tgtOS = WINDOWS;
 
 
 		inline fs::path GetIntermediatePath(const fs::path& file) const {
