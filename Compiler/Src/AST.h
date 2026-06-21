@@ -58,16 +58,7 @@ namespace BFC
 	};
 	struct Stmt
 	{
-		// TODO: all variant types use less than 4Bytes, could fit the type in the remaining bits
 		std::variant<Goto, Return, Operation, Loop> value;
-		//StmtType type;
-		/*union
-		{
-			Goto label;
-			Return ret;
-			Operation op;
-			Loop loop;
-		} value;*/
 	};
 
 	struct Decl
@@ -77,13 +68,6 @@ namespace BFC
 
 	struct BlockItem
 	{
-		/*static constexpr bool STMT = false, DECL = !STMT;
-		bool which = false;
-		union
-		{
-			Stmt stmt;
-			Decl decl;
-		} value;*/
 		std::variant<Stmt, Decl> value;
 	};
 

@@ -21,11 +21,21 @@ namespace BFC
 		{
 			auto original = fs::current_path();
 			fs::current_path(offset);
+#ifdef _WIN32
 			auto res = _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat");
+#else
+			auto res = _Compile(p, "CheckRequirements.sh", "Assemble.sh", "LinkObj.sh");
+#endif
 			fs::current_path(original);
 			return res;
 		}
-		static CompilerError Compile(CompilationParams p) { return _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat"); }
+		static CompilerError Compile(CompilationParams p) {
+#ifdef _WIN32
+			return _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat");
+#else
+			return _Compile(p, "CheckRequirements.sh", "Assemble.sh", "LinkObj.sh");
+#endif
+		}
 
 
 		/// Lexical Analyzer / Scanner / Lexer
@@ -55,10 +65,10 @@ namespace BFC
 		/// basically go from LOOP { body } to LABEL loop1 body JNZ loop1
 		static IR Intermediate(TU&& tu);
 
-		/// Output to 'out' the assembly code generated for AMD Windows 64 bit
-		static void EmitASM_AMDWin64(const IR& ir, std::ostream& out, bool main);
-
-		// TODO: run (compile and run the code in that block before compiling, used to initialize memory) 
+		/// Output to 'out' the assembly code generated for Windows 64 bit
+		static void EmitASM_Win64(const IR& ir, std::ostream& out, bool main);
+		/// Output to 'out' the assembly code generated for Linux 64 bit
+		static void EmitASM_Linux64(const IR& ir, std::ostream& out, bool main);
 
 	private:
 		/// used for testing, as the bat file paths are different

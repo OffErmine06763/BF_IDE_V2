@@ -2,8 +2,8 @@
 
 Compiler for BF code (and custom extension, see later)
 
-The compiler can be utilized via command line (refer to the [help file](Res/help.txt))
-or via the API (refer to [CompilationParames.h](Src/CompilationParams.h))
+The compiler can be utilized via command line (see [help file](Res/help.txt))
+or via the API (see to [CompilationParams.h](Src/CompilationParams.h))
 
 ## Requirements
 
@@ -22,7 +22,7 @@ The code goes through the following phases
 - Optimize: performs simple simplifications of the code (if enabled), like 
             removing opposite adjacent operations (`+-><`) and nested loops (`[[code]]`)
 - Generate IR
-- Emit ASM: currently supports only AMD + Win64
+- Emit ASM: currently supports only Windows 64 bit
 - Assemble: requires NASM installed
 - Link: requires Visual Studio 2022
 
@@ -43,7 +43,7 @@ after performing a function.
 Standard BF code includes only the symbols `+-><[].,`, starts the execution at the beginning
 of the file and ends it at the EOF.
 
-My extension allows the usage of multiple files and the definition of functions.
+This compiler supports the usage of multiple source files and the definition of functions.<br>
 This is done like in Assembly, where each file can declare, export or import labels.
 
 When multiple files are provided to the compiler, it's necessary to specify which one is the main

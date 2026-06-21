@@ -1,9 +1,13 @@
 #include "Compiler.h"
 
-#define NOMINMAX
-#include <Windows.h>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #include <Terminal.h>
+#endif
 
 
 
@@ -128,7 +132,7 @@ namespace BFC
 				else
 					return GetInvalidPreprocessorError(row, col);
 			}
-			else if (c != ' ' && c != '\t' && c != '\n')
+			else if (c != ' ' && c != '\t' && c != '\n' && c != '\r')
 				return GetUnreconTokenError(c, row, col);
 
 			col++;
@@ -211,7 +215,7 @@ namespace BFC
 				subLoop = ParseLoop(parser, tu);
 				if (!subLoop.success())
 				{
-					tu.bodies.insert({ loop.ID, body });
+					tu.bodies.insert({ to<u32>(loop.ID), body });
 					return subLoop.getU().value();
 				}
 				body.push_back({ subLoop.getE().value() });
@@ -224,7 +228,7 @@ namespace BFC
 				{
 					// if #] == #[ return
 					parser.MoveToNextToken();
-					tu.bodies.insert({ loop.ID, body });
+					tu.bodies.insert({ to<u32>(loop.ID), body });
 					return loop;
 				}
 				else if (subcount > loop.count)
@@ -233,7 +237,7 @@ namespace BFC
 					// if #] > #[ we close the current loop, and return to the superloop
 					for (u32 i = iteration; i < loop.count; i++)
 						parser.Consume();
-					tu.bodies.insert({ loop.ID, body });
+					tu.bodies.insert({ to<u32>(loop.ID), body });
 					return loop;
 				}
 
@@ -255,14 +259,14 @@ namespace BFC
 				parser.MoveToNextToken();
 				break;
 			case T_LABEL:
-				tu.bodies.insert({ loop.ID, body });
+				tu.bodies.insert({ to<u32>(loop.ID), body });
 				return Compiler::GetLabelInLoopError();
 			case T_RETURN:
 				body.push_back({ Return{} });
 				break;
 			}
 		}
-		tu.bodies.insert({ loop.ID, body });
+		tu.bodies.insert({ to<u32>(loop.ID), body });
 		return Compiler::GetUnmatchedOpenError(parser.Position(start.ID));
 	}
 	static expected<Label, CompilerError> ParseLabel(Parser& parser, TU& tu)
@@ -290,13 +294,13 @@ namespace BFC
 				parser.Back();
 				subLoop = ParseLoop(parser, tu);
 				if (!subLoop.success()) {
-					tu.bodies.insert({ label.ID, body });
+					tu.bodies.insert({ to<u32>(label.ID), body });
 					return subLoop.getU().value();
 				}
 				body.push_back({ subLoop.getE().value() });
 				break;
 			case T_LOOPE:
-				tu.bodies.insert({ label.ID, body });
+				tu.bodies.insert({ to<u32>(label.ID), body });
 				return Compiler::GetUnmatchedCloseError(parser.Position(token.ID));
 			case T_GOTO:
 				body.push_back({ Goto{ token.ID } });
@@ -305,14 +309,14 @@ namespace BFC
 				break;
 			case T_LABEL:
 				parser.Back();
-				tu.bodies.insert({ label.ID, body });
+				tu.bodies.insert({ to<u32>(label.ID), body });
 				return label; // the next label will be parsed by the caller
 			case T_RETURN:
 				body.push_back({ Return{} });
 			}
 		}
 
-		tu.bodies.insert({ label.ID, body });
+		tu.bodies.insert({ to<u32>(label.ID), body });
 		return label;
 	}
 	static expected<Block, CompilerError> ParseRoot(Parser& parser, TU& tu)
@@ -352,7 +356,7 @@ namespace BFC
 				block.items.push_back({ Decl{ subLabel.getE().value() } });
 				break;
 			case T_RETURN:
-				// intentionally allow returns outside a label, will be a TODO: warning
+				// intentionally allow returns outside a label, will be a (TODO) warning
 				block.items.push_back({ Stmt{ Return{} } });
 				break;
 			}
@@ -668,7 +672,7 @@ namespace BFC
 
 
 	// #################################################################### ASSEMBLY ###########################################################################
-	void Compiler::EmitASM_AMDWin64(const IR& ir, std::ostream& out, bool main)
+	void Compiler::EmitASM_Win64(const IR& ir, std::ostream& out, bool main)
 	{
 		if (main)
 		{
@@ -740,14 +744,14 @@ namespace BFC
 			out << "_main:\n";
 			out << "    lea rsi, [rel tape]\n";
 			out << "    mov rcx, -11\n" // STD_OUTPUT_HANDLE = -11
-				<< "    sub rsp, 32\n"
+				<< "    sub rsp, 40\n"
 				<< "    call GetStdHandle\n"
-				<< "    add rsp, 32\n"
+				<< "    add rsp, 40\n"
 				<< "    mov [rel hStdOut], rax\n";
 			out << "    mov rcx, -10\n" // STD_INPUT_HANDLE = -10
-				<< "    sub rsp, 32\n"
+				<< "    sub rsp, 40\n"
 				<< "    call GetStdHandle\n"
-				<< "    add rsp, 32\n"
+				<< "    add rsp, 40\n"
 				<< "    mov [rel hStdIn], rax\n";
 
 			out << '\n';
@@ -777,40 +781,19 @@ namespace BFC
 				else				 out << "    add rsi, " << line.count + 1 << '\n';
 				break;
 			case IR_O:
-				out << "    sub rsp, 32\n";
+				out << "    sub rsp, 40\n";
 				for (u32 count = 0; count <= line.count; count++)
 					out << "    call _out\n";
-				out << "    add rsp, 32\n";
-
-				//out << "    mov rcx, [rel hStdOut]\n"
-				//	<< "    mov rdx, rsi\n"				// lpBuffer
-				//	<< "    mov r8, 1\n"				// nNumberOfBytesToWrite
-				//	<< "    xor r9, r9\n"				// lpNumberOfBytesWritten (NULL)
-				//	<< "    sub rsp, 40\n"				// Shadow space
-				//	<< "    mov qword [rsp + 32], 0\n"	// lpOverlapped (NULL)
-				//	<< "    call WriteFile\n"
-				//	<< "    add rsp, 40\n";				// Clean up stack
-
-				//out << "    movzx rcx, byte [rsi]\n" << "    call putchar\n";
+				out << "    add rsp, 40\n";
 				break;
 			case IR_I:
-				out << "    sub rsp, 32\n";
+				out << "    sub rsp, 40\n";
 				for (u32 count = 0; count <= line.count; count++)
 					out << "    call _in\n";
-				out << "    add rsp, 32\n";
-
-				//out << "    mov rcx, [rel hStdIn]\n"
-				//	<< "    mov rdx, rsi\n"					// lpBuffer
-				//	<< "    mov r8, 1\n"					// nNumberOfBytesToRead
-				//	<< "    lea r9, [rel bytes_read]\n"		// lpNumberOfBytesRead
-				//	<< "    sub rsp, 40\n"					// Shadow space
-				//	<< "    mov qword [rsp + 32], 0\n"		// lpOverlapped(NULL)
-				//	<< "    call ReadFile\n"
-				//	<< "    add rsp, 40\n";					// Clean up stack
-				//out << "    call getchar\n" << "    mov [rsi], al\n";
+				out << "    add rsp, 40\n";
 				break;
 			case IR_GOTO:
-				out << "    sub rsp, 32\n" << "    call " << ir.names.at(line.ID) << '\n' << "    add rsp, 32\n";
+				out << "    sub rsp, 40\n" << "    call " << ir.names.at(line.ID) << '\n' << "    add rsp, 40\n";
 				break;
 			case IR_RET:
 				out << "    ret\n";
@@ -827,12 +810,143 @@ namespace BFC
 			}
 		}
 
-		//out << "\n    mov eax, 0\n" << "    ret\n";
 		out << "    xor rcx, rcx\n" << "    call ExitProcess\n";
 
 		// nasm -f win64 code.asm -o code.obj
 		// link /ENTRY:_start /SUBSYSTEM:CONSOLE /NODEFAULTLIB code.obj kernel32.lib
 		// C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link
+	}
+
+
+	void Compiler::EmitASM_Linux64(const IR& ir, std::ostream& out, bool main)
+	{
+		// TODO: evaluate switching from RSI to RBX, since it's closer in meaning to RSI for windows
+		if (main)
+		{
+			out << "section .bss\n"
+				<< "    tape resb " << BF_MEMSIZE << '\n'
+				<< "    bytes_read resd 1\n";
+
+			out << '\n';
+		}
+
+		out << "section .text\n";
+
+		if (main)
+			out << "    global _start, _in, _out\n";
+
+		if (!ir.exports.empty())
+		{
+			out << "    global ";
+			for (const auto& exp : ir.exports)
+				out << exp << ", ";
+			out << '\n';
+		}
+
+		if (!ir.externs.empty())
+		{
+			out << "    extern ";
+			for (const auto& ext : ir.externs)
+				out << ext << ", ";
+			out << '\n';
+		}
+
+		if (!main)
+			out << "    extern _in, _out\n";
+
+		out << '\n';
+
+		if (main)
+		{
+			out << "_out:\n"
+				<< "    mov rax, 1\n"      // SYS_write
+				<< "    mov rdi, 1\n"      // stdout
+				<< "    mov rdx, 1\n"      // count
+				<< "    syscall\n"
+				<< "    ret\n";
+
+			out << '\n';
+
+			out << "_in:\n"
+				<< "    mov rax, 0\n"      // SYS_read
+				<< "    mov rdi, 0\n"      // stdin
+				<< "    mov rdx, 1\n"      // count
+				<< "    syscall\n"
+				<< "    ret\n";
+
+			out << '\n';
+
+			out << "_start:\n"
+				<< "    lea rsi, [rel tape]\n\n";
+		}
+
+		for (const auto& line : ir.code)
+		{
+			switch (line.type)
+			{
+			case IR_LABEL:
+				out << '\n' << ir.names.at(line.ID) << ":\n";
+				break;
+
+			case IR_INC:
+				if (line.count == 0) out << "    inc byte [rsi]\n";
+				else				 out << "    add byte [rsi], " << line.count + 1 << '\n';
+				break;
+
+			case IR_DEC:
+				if (line.count == 0) out << "    dec byte [rsi]\n";
+				else				 out << "    sub byte [rsi], " << line.count + 1 << '\n';
+				break;
+
+			case IR_LEFT:
+				if (line.count == 0) out << "    dec rsi\n";
+				else				 out << "    sub rsi, " << line.count + 1 << '\n';
+				break;
+
+			case IR_RIGHT:
+				if (line.count == 0) out << "    inc rsi\n";
+				else				 out << "    add rsi, " << line.count + 1 << '\n';
+				break;
+
+			case IR_O:
+				for (u32 count = 0; count <= line.count; count++)
+					out << "    call _out\n";
+				break;
+
+			case IR_I:
+				for (u32 count = 0; count <= line.count; count++)
+					out << "    call _in\n";
+				break;
+
+			case IR_GOTO:
+				out << "    call " << ir.names.at(line.ID) << '\n';
+				break;
+
+			case IR_RET:
+				out << "    ret\n";
+				break;
+
+			case IR_JZ:
+				out << "    cmp byte [rsi], 0\n" << "    je " << ir.names.at(line.ID) << '\n';
+				break;
+
+			case IR_JMP:
+				out << "    jmp " << ir.names.at(line.ID) << '\n';
+				break;
+
+			case IR_LOOP:
+				out << ir.names.at(line.ID) << ":\n";
+				break;
+			}
+		}
+
+		out << '\n'
+			<< "    mov rax, 60\n" // SYS_exit
+			<< "    xor rdi, rdi\n"
+			<< "    syscall\n";
+
+		// nasm -f elf64 code.asm -o code.o
+		// ld code.o -o code
 	}
 
 
@@ -928,7 +1042,11 @@ namespace BFC
 		std::ostream& outstream = *p.outputStream;
 
 		{
+#ifdef _WIN32
 			std::string cmd = "cmd /c "s + cmd1;
+#else
+			std::string cmd = "./"s + cmd1;
+#endif
 
 			RunCommandResult out = RunCommand(cmd);
 			if (out.errorCode != 0)
@@ -1057,7 +1175,11 @@ namespace BFC
 			fs::path pasm = ipath / (iname + ".asm");
 			asmPaths.push_back(pasm);
 			std::ofstream out{ pasm };
-			Compiler::EmitASM_AMDWin64(ir, out, main);
+#ifdef _WIN32
+			Compiler::EmitASM_Win64(ir, out, main);
+#else
+			Compiler::EmitASM_Linux64(ir, out, main);
+#endif
 			out.close();
 
 			end = stdc::clock::now();
@@ -1076,12 +1198,23 @@ namespace BFC
 	
 		{
 			std::stringstream ss;
+
+#ifdef _WIN32
 			ss << "cmd /c " << cmd2 << ' ';
+#else
+			ss << "./" << cmd2 << ' ';
+#endif
 			for (const fs::path& tgt : asmPaths) {
 				fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
 				ss << tgt << " " << pobj << " ";
 			}
-			ss << "&& " << cmd3 << ' ' << p.outputPath << " \"";
+			ss << "&& ";
+#ifdef _WIN32
+			ss << cmd3 << ' ';
+#else
+			ss << "./" << cmd3 << ' ';
+#endif
+			ss << p.outputPath << " \"";
 			for (const fs::path& tgt : asmPaths) {
 				fs::path path = (tgt.parent_path() / tgt.stem()).string() + ".obj";
 				ss << path << " ";
@@ -1091,13 +1224,15 @@ namespace BFC
 
 			RunCommandResult out = RunCommand(command);
 			
+#ifdef _WIN32
 			size_t mic = out.output.find("Microsoft (R)");
 			size_t nl1 = out.output.find('\n', mic);
 			size_t nl2 = out.output.find('\n', nl1 + 1);
 			size_t nl3 = out.output.find('\n', nl2 + 1);
 			if (mic != std::string::npos && nl3 != std::string::npos)
 				out.output.erase(mic, nl3 - mic + 1);
-			
+#endif
+
 			outstream << out.output << '\n';
 			if (out.errorCode != 0)
 				return { CompilerError::GENERIC, std::format("Failed to start assembler and linker, error code {}", out.errorCode) };
@@ -1125,8 +1260,12 @@ namespace BFC
 			for (const auto& pasm : asmPaths) {
 				bool res = fs::remove(pasm, ec);
 				if (ec) {
+#ifdef _WIN32
 					std::cout << Terminal::TEXT_F_BRED << "Failed to remove " << pasm
 							  << ", cause:\n" << Terminal::TEXT_RESET << ec.message() << '\n';
+#else
+					std::cout << "Failed to remove " << pasm << ", cause:\n" << ec.message() << '\n';
+#endif
 					return { CompilerError::GENERIC | ec.value(), "Failed to remove "s + pasm.string() + ", cause:\n" + ec.message() };
 				}
 			}
@@ -1139,8 +1278,12 @@ namespace BFC
 				fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
 				bool res = fs::remove(pobj, ec);
 				if (ec) {
+#ifdef _WIN32
 					std::cout << Terminal::TEXT_F_BRED << "Failed to remove " << pobj
 							  << ", cause:\n" << Terminal::TEXT_RESET << ec.message() << '\n';
+#else
+					std::cout << "Failed to remove " << pobj << ", cause:\n" << ec.message() << '\n';
+#endif
 					return { CompilerError::GENERIC | ec.value(), "Failed to remove "s + pobj.string() + ", cause:\n" + ec.message() };
 				}
 			}
@@ -1153,6 +1296,7 @@ namespace BFC
 
 	RunCommandResult RunCommand(const std::string& command)
 	{
+#ifdef _WIN32
 		HANDLE hStdOutRead, hStdOutWrite;
 		SECURITY_ATTRIBUTES sa{ sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
 
@@ -1184,7 +1328,7 @@ namespace BFC
 			return { .errorCode = GetLastError(), .exitCode = 0, .output = "" };
 		}
 
-		CloseHandle(hStdOutWrite); // parent doesn’t need write end
+		CloseHandle(hStdOutWrite); // parent doesn't need write end
 
 		// Read output
 		char buffer[128];
@@ -1204,6 +1348,30 @@ namespace BFC
 		CloseHandle(pi.hThread);
 
 		return { .errorCode = 0, .exitCode = exitCode, .output = result };
+#else
+		std::array<char, 128> buffer;
+		std::string output;
+
+		FILE* pipe = popen(command.c_str(), "r");
+
+		if (!pipe)
+		{
+			return { .errorCode = errno, .exitCode = 0, .output = "" };
+		}
+
+		while (fgets(buffer.data(), buffer.size(), pipe))
+		{
+			output += buffer.data();
+		}
+
+		int status = pclose(pipe);
+
+		return {
+			.errorCode = 0,
+			.exitCode = WEXITSTATUS(status),
+			.output = output
+		};
+#endif
 	}
 
 

@@ -8,10 +8,6 @@
 #include <fstream>
 #include <iostream>
 
-// TODO: WINDOWS ONLY
-#define NOMINMAX
-#include <windows.h>
-#include <shlobj.h>
 
 
 static constexpr auto DI_FLAG = fs::directory_options::skip_permission_denied;
