@@ -1,11 +1,6 @@
 #include "Compiler.h"
 
-
 #ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
 #include <Terminal.h>
 #endif
 
@@ -1033,7 +1028,7 @@ namespace BFC
 
 		return Compile(p);
 	}
-	CompilerError Compiler::_Compile(CompilationParams p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3)
+	CompilerError Compiler::_Compile(CompilationParams p)
 	{
 		auto error = p.Validate();
 		if (error)
@@ -1042,16 +1037,12 @@ namespace BFC
 		std::ostream& outstream = *p.outputStream;
 
 		{
-#ifdef _WIN32
-			std::string cmd = "cmd /c "s + cmd1;
-#else
-			std::string cmd = "./"s + cmd1;
-#endif
-
-			RunCommandResult out = RunCommand(cmd);
-			if (out.errorCode != 0)
-				return { CompilerError::GENERIC, std::format("Failed to check for required software, error code {}", out.errorCode) };
-			else if (out.exitCode != 0)
+			ScriptExecutionResult res = ScriptsManager::CheckRequirements();
+			
+			outstream << res.Output << '\n';
+			if (res.FailedExecution())
+				return { CompilerError::GENERIC, std::format("Failed to check for required software, error code {}", res.ExecErrorCode) };
+			else if (res.ExitCode != 0)
 				return { CompilerError::GENERIC, "Requirements not met (NASM missing)"s };
 		}
 
@@ -1067,7 +1058,6 @@ namespace BFC
 
 			stdc::time_point start = stdc::clock::now();
 
-			//auto expTokens = Compiler::Tokenize(fs::path("Res/Code.bf"));
 			auto expTokens = Compiler::Tokenize(path);
 
 			stdc::time_point end = stdc::clock::now();
@@ -1205,47 +1195,14 @@ namespace BFC
 			same_platform = true;
 			stdc::time_point start = stdc::clock::now();
 
-			std::stringstream ss;
 
-#ifdef _WIN32
-			ss << "cmd /c " << cmd2 << ' ';
-#else
-			ss << "./" << cmd2 << ' ';
-#endif
-			for (const fs::path& tgt : asmPaths) {
-				fs::path pobj = (tgt.parent_path() / tgt.stem()).string() + ".obj";
-				ss << tgt << " " << pobj << " ";
-			}
-			ss << "&& ";
-#ifdef _WIN32
-			ss << cmd3 << ' ';
-#else
-			ss << "./" << cmd3 << ' ';
-#endif
-			ss << p.outputPath << " \"";
-			for (const fs::path& tgt : asmPaths) {
-				fs::path path = (tgt.parent_path() / tgt.stem()).string() + ".obj";
-				ss << path << " ";
-			}
-			ss << '\"';
-			std::string command = ss.str();
+			ScriptExecutionResult res = ScriptsManager::LinkAndAssemble(asmPaths, p.outputPath);
 
-			RunCommandResult out = RunCommand(command);
-			
-#ifdef _WIN32
-			size_t mic = out.output.find("Microsoft (R)");
-			size_t nl1 = out.output.find('\n', mic);
-			size_t nl2 = out.output.find('\n', nl1 + 1);
-			size_t nl3 = out.output.find('\n', nl2 + 1);
-			if (mic != std::string::npos && nl3 != std::string::npos)
-				out.output.erase(mic, nl3 - mic + 1);
-#endif
-
-			outstream << out.output << '\n';
-			if (out.errorCode != 0)
-				return { CompilerError::GENERIC, std::format("Failed to start assembler and linker, error code {}", out.errorCode) };
-			else if (out.exitCode != 0)
-				return { CompilerError::GENERIC, std::format("Linking or assembling failed with exit code {}", out.exitCode) };
+			outstream << res.Output << '\n';
+			if (res.FailedExecution())
+				return { CompilerError::GENERIC, std::format("Failed to start assembler and linker, error code {}", res.ExecErrorCode) };
+			else if (res.ExitCode != 0)
+				return { CompilerError::GENERIC, std::format("Linking or assembling failed with exit code {}", res.ExitCode) };
 			
 			stdc::time_point end = stdc::clock::now();
 			external = end - start;
@@ -1294,90 +1251,6 @@ namespace BFC
 
 		return { CompilerError::NONE, "" };
 	}
-
-
-
-	RunCommandResult RunCommand(const std::string& command)
-	{
-#ifdef _WIN32
-		HANDLE hStdOutRead, hStdOutWrite;
-		SECURITY_ATTRIBUTES sa{ sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
-
-		// Create pipe
-		if (!CreatePipe(&hStdOutRead, &hStdOutWrite, &sa, 0))
-		{
-			return { .errorCode = GetLastError(), .exitCode = 0, .output = "" };
-		}
-
-		// Ensure the read handle is not inherited
-		SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
-
-		PROCESS_INFORMATION pi{};
-		STARTUPINFOA si{};
-		si.cb = sizeof(si);
-		si.hStdOutput = hStdOutWrite;
-		si.hStdError = hStdOutWrite;
-		si.dwFlags |= STARTF_USESTDHANDLES;
-
-		// Create child process
-		if (!CreateProcessA(
-			nullptr,
-			const_cast<char*>(command.c_str()),
-			nullptr, nullptr, TRUE, CREATE_NO_WINDOW,
-			nullptr, nullptr, &si, &pi))
-		{
-			CloseHandle(hStdOutRead);
-			CloseHandle(hStdOutWrite);
-			return { .errorCode = GetLastError(), .exitCode = 0, .output = "" };
-		}
-
-		CloseHandle(hStdOutWrite); // parent doesn't need write end
-
-		// Read output
-		char buffer[128];
-		DWORD bytesRead;
-		std::string result;
-		while (ReadFile(hStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-			buffer[bytesRead] = '\0';
-			result += buffer;
-		}
-
-		// Cleanup
-		CloseHandle(hStdOutRead);
-		WaitForSingleObject(pi.hProcess, INFINITE);
-		DWORD exitCode = 0;
-		GetExitCodeProcess(pi.hProcess, &exitCode);
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
-
-		return { .errorCode = 0, .exitCode = exitCode, .output = result };
-#else
-		std::array<char, 128> buffer;
-		std::string output;
-
-		FILE* pipe = popen(command.c_str(), "r");
-
-		if (!pipe)
-		{
-			return { .errorCode = errno, .exitCode = 0, .output = "" };
-		}
-
-		while (fgets(buffer.data(), buffer.size(), pipe))
-		{
-			output += buffer.data();
-		}
-
-		int status = pclose(pipe);
-
-		return {
-			.errorCode = 0,
-			.exitCode = WEXITSTATUS(status),
-			.output = output
-		};
-#endif
-	}
-
-
 }
 
 

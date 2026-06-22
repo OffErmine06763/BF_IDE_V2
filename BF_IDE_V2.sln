@@ -62,9 +62,13 @@ Global
 		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Test Debug|x86.ActiveCfg = Debug|Win32
 		{11AEA95B-A92F-4122-BBA0-6AECFBE6597C}.Test Debug|x86.Build.0 = Debug|Win32
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Debug|x64.ActiveCfg = Debug|x64
+		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Debug|x64.Build.0 = Debug|x64
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Debug|x86.ActiveCfg = Compiler Debug|Win32
+		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Debug|x86.Build.0 = Compiler Debug|Win32
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Release|x64.ActiveCfg = Release|x64
+		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Release|x64.Build.0 = Release|x64
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Release|x86.ActiveCfg = Release|Win32
+		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Compiler Release|x86.Build.0 = Release|Win32
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Debug|x64.ActiveCfg = Debug|x64
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Debug|x64.Build.0 = Debug|x64
 		{3F571F42-ABBF-41FC-A3B3-9497A53392D8}.Debug|x86.ActiveCfg = Debug|Win32

@@ -15,9 +15,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE Src)
 if (WIN32)
 	message(STATUS "Configuring for Windows...")
 
-	# Optional: Set Windows-specific compile definitions
-	target_compile_definitions(${PROJECT_NAME} PRIVATE PLATFORM_WINDOWS)
-
 	# Optional: Set MSVC flags
 	if (MSVC)
 		target_compile_options(${PROJECT_NAME} PRIVATE /W4)
@@ -32,24 +29,30 @@ if (WIN32)
 elseif (UNIX)
 	message(STATUS "Configuring for Linux...")
 
-	target_compile_definitions(${PROJECT_NAME} PRIVATE PLATFORM_LINUX)
-
 	# GCC/Clang warnings
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 
+	# Create Scripts dir in the build dir
+	add_custom_command(
+		TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts
+	)
+	# Move the script files there
 	add_custom_command(
 		TARGET ${PROJECT_NAME} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			${CMAKE_SOURCE_DIR}/Scripts/CheckRequirements.sh
-			${CMAKE_SOURCE_DIR}/Scripts/Assemble.sh
-			${CMAKE_SOURCE_DIR}/Scripts/LinkObj.sh
-			$<TARGET_FILE_DIR:${PROJECT_NAME}>
+			${CMAKE_CURRENT_SOURCE_DIR}/Scripts/CheckRequirements.sh
+			${CMAKE_CURRENT_SOURCE_DIR}/Scripts/Assemble.sh
+			${CMAKE_CURRENT_SOURCE_DIR}/Scripts/LinkObj.sh
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts
 	)
+	# Make them executable
 	add_custom_command(
 		TARGET ${PROJECT_NAME} POST_BUILD
 		COMMAND chmod +x
-	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/CheckRequirements.sh
-	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Assemble.sh
-	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/LinkObj.sh
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts/CheckRequirements.sh
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts/Assemble.sh
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts/LinkObj.sh
 	)
 endif()

@@ -87,9 +87,10 @@
       <AdditionalDependencies>Dwmapi.lib;d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy "$(SolutionDir)Compiler\Assemble.bat" "$(ProjectDir)Assemble.bat"
-copy "$(SolutionDir)Compiler\CheckRequirements.bat" "$(ProjectDir)CheckRequirements.bat"
-copy "$(SolutionDir)Compiler\LinkObj.bat" "$(ProjectDir)LinkObj.bat"</Command>
+      <Command>mkdir "$(ProjectDir)Scripts"
+copy "$(SolutionDir)Compiler\Scripts\Assemble.bat" "$(ProjectDir)Scripts\Assemble.bat"
+copy "$(SolutionDir)Compiler\Scripts\CheckRequirements.bat" "$(ProjectDir)Scripts\CheckRequirements.bat"
+copy "$(SolutionDir)Compiler\Scripts\LinkObj.bat" "$(ProjectDir)Scripts\LinkObj.bat"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -113,9 +114,10 @@ copy "$(SolutionDir)Compiler\LinkObj.bat" "$(ProjectDir)LinkObj.bat"</Command>
       <AdditionalDependencies>Dwmapi.lib;d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy "$(SolutionDir)Compiler\Assemble.bat" "$(ProjectDir)Assemble.bat"
-copy "$(SolutionDir)Compiler\CheckRequirements.bat" "$(ProjectDir)CheckRequirements.bat"
-copy "$(SolutionDir)Compiler\LinkObj.bat" "$(ProjectDir)LinkObj.bat"</Command>
+      <Command>mkdir "$(ProjectDir)Scripts"
+copy "$(SolutionDir)Compiler\Scripts\Assemble.bat" "$(ProjectDir)Scripts\Assemble.bat"
+copy "$(SolutionDir)Compiler\Scripts\CheckRequirements.bat" "$(ProjectDir)Scripts\CheckRequirements.bat"
+copy "$(SolutionDir)Compiler\Scripts\LinkObj.bat" "$(ProjectDir)Scripts\LinkObj.bat"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -135,9 +137,10 @@ copy "$(SolutionDir)Compiler\LinkObj.bat" "$(ProjectDir)LinkObj.bat"</Command>
       <AdditionalDependencies>Dwmapi.lib;d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy "$(SolutionDir)Compiler\Assemble.bat" "$(ProjectDir)Assemble.bat"
-copy "$(SolutionDir)Compiler\CheckRequirements.bat" "$(ProjectDir)CheckRequirements.bat"
-copy "$(SolutionDir)Compiler\LinkObj.bat" "$(ProjectDir)LinkObj.bat"</Command>
+      <Command>mkdir "$(ProjectDir)Scripts"
+copy "$(SolutionDir)Compiler\Scripts\Assemble.bat" "$(ProjectDir)Scripts\Assemble.bat"
+copy "$(SolutionDir)Compiler\Scripts\CheckRequirements.bat" "$(ProjectDir)Scripts\CheckRequirements.bat"
+copy "$(SolutionDir)Compiler\Scripts\LinkObj.bat" "$(ProjectDir)Scripts\LinkObj.bat"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -161,9 +164,10 @@ copy "$(SolutionDir)Compiler\LinkObj.bat" "$(ProjectDir)LinkObj.bat"</Command>
       <AdditionalDependencies>Dwmapi.lib;d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy "$(SolutionDir)Compiler\Assemble.bat" "$(ProjectDir)Assemble.bat"
-copy "$(SolutionDir)Compiler\CheckRequirements.bat" "$(ProjectDir)CheckRequirements.bat"
-copy "$(SolutionDir)Compiler\LinkObj.bat" "$(ProjectDir)LinkObj.bat"</Command>
+      <Command>mkdir "$(ProjectDir)Scripts"
+copy "$(SolutionDir)Compiler\Scripts\Assemble.bat" "$(ProjectDir)Scripts\Assemble.bat"
+copy "$(SolutionDir)Compiler\Scripts\CheckRequirements.bat" "$(ProjectDir)Scripts\CheckRequirements.bat"
+copy "$(SolutionDir)Compiler\Scripts\LinkObj.bat" "$(ProjectDir)Scripts\LinkObj.bat"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

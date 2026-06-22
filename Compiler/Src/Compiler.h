@@ -5,6 +5,7 @@
 #include "IR.h"
 #include "CompilerError.h"
 #include "CompilationParams.h"
+#include "ScriptsManager.h"
 
 
 
@@ -15,26 +16,17 @@ namespace BFC
 	class Compiler
 	{
 	public:
-		static CompilerError Compile(const std::vector<std::string>& args);
-		// TODO: how to access the script files when using the compiler as an API without providing the path offset
-		static CompilerError Compile(CompilationParams p, const fs::path& offset)
+		/// Specify a custom path for the script files necessary for compilation
+		static void SetScriptsLocations(const std::string& requirements, const std::string& assemble, const std::string& link)
 		{
-			auto original = fs::current_path();
-			fs::current_path(offset);
-#ifdef _WIN32
-			auto res = _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat");
-#else
-			auto res = _Compile(p, "CheckRequirements.sh", "Assemble.sh", "LinkObj.sh");
-#endif
-			fs::current_path(original);
-			return res;
+			ScriptsManager::CheckRequirementsScript = requirements;
+			ScriptsManager::AssembleScript          = assemble;
+			ScriptsManager::LinkScript              = link;
 		}
+
+		static CompilerError Compile(const std::vector<std::string>& args);
 		static CompilerError Compile(CompilationParams p) {
-#ifdef _WIN32
-			return _Compile(p, "CheckRequirements.bat", "Assemble.bat", "LinkObj.bat");
-#else
-			return _Compile(p, "CheckRequirements.sh", "Assemble.sh", "LinkObj.sh");
-#endif
+			return _Compile(p);
 		}
 
 
@@ -71,8 +63,7 @@ namespace BFC
 		static void EmitASM_Linux64(const IR& ir, std::ostream& out, bool main);
 
 	private:
-		/// used for testing, as the bat file paths are different
-		static CompilerError _Compile(CompilationParams p, const std::string& cmd1, const std::string& cmd2, const std::string& cmd3);
+		static CompilerError _Compile(CompilationParams p);
 
 	public:
 		static inline CompilerError GetUnreconTokenError(const char c, const u32 row, const u32 col) {

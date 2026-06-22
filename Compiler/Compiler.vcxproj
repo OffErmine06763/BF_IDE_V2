@@ -319,6 +319,7 @@
     <ClCompile Include="Src\CompilerError.cpp" />
     <ClCompile Include="Src\IR.cpp" />
     <ClCompile Include="Src\CompilationParams.cpp" />
+    <ClCompile Include="Src\ScriptsManager.cpp" />
     <ClCompile Include="Src\Token.cpp" />
     <ClCompile Include="Src\Utility.cpp" />
   </ItemGroup>
@@ -329,6 +330,7 @@
     <ClInclude Include="Src\CompilerUtility.h" />
     <ClInclude Include="Src\IR.h" />
     <ClInclude Include="Src\CompilationParams.h" />
+    <ClInclude Include="Src\ScriptsManager.h" />
     <ClInclude Include="Src\Token.h" />
     <ClInclude Include="Src\Utility.h" />
   </ItemGroup>
@@ -351,6 +353,7 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Compiler Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Compiler Release|x64'">true</DeploymentContent>
     </CopyFileToFolders>
+    <None Include="CMakePresets.json" />
     <None Include="README.md" />
     <None Include="Res\Code\Code.bf" />
     <None Include="Res\Code\Code2.bf" />

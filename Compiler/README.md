@@ -16,6 +16,55 @@ The compiler just emits the assembly code of the BF code provided, assembling an
 - Visual Studio 2022 for linking on Windows
 - GNU ld for linking on Linux
 
+## Usage in Other Projects
+
+The compiler requires some script files, saved under `Scripts/`.<br>
+It's thus required to copy those files in the desired directory and specify their position
+using
+    
+	Compiler::SetScriptsLocations(const std::string& requirements, const std::string& assemble, const std::string& link)
+
+Make sure to specify the scripts matching the operating system.
+
+For VisualStudio users it's suggested to add a post-build step such as
+
+    mkdir "$(ProjectDir)Scripts"
+    copy "$(SolutionDir)Compiler\Scripts\Assemble.bat" "$(ProjectDir)Scripts\Assemble.bat"
+    copy "$(SolutionDir)Compiler\Scripts\CheckRequirements.bat" "$(ProjectDir)Scripts\CheckRequirements.bat"
+    copy "$(SolutionDir)Compiler\Scripts\LinkObj.bat" "$(ProjectDir)Scripts\LinkObj.bat"
+
+in the startup project, then leaving the script locations to their default value.
+
+Equivalently, linux users should see the [CMakeLists.txt](CMakeLists.txt) (which is used to build the standalone compiler), which contains the following post-build commands
+
+    # Create Scripts dir in the build dir
+	add_custom_command(
+		TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts
+	)
+	# Move the script files there
+	add_custom_command(
+		TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			${CMAKE_SOURCE_DIR}/Scripts/CheckRequirements.sh
+			${CMAKE_SOURCE_DIR}/Scripts/Assemble.sh
+			${CMAKE_SOURCE_DIR}/Scripts/LinkObj.sh
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts
+	)
+	# Make them executable
+	add_custom_command(
+		TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND chmod +x
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts/CheckRequirements.sh
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts/Assemble.sh
+	        $<TARGET_FILE_DIR:${PROJECT_NAME}>/Scripts/LinkObj.sh
+	)
+
+AFAIK, including this cmake using `add_subdirectory` should copy those files in the `build/BF_Compiler` directory,
+so you might want to update the script position in the code or change the cmake to copy them into `${CMAKE_BINARY_DIR}` rather than
+`$<TARGET_FILE_DIR:${PROJECT_NAME}>`
+
 ## Compilation Steps
 
 The code goes through the following phases

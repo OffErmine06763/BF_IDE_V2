@@ -12,6 +12,10 @@ Test Exe Debug/
 /App/history.bfidedata
 badapple.bf
 
+/App/Scripts/Assemble.bat
+/App/Scripts/CheckRequirements.bat
+/App/Scripts/LinkObj.bat
+
 
 # User-specific files
 *.rsuser
@@ -371,6 +375,4 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/App/Assemble.bat
-/App/CheckRequirements.bat
-/App/LinkObj.bat
+
