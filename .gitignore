@@ -16,6 +16,7 @@ badapple.bf
 /App/Scripts/CheckRequirements.bat
 /App/Scripts/LinkObj.bat
 
+.github/
 
 # User-specific files
 *.rsuser
